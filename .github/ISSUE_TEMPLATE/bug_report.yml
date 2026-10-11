@@ -1,0 +1,38 @@
+name: 问题反馈
+description: 报告可复现的动作、窗口或存档问题
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "感谢反馈。截图、录屏和日志请先遮住个人信息；不要上传整个个人存档目录。"
+  - type: input
+    id: version
+    attributes:
+      label: 程序版本
+      placeholder: v0.1.0-preview.1
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 运行环境
+      description: Windows版本、屏幕数量、各屏幕缩放比例
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 说明模式、动作或点击位置，以及如何稳定出现问题
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 预期与实际表现
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 截图、录屏或经过隐私处理的日志

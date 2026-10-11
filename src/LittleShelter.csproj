@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable><ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>RinsLittleShelter</AssemblyName><RootNamespace>LittleShelter</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestorePackagesPath>$(MSBuildThisFileDirectory)..\.tools\packages</RestorePackagesPath>
+  </PropertyGroup>
+  <ItemGroup><PackageReference Include="NAudio" Version="3.1.0" /></ItemGroup>
+  <ItemGroup>
+    <Content Include="..\assets\rin\**\*"><Link>assets\rin\%(RecursiveDir)%(Filename)%(Extension)</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>Always</CopyToPublishDirectory><ExcludeFromSingleFile>true</ExcludeFromSingleFile></Content>
+    <Content Include="..\assets\world\**\*"><Link>assets\world\%(RecursiveDir)%(Filename)%(Extension)</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>Always</CopyToPublishDirectory><ExcludeFromSingleFile>true</ExcludeFromSingleFile></Content>
+    <Content Include="..\assets\manifest.json"><Link>assets\manifest.json</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><CopyToPublishDirectory>Always</CopyToPublishDirectory><ExcludeFromSingleFile>true</ExcludeFromSingleFile></Content>
+  </ItemGroup>
+</Project>

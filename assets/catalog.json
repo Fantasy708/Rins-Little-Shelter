@@ -1,0 +1,841 @@
+{
+  "Version": 2,
+  "Source": "src/Models.cs",
+  "ClipSource": "src/MotionClips.cs",
+  "LogicalSize": [
+    480,
+    340
+  ],
+  "ActorStandingHeight": 150,
+  "LayerSplit": 0.82,
+  "SeatedHipFraction": 0.56,
+  "BenchSeatAnchor": [
+    0.5,
+    0.56
+  ],
+  "SeatedContactAnchor": [
+    0.5,
+    0.625
+  ],
+  "MotionRegistration": "walking head/per-row ground; hop and turn individual sandal anchors in manifest",
+  "MovementTiming": "distance-based steps, eased approach, .35-second settle before context; hop airborne-only travel, turn in place",
+  "PoseCrossfadeSeconds": 0.25,
+  "SequenceCrossfadeSeconds": 0.08,
+  "SequenceInterpolation": "single opaque registered pose frame; continuous root and lift; premultiplied RGBA action transitions",
+  "CreationEventFraction": 0.58,
+  "CreationFadeSeconds": 2.5,
+  "Animations": [
+    {
+      "Id": "stand",
+      "Name": "轻轻呼吸",
+      "Pose": 0,
+      "DurationSeconds": 12,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "knees",
+      "Name": "抱膝发呆",
+      "Pose": 6,
+      "DurationSeconds": 20,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "swing",
+      "Name": "坐着晃腿",
+      "Pose": 7,
+      "DurationSeconds": 18,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "gaze",
+      "Name": "看向远处",
+      "Pose": 0,
+      "DurationSeconds": 14,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "sky",
+      "Name": "仰望天空",
+      "Pose": 2,
+      "DurationSeconds": 16,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "dress",
+      "Name": "整理衣摆",
+      "Pose": 3,
+      "DurationSeconds": 6,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "tablet",
+      "Name": "查看平板",
+      "Pose": 4,
+      "DurationSeconds": 14,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "catch",
+      "Name": "接住花瓣",
+      "Pose": 5,
+      "DurationSeconds": 8,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "lie",
+      "Name": "躺下休息",
+      "Pose": 8,
+      "DurationSeconds": 24,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "nap",
+      "Name": "闭眼小憩",
+      "Pose": 9,
+      "DurationSeconds": 20,
+      "Kind": "idle",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "benchSit",
+      "Name": "坐在长椅上",
+      "Pose": 7,
+      "DurationSeconds": 22,
+      "Kind": "context",
+      "Object": "bench",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "treeGaze",
+      "Name": "树下看天空",
+      "Pose": 2,
+      "DurationSeconds": 20,
+      "Kind": "context",
+      "Object": "tree",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "touchFlower",
+      "Name": "轻触花朵",
+      "Pose": 11,
+      "DurationSeconds": 10,
+      "Kind": "context",
+      "Object": "flower",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "watchBird",
+      "Name": "看小鸟飞过",
+      "Pose": 2,
+      "DurationSeconds": 14,
+      "Kind": "context",
+      "Object": "bird",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "touchLight",
+      "Name": "触碰光片",
+      "Pose": 5,
+      "DurationSeconds": 9,
+      "Kind": "context",
+      "Object": "stars",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "homeVisit",
+      "Name": "小屋前停留",
+      "Pose": 0,
+      "DurationSeconds": 15,
+      "Kind": "context",
+      "Object": "house",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "walk",
+      "Name": "慢慢走",
+      "Pose": 0,
+      "DurationSeconds": 5,
+      "Kind": "move",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": "rin/walk.png"
+    },
+    {
+      "Id": "trot",
+      "Name": "小步跑",
+      "Pose": 0,
+      "DurationSeconds": 3,
+      "Kind": "move",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": "rin/trot-v2.png"
+    },
+    {
+      "Id": "hop",
+      "Name": "轻跃平台",
+      "Pose": 0,
+      "DurationSeconds": 2,
+      "Kind": "move",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "ClipSeconds": 0.9,
+      "FrameKeys": [
+        0.0,
+        0.12,
+        0.21,
+        0.29,
+        0.34,
+        0.41,
+        0.49,
+        0.57,
+        0.68,
+        0.75,
+        0.85,
+        1.0
+      ],
+      "MotionAtlas": "rin/hop.png"
+    },
+    {
+      "Id": "turn",
+      "Name": "边缘转身",
+      "Pose": 0,
+      "DurationSeconds": 2,
+      "Kind": "move",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "ClipSeconds": 0.8,
+      "FrameKeys": [
+        0.0,
+        0.09,
+        0.18,
+        0.27,
+        0.36,
+        0.46,
+        0.54,
+        0.64,
+        0.73,
+        0.81,
+        0.91,
+        1.0
+      ],
+      "MotionAtlas": "rin/turn.png"
+    },
+    {
+      "Id": "visit",
+      "Name": "走向景物",
+      "Pose": 0,
+      "DurationSeconds": 5,
+      "Kind": "move",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": "rin/walk.png"
+    },
+    {
+      "Id": "createTap",
+      "Name": "点触生成",
+      "Pose": 4,
+      "DurationSeconds": 7,
+      "Kind": "create",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "createSwipe",
+      "Name": "划出云带",
+      "Pose": 10,
+      "DurationSeconds": 7,
+      "Kind": "create",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "createRaise",
+      "Name": "抬手创造",
+      "Pose": 10,
+      "DurationSeconds": 7,
+      "Kind": "create",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "createPlace",
+      "Name": "摆放景物",
+      "Pose": 11,
+      "DurationSeconds": 7,
+      "Kind": "create",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "createMusic",
+      "Name": "随音乐创造",
+      "Pose": 4,
+      "DurationSeconds": 8,
+      "Kind": "create",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "smile",
+      "Name": "轻轻微笑",
+      "Pose": 1,
+      "DurationSeconds": 5,
+      "Kind": "interact",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "retreat",
+      "Name": "轻退一步",
+      "Pose": 0,
+      "DurationSeconds": 3,
+      "Kind": "interact",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "invite",
+      "Name": "展示平板",
+      "Pose": 4,
+      "DurationSeconds": 6,
+      "Kind": "interact",
+      "Object": "",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    }
+  ],
+  "Objects": [
+    {
+      "Id": "platform",
+      "Name": "云台",
+      "Day": 0,
+      "Tile": 0,
+      "MaxWidth": 420,
+      "MaxHeight": 95,
+      "X": 240,
+      "FeetY": 310,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "grass",
+      "Name": "草地",
+      "Day": 2,
+      "Tile": 1,
+      "MaxWidth": 350,
+      "MaxHeight": 75,
+      "X": 240,
+      "FeetY": 280,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "flower",
+      "Name": "花",
+      "Day": 3,
+      "Tile": 2,
+      "MaxWidth": 45,
+      "MaxHeight": 50,
+      "X": 320,
+      "FeetY": 254,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "path",
+      "Name": "小路",
+      "Day": 4,
+      "Tile": 6,
+      "MaxWidth": 175,
+      "MaxHeight": 45,
+      "X": 235,
+      "FeetY": 276,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "tree",
+      "Name": "小树",
+      "Day": 5,
+      "Tile": 3,
+      "MaxWidth": 110,
+      "MaxHeight": 156,
+      "X": 370,
+      "FeetY": 249,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "bird",
+      "Name": "小鸟",
+      "Day": 6,
+      "Tile": 10,
+      "MaxWidth": 32,
+      "MaxHeight": 28,
+      "X": 330,
+      "FeetY": 100,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "bench",
+      "Name": "长椅",
+      "Day": 7,
+      "Tile": 5,
+      "MaxWidth": 110,
+      "MaxHeight": 68,
+      "X": 270,
+      "FeetY": 252,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "lamp",
+      "Name": "灯",
+      "Day": 8,
+      "Tile": 9,
+      "MaxWidth": 30,
+      "MaxHeight": 80,
+      "X": 100,
+      "FeetY": 247,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "cloud",
+      "Name": "云",
+      "Day": 10,
+      "Tile": 4,
+      "MaxWidth": 105,
+      "MaxHeight": 55,
+      "X": 165,
+      "FeetY": 92,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "windmill",
+      "Name": "风车",
+      "Day": 12,
+      "Tile": 8,
+      "MaxWidth": 63,
+      "MaxHeight": 102,
+      "X": 75,
+      "FeetY": 244,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "house",
+      "Name": "小屋",
+      "Day": 14,
+      "Tile": 7,
+      "MaxWidth": 132,
+      "MaxHeight": 132,
+      "X": 170,
+      "FeetY": 247,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "stars",
+      "Name": "星光",
+      "Day": 20,
+      "Tile": 11,
+      "MaxWidth": 145,
+      "MaxHeight": 65,
+      "X": 305,
+      "FeetY": 72,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    }
+  ]
+}

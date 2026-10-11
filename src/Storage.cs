@@ -1,0 +1,49 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+namespace LittleShelter;
+
+public sealed class Storage
+{
+    private readonly string directory;
+    public string FilePath => Path.Combine(directory, "shelter.json");
+    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+    public Storage(string directory) => this.directory = directory;
+    public SaveData Load()
+    {
+        Directory.CreateDirectory(directory);
+        foreach (var path in new[] { FilePath, FilePath + ".bak" })
+        {
+            try
+            {
+                if (!File.Exists(path)) continue;
+                using var document = JsonDocument.Parse(File.ReadAllText(path));
+                if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("Version", out _)) continue;
+                var save = document.RootElement.Deserialize<SaveData>(Options);
+                if (save == null || save.Version != 1 || save.Settings == null || save.DailySeconds == null || save.CompanionDates == null || save.ChoiceCounts == null || save.GrowthLayout == null || save.FreeLayout == null || save.Created == null || save.GrowthLayout.Any(p => p == null) || save.FreeLayout.Any(p => p == null)) continue;
+                Sanitize(save); World.Initialize(save); return save;
+            }
+            catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
+        }
+        var fresh = new SaveData(); World.Initialize(fresh); return fresh;
+    }
+    public void Write(SaveData save)
+    {
+        Directory.CreateDirectory(directory);
+        var temp = FilePath + ".tmp";
+        File.WriteAllText(temp, JsonSerializer.Serialize(save, Options));
+        if (File.Exists(FilePath)) File.Replace(temp, FilePath, FilePath + ".bak", true);
+        else File.Move(temp, FilePath);
+    }
+    private static void Sanitize(SaveData s)
+    {
+        s.Settings.Scale = double.IsFinite(s.Settings.Scale) ? Math.Clamp(s.Settings.Scale, .65, 1.8) : 1;
+        s.Settings.Opacity = double.IsFinite(s.Settings.Opacity) ? Math.Clamp(s.Settings.Opacity, .35, 1) : 1;
+        s.Settings.InteractionMinutes = Math.Clamp(s.Settings.InteractionMinutes, 15, 120);
+        s.CompanionDates = s.CompanionDates.Where(d => DateOnly.TryParse(d, out _)).Distinct().ToList();
+        foreach (var list in new[] { s.GrowthLayout, s.FreeLayout })
+        {
+            list.RemoveAll(p => !ObjectDef.All.Any(d => d.Id == p.Id) || !double.IsFinite(p.X) || !double.IsFinite(p.Y));
+            foreach (var p in list) { p.X = Math.Clamp(p.X, 25, 455); p.Y = Math.Clamp(p.Y, 45, 310); }
+        }
+    }
+}

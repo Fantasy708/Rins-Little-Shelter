@@ -93,9 +93,28 @@ public sealed class ResourceManifest
     public double[] BenchSeatAnchor { get; set; } = new[] { .5, .56 };
     public double[] SeatedContactAnchor { get; set; } = new[] { .5, .625 };
     public double HitAlphaThreshold { get; set; } = 48;
+    public string ScenesAtlas { get; set; } = "world/scenes.png";
+    public string SwingAtlas { get; set; } = "rin/swing-life.png";
+    public string FamilyAtlas { get; set; } = "rin/family-memory.png";
+    public double[][] SceneRegions { get; set; } = Atlas.Grid(3,2);
+    public string BedroomAtlas { get; set; } = "world/bedroom.png";
+    public double[][] BedroomRegions { get; set; } = Atlas.Grid(3,2);
+    public double[] BedSeatAnchor { get; set; } = new[]{.48,.57};
+    public double[] BedroomWindowPane { get; set; } = new[]{.24,.035,.48,.91};
+    public double[][] BedroomGlassRegions { get; set; } = Array.Empty<double[]>();
+    public double[][] SwingRegions { get; set; } = Array.Empty<double[]>();
+    public double[][] FamilyRegions { get; set; } = Array.Empty<double[]>();
+    public double[][] SwingHips { get; set; } = Array.Empty<double[]>();
+    public double[][] SwingHands { get; set; } = Array.Empty<double[]>();
+    public double[][] ChildHips { get; set; } = Array.Empty<double[]>();
+    public double[][] ChildHands { get; set; } = Array.Empty<double[]>();
+    public string LoopAtlas { get; set; } = "rin/swing-loop.png";
+    public double[][] LoopRegions { get; set; } = Array.Empty<double[]>();
+    public double[][] LoopHips { get; set; } = Array.Empty<double[]>();
+    public double[][] LoopHands { get; set; } = Array.Empty<double[]>();
 }
 
-public sealed class Scene : FrameworkElement
+public sealed partial class Scene : FrameworkElement
 {
     private readonly SaveData save;
     private readonly Behavior behavior;
@@ -145,6 +164,7 @@ public sealed class Scene : FrameworkElement
         hopFrames=new RegisteredPoseFrames(hopping,manifest.HopAnchors,manifest.HopStandingHeights);
         turnFrames=new RegisteredPoseFrames(turning,manifest.TurnAnchors,manifest.TurnStandingHeights);
         world = new Atlas(Path.Combine(root, manifest.World), manifest.WorldRegions);
+        LoadLifeAssets(root);
         RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.HighQuality);
     }
     private SolidColorBrush Brush(byte a, byte r, byte g, byte b)
@@ -158,6 +178,7 @@ public sealed class Scene : FrameworkElement
     public void Born(string id) => births[id] = Time;
     public string? Hit(Point point)
     {
+        var special=LifeHit(point); if (special != null && special != "swingSeat") return special;
         if (Time < ChoiceUntil) for (int i = 0; i < choiceRects.Length; i++) if (choiceRects[i].Contains(point)) return "choice:" + i;
         if (Time < BubbleUntil && bubbleRect.Contains(point)) return "bubble";
         for (int i=actorHits.Count-1; i>=0; i--)
@@ -168,9 +189,12 @@ public sealed class Scene : FrameworkElement
             if (actorPoint.Y >= actor.Hinge) actorPoint.X -= actor.Shear * (actorPoint.Y - actor.Hinge);
             if (actor.Rect.Contains(actorPoint) && actor.Sprite.Solid((actorPoint.X - actor.Rect.X) / actor.Rect.Width, (actorPoint.Y - actor.Rect.Y) / actor.Rect.Height, actor.Opacity)) return "rin";
         }
+        if (special != null) return special;
+        if (!doorRect.IsEmpty && doorRect.Contains(point)) return "door";
         foreach (var pair in hits.Reverse())
         {
             var rect = pair.Value.Rect;
+            if (pair.Key == "window" && save.SceneId == "indoor" && glassClip?.FillContains(point) == true) return "window";
             if (rect.Contains(point) && pair.Value.Sprite.Solid((point.X - rect.X) / rect.Width, (point.Y - rect.Y) / rect.Height)) return pair.Key;
         }
         return null;
@@ -179,14 +203,16 @@ public sealed class Scene : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         hits.Clear();
+        actorHits.Clear(); lifeHits.Clear(); doorRect=Rect.Empty;
         string theme = World.Theme(save.Settings, DateTime.Now.Hour);
         bool night = theme is "夜晚" or "深夜";
-        bool ideal = Time < IdealUntil;
+        bool ideal = save.SceneId is "outdoor" or "cloud" && Time < IdealUntil && !behavior.Life.Active;
         var layout = ideal ? ObjectDef.All.Select(World.Default).ToList() : save.Layout.Where(p => !p.Hidden).ToList();
-        foreach (var p in layout.OrderBy(p => p.Id is "platform" ? -3 : p.Id is "grass" ? -2 : p.Id is "path" ? -1 : 0))
+        foreach (var p in layout.OrderBy(p => Scenes.Foundation(p.Id) ? -3 : p.Id is "grass" ? -2 : p.Id is "path" ? -1 : 0))
         {
             if (!ideal && !World.Available(save).Any(d => d.Id == p.Id)) continue;
-            var d = ObjectDef.Get(p.Id); var sprite = world.Sprites[d.Tile];
+            var d = ObjectDef.Get(p.Id); if (p.Id == "swingSeat") continue;
+            var sprite = ObjectSprite(d);
             double ox = 0, oy = 0, angle = 0;
             if (p.Id == "cloud") ox = Math.Sin(Time * .13) * 8;
             if (p.Id == "bird") { ox = Math.Sin(Time * .65) * 14; oy = Math.Sin(Time * 1.2) * 3; }
@@ -198,15 +224,22 @@ public sealed class Scene : FrameworkElement
             }
             double k = Math.Min(d.Width / sprite.Width, d.Height / sprite.Height);
             double width = sprite.Width * k, height = sprite.Height * k;
-            if (p.Id is "platform" or "grass" or "path") { width = d.Width; height = d.Height; }
+            if (p.Id is "platform" or "grass" or "path" or "meadowBase" or "roomBase" or "bigTree") { width = d.Width; height = d.Height; }
             var rect = new Rect(p.X - width / 2 + ox, p.Y - height + oy, width, height);
             double appear = births.TryGetValue(p.Id, out var born) ? Math.Clamp((Time - born) / 2.5, 0, 1) : 1;
-            dc.PushOpacity(appear);
+            double visibleOpacity=appear*(save.SceneId == "indoor" && !Scenes.Foundation(p.Id) ? 1-behavior.Life.Atmosphere : 1);
+            dc.PushOpacity(visibleOpacity);
             dc.PushTransform(new ScaleTransform(.85 + .15 * appear, .85 + .15 * appear, p.X, p.Y));
             dc.PushTransform(new RotateTransform(angle, p.X, p.Y));
             if (p.Id == "stars") dc.PushOpacity(night || ideal || audio.IsShelter ? .95 : .28);
-            else dc.PushOpacity(theme == "深夜" ? .7 : night ? .79 : 1);
-            dc.DrawImage(sprite.Image, rect); dc.Pop(); dc.Pop(); dc.Pop(); dc.Pop(); if (appear > .5) hits[p.Id] = (rect, sprite);
+            else dc.PushOpacity(save.SceneId == "indoor" ? 1 : theme == "深夜" ? .7 : night ? .79 : 1);
+            // The repainted glass has real alpha holes. Put the sky behind
+            // the window so its antialiased ironwork stays visible.
+            if (p.Id == "window" && save.SceneId == "indoor") DrawBedroomSky(dc,rect,theme);
+            dc.DrawImage(sprite.Image, rect);
+            if (p.Id == "roomBase" && behavior.Life.Atmosphere > 0) { dc.PushOpacity(behavior.Life.Atmosphere); dc.DrawImage(environments.Sprites[1].Image,rect); dc.Pop(); }
+            dc.Pop(); dc.Pop(); dc.Pop(); dc.Pop(); if (visibleOpacity > .5) hits[p.Id] = (rect, sprite);
+            if (p.Id == "house" && save.SceneId == "outdoor") doorRect=new Rect(rect.X+rect.Width*.26,rect.Y+rect.Height*.52,rect.Width*.15,rect.Height*.39);
             if (p.Id is "lamp" or "house" && (night || theme == "傍晚" || FeedbackObject == p.Id && Time < FeedbackUntil))
             {
                 dc.DrawEllipse(Brush(32, 255, 226, 149), null, new Point(p.X, p.Y - d.Height * .48), 24, 22);
@@ -222,8 +255,10 @@ public sealed class Scene : FrameworkElement
         dc.DrawEllipse(ambient, null, new Point(240, 228), 164, 56);
         DrawParticles(dc, theme, night, ideal);
         DrawWeather(dc);
-        DrawRin(dc);
+        DrawLifeWorld(dc);
+        DrawPresentRin(dc);
         DrawCreation(dc);
+        DrawMemoryControls(dc);
         if (Time < ChoiceUntil) DrawChoices(dc);
         else if (Time < BubbleUntil) DrawBubble(dc, Bubble);
         if (Editing) Text(dc, "整理世界 · 拖动物件 · 右键收起", 124, 316, 11, Ink);
@@ -235,6 +270,9 @@ public sealed class Scene : FrameworkElement
         var clip=MotionClips.Find(action.Id);
         bool raw=clip != null;
         bool left=raw ? behavior.SequenceMirror : behavior.FacingLeft;
+        // The sky-watching pose was drawn looking left in its source frame.
+        // Orient this pose toward the actual window instead of the walk facing.
+        if (action.Id == "windowWatch" && save.SceneId == "indoor" && save.Layout.FirstOrDefault(p=>p.Id == "window" && !p.Hidden) is { } window) left=window.X>behavior.X;
         double breath=move || raw ? 0 : Math.Sin(Time*1.5)*.45;
         double seatOffset=action.Id == "swing" ? 45 : 0;
         string key=(raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
@@ -274,12 +312,13 @@ public sealed class Scene : FrameworkElement
             // Placement.Y is the furniture's ground anchor, not its seat surface.
             // Keep the actor's drag offset, but register the seated hips to the
             // wooden seat rather than aligning her sandals with the chair legs.
-            if (action.Id == "benchSit" && (Time < IdealUntil || save.Layout.Any(p=>p.Id == "bench" && !p.Hidden) && World.Available(save).Any(d=>d.Id == "bench")))
+            if (action.Id is "benchSit" or "roomRest" && (Time < IdealUntil || save.Layout.Any(p=>p.Id == action.ObjectId && !p.Hidden) && World.Available(save).Any(d=>d.Id == action.ObjectId)))
             {
-                var bench=ObjectDef.Get("bench"); var image=world.Sprites[bench.Tile];
+                var bench=ObjectDef.Get(action.ObjectId!); var image=ObjectSprite(bench);
                 double k=Math.Min(bench.Width/image.Width,bench.Height/image.Height);
-                double seatX=behavior.X+image.Width*k*(manifest.BenchSeatAnchor[0]-.5);
-                double seatY=behavior.Y-image.Height*k*(1-manifest.BenchSeatAnchor[1]);
+                var seatAnchor=action.Id == "roomRest" ? manifest.BedSeatAnchor : manifest.BenchSeatAnchor;
+                double seatX=behavior.X+image.Width*k*(seatAnchor[0]-.5);
+                double seatY=behavior.Y-image.Height*k*(1-seatAnchor[1]);
                 rect=new Rect(seatX-rect.Width*manifest.SeatedContactAnchor[0],seatY-rect.Height*manifest.SeatedContactAnchor[1],rect.Width,rect.Height);
             }
         }
@@ -360,6 +399,8 @@ public sealed class Scene : FrameworkElement
     }
     private void DrawWeather(DrawingContext dc)
     {
+        bool indoors=save.SceneId == "indoor";
+        if (indoors) return; // Indoor weather is drawn behind individual window panes.
         switch (save.Settings.Weather)
         {
             case "雨":

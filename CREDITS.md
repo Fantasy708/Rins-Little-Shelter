@@ -7,6 +7,8 @@
 - `assets/rin` 和 `assets/world` 的PNG图集由内置imagegen工具生成，并以已有素材保持角色一致。制作提示词见 [素材制作](docs/素材制作.md)。
 - 未附带原曲、原片音轨或官网角色原图。角色、名称及原作相关权利归相应权利人；代码许可证不授予这些权利，也不自动适用于角色和场景图片。
 
+父女记忆以[官方短片](https://www.youtube.com/watch?v=fzQ6gRAEoy0)约3:46的秋千及4:06的整理发饰为参考。父亲和幼年Rin均为本项目重新生成的插画，不附带原片画面或音轨。提示词与选帧记录见[多场景素材制作](docs/多场景素材制作.md)。
+
 ## 软件组件
 
 采用.NET 10、WPF、NAudio 3.1.0及System.Numerics.Tensors 9.0.0。依赖版本记录在 `src/packages.lock.json`；第三方许可原文见 `LICENSES`，说明见 [第三方组件](THIRD-PARTY-NOTICES.md)。

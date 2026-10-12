@@ -1,5 +1,249 @@
 {
-  "Version": 2,
+  "Version": 4,
+  "Scenes": [
+    {
+      "Id": "cloud",
+      "Day": 0,
+      "Name": "云台"
+    },
+    {
+      "Id": "indoor",
+      "Day": 2,
+      "Name": "屋内"
+    },
+    {
+      "Id": "outdoor",
+      "Day": 7,
+      "Name": "屋外院子"
+    },
+    {
+      "Id": "meadow",
+      "Day": 10,
+      "Name": "室外草坡"
+    },
+    {
+      "Id": "swingTree",
+      "Day": 20,
+      "Name": "树下秋千"
+    }
+  ],
+  "Swing": {
+    "BoardingFrames": 20,
+    "Hands": [
+      [
+        141,
+        208,
+        226,
+        211
+      ],
+      [
+        42,
+        51,
+        180,
+        122
+      ],
+      [
+        56,
+        111,
+        166,
+        109
+      ],
+      [
+        55,
+        115,
+        166,
+        110
+      ],
+      [
+        119,
+        90,
+        229,
+        102
+      ],
+      [
+        74,
+        116,
+        181,
+        109
+      ],
+      [
+        68,
+        106,
+        180,
+        104
+      ],
+      [
+        57,
+        96,
+        165,
+        101
+      ],
+      [
+        121,
+        96,
+        233,
+        98
+      ],
+      [
+        82,
+        98,
+        187,
+        97
+      ],
+      [
+        70,
+        96,
+        177,
+        97
+      ],
+      [
+        65,
+        98,
+        170,
+        97
+      ],
+      [
+        130,
+        85,
+        223,
+        94
+      ],
+      [
+        90,
+        100,
+        197,
+        103
+      ],
+      [
+        70,
+        95,
+        179,
+        95
+      ],
+      [
+        63,
+        100,
+        171,
+        110
+      ],
+      [
+        137,
+        120,
+        236,
+        121
+      ],
+      [
+        83,
+        104,
+        181,
+        112
+      ],
+      [
+        70,
+        91,
+        175,
+        97
+      ],
+      [
+        98,
+        165,
+        173,
+        166
+      ]
+    ],
+    "CycleSeconds": 4.6,
+    "HipAnchors": [
+      [
+        188,
+        211
+      ],
+      [
+        128,
+        213
+      ],
+      [
+        115,
+        214
+      ],
+      [
+        115,
+        211
+      ],
+      [
+        180,
+        175
+      ],
+      [
+        127,
+        190
+      ],
+      [
+        114,
+        179
+      ],
+      [
+        128,
+        181
+      ],
+      [
+        178,
+        177
+      ],
+      [
+        126,
+        181
+      ],
+      [
+        119,
+        175
+      ],
+      [
+        127,
+        180
+      ],
+      [
+        179,
+        173
+      ],
+      [
+        127,
+        174
+      ],
+      [
+        119,
+        175
+      ],
+      [
+        122,
+        174
+      ],
+      [
+        180,
+        149
+      ],
+      [
+        125,
+        143
+      ],
+      [
+        118,
+        149
+      ],
+      [
+        131,
+        155
+      ]
+    ],
+    "LoopKeys": 34,
+    "LoopFrames": 18
+  },
+  "Memory": {
+    "FadeSeconds": 1.5,
+    "UserTriggered": true,
+    "TemporaryLayout": true,
+    "StorySeconds": 25,
+    "Silent": true
+  },
   "Source": "src/Models.cs",
   "ClipSource": "src/MotionClips.cs",
   "LogicalSize": [
@@ -654,6 +898,101 @@
       "ClipSeconds": null,
       "FrameKeys": null,
       "MotionAtlas": null
+    },
+    {
+      "Id": "ropeHold",
+      "Name": "扶住秋千绳",
+      "Pose": 0,
+      "DurationSeconds": 2,
+      "Kind": "special",
+      "Object": "swingSeat",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "swingLife",
+      "Name": "树下轻荡秋千",
+      "Pose": 0,
+      "DurationSeconds": 34,
+      "Kind": "special",
+      "Object": "swingSeat",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "windowWatch",
+      "Name": "窗边看天气",
+      "Pose": 2,
+      "DurationSeconds": 18,
+      "Kind": "context",
+      "Object": "window",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "deskTablet",
+      "Name": "桌边使用平板",
+      "Pose": 4,
+      "DurationSeconds": 20,
+      "Kind": "context",
+      "Object": "desk",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "roomRest",
+      "Name": "床沿安静休息",
+      "Pose": 7,
+      "DurationSeconds": 22,
+      "Kind": "context",
+      "Object": "chair",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
     }
   ],
   "Objects": [
@@ -831,6 +1170,126 @@
       "MaxHeight": 65,
       "X": 305,
       "FeetY": 72,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "meadowBase",
+      "Name": "草坡",
+      "Day": 10,
+      "Tile": 0,
+      "MaxWidth": 420,
+      "MaxHeight": 125,
+      "X": 240,
+      "FeetY": 305,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "roomBase",
+      "Name": "卧室",
+      "Day": 2,
+      "Tile": 1,
+      "MaxWidth": 420,
+      "MaxHeight": 275,
+      "X": 240,
+      "FeetY": 306,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "bigTree",
+      "Name": "树荫",
+      "Day": 20,
+      "Tile": 2,
+      "MaxWidth": 420,
+      "MaxHeight": 278,
+      "X": 240,
+      "FeetY": 304,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "desk",
+      "Name": "床边圆几",
+      "Day": 2,
+      "Tile": 3,
+      "MaxWidth": 54,
+      "MaxHeight": 60,
+      "X": 274,
+      "FeetY": 278,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "window",
+      "Name": "高窗",
+      "Day": 2,
+      "Tile": 4,
+      "MaxWidth": 94,
+      "MaxHeight": 154,
+      "X": 106,
+      "FeetY": 190,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "chair",
+      "Name": "粉色床铺",
+      "Day": 2,
+      "Tile": 5,
+      "MaxWidth": 181,
+      "MaxHeight": 123,
+      "X": 166,
+      "FeetY": 279,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "cabinet",
+      "Name": "柜子与小熊",
+      "Day": 2,
+      "Tile": 6,
+      "MaxWidth": 79,
+      "MaxHeight": 125,
+      "X": 358,
+      "FeetY": 273,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "swingSeat",
+      "Name": "木座秋千",
+      "Day": 20,
+      "Tile": -1,
+      "MaxWidth": 65,
+      "MaxHeight": 8,
+      "X": 300,
+      "FeetY": 260,
       "Anchor": [
         0.5,
         1

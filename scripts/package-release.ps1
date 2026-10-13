@@ -1,5 +1,5 @@
 param(
-    [string]$Version = 'v0.2.0-preview.4',
+    [string]$Version = 'v0.3.0-preview.1',
     [string]$ProgramDirectory = 'dist/RinsLittleShelter'
 )
 $ErrorActionPreference = 'Stop'
@@ -16,7 +16,7 @@ New-Item -ItemType Directory -Path $portableRoot,$releaseRoot -Force | Out-Null
 $runtimeFiles = @('RinsLittleShelter.exe','assets/manifest.json','assets/catalog.json',
     'assets/rin/poses.png','assets/rin/walk.png','assets/rin/trot-v2.png',
     'assets/rin/hop.png','assets/rin/turn.png','assets/world/objects.png',
-    'assets/rin/swing-life.png','assets/rin/swing-loop.png','assets/rin/family-memory.png',
+    'assets/rin/swing-life.png','assets/rin/swing-loop.png','assets/rin/family-memory.png','assets/rin/tablet-life.png',
     'assets/world/scenes.png','assets/world/swing-tree.png','assets/world/bedroom.png')
 foreach ($relative in $runtimeFiles) {
     $target = Join-Path $portableRoot $relative
@@ -33,8 +33,12 @@ if (Test-Path -LiteralPath (Join-Path $projectRoot 'LICENSE')) {
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSES') -Destination $portableRoot -Recurse
 $publicDocs = Join-Path $portableRoot 'docs'
 New-Item -ItemType Directory -Path $publicDocs -Force | Out-Null
-foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验证记录.md','docs/发布状态.md','docs/多场景素材制作.md')) {
+foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验证记录.md','docs/发布状态.md','docs/多场景素材制作.md',
+    'docs/平板创造交互设计.md','docs/平板消息界面设计.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $publicDocs
+}
+if (Test-Path -LiteralPath (Join-Path $projectRoot 'docs/平板参考核对.md')) {
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/平板参考核对.md') -Destination $publicDocs
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/releases') -Destination $publicDocs -Recurse
 New-Item -ItemType Directory -Path (Join-Path $publicDocs 'screenshots') -Force | Out-Null
@@ -52,4 +56,4 @@ $hashLines = @(
 )
 [System.IO.File]::WriteAllLines((Join-Path $releaseRoot 'SHA256.txt'), $hashLines, [System.Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $projectRoot "docs/releases/$Version.md") -Destination (Join-Path $releaseRoot 'RELEASE_NOTES.md')
-Write-Output "GitHub附件已准备：$releaseRoot"
+Write-Output "本地版本附件已准备：$releaseRoot（本脚本不上传或发布到GitHub）"

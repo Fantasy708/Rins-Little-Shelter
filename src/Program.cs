@@ -28,6 +28,7 @@ internal static class Program
             if (args.Contains("--settings")) pet.Loaded += (_, _) => pet.OpenSettings();
             string? action = Option(args, "--action"); if (action != null) pet.Loaded += (_, _) => pet.PreviewAction(action);
             if (args.Contains("--memory")) pet.Loaded+=(_,_)=>pet.ViewMemory();
+            if (Option(args,"--tablet") is { } tabletPage) pet.Loaded+=(_,_)=>pet.OpenTablet(tabletPage);
             app.Run(pet);
         }
         catch (Exception e) { Log.Write(e); MessageBox.Show("启动失败：" + e.Message + "\n请保持程序与 assets 文件夹在一起。", "Rin’s Little Shelter"); }

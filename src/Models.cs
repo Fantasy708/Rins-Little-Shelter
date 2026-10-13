@@ -47,6 +47,8 @@ public sealed class SaveData
     public long Interactions { get; set; }
     public double MusicSeconds { get; set; }
     public int IndoorStyleVersion { get; set; }
+    public StoryState GrowthStory { get; set; } = new();
+    public StoryState FreeStory { get; set; } = new();
     [JsonIgnore] public int Days => CompanionDates.Count;
     [JsonIgnore] public string SceneId => Scenes.Current(this);
     [JsonIgnore] public List<Placement> Layout => Scenes.Layout(this);

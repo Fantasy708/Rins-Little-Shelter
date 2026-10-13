@@ -3,31 +3,33 @@
   "Scenes": [
     {
       "Id": "cloud",
-      "Day": 0,
-      "Name": "云台"
+      "Name": "云台",
+      "Day": 0
     },
     {
       "Id": "indoor",
-      "Day": 2,
-      "Name": "屋内"
+      "Name": "屋内",
+      "Day": 2
     },
     {
       "Id": "outdoor",
-      "Day": 7,
-      "Name": "屋外院子"
+      "Name": "屋外院子",
+      "Day": 7
     },
     {
       "Id": "meadow",
-      "Day": 10,
-      "Name": "室外草坡"
+      "Name": "室外草坡",
+      "Day": 10
     },
     {
       "Id": "swingTree",
-      "Day": 20,
-      "Name": "树下秋千"
+      "Name": "树下秋千",
+      "Day": 20
     }
   ],
   "Swing": {
+    "CycleSeconds": 4.6,
+    "LoopKeys": 34,
     "BoardingFrames": 20,
     "Hands": [
       [
@@ -151,7 +153,6 @@
         166
       ]
     ],
-    "CycleSeconds": 4.6,
     "HipAnchors": [
       [
         188,
@@ -234,15 +235,14 @@
         155
       ]
     ],
-    "LoopKeys": 34,
     "LoopFrames": 18
   },
   "Memory": {
+    "Silent": true,
     "FadeSeconds": 1.5,
     "UserTriggered": true,
     "TemporaryLayout": true,
-    "StorySeconds": 25,
-    "Silent": true
+    "StorySeconds": 25
   },
   "Source": "src/Models.cs",
   "ClipSource": "src/MotionClips.cs",

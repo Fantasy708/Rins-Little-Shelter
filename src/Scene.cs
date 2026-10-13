@@ -112,6 +112,11 @@ public sealed class ResourceManifest
     public double[][] LoopRegions { get; set; } = Array.Empty<double[]>();
     public double[][] LoopHips { get; set; } = Array.Empty<double[]>();
     public double[][] LoopHands { get; set; } = Array.Empty<double[]>();
+    public string TabletAtlas { get; set; } = "rin/tablet-life.png";
+    public double[][] TabletRegions { get; set; } = Array.Empty<double[]>();
+    public double[][] TabletFeet { get; set; } = Array.Empty<double[]>();
+    public double[] TabletHeights { get; set; } = Array.Empty<double>();
+    public double[][] TabletHands { get; set; } = Array.Empty<double[]>();
 }
 
 public sealed partial class Scene : FrameworkElement
@@ -142,12 +147,9 @@ public sealed partial class Scene : FrameworkElement
     public double ShelterUntil { get; set; }
     public string Bubble { get; set; } = "";
     public double BubbleUntil { get; set; }
-    public string[] Choices { get; set; } = Array.Empty<string>();
-    public double ChoiceUntil { get; set; }
     public string? FeedbackObject { get; set; }
     public double FeedbackUntil { get; set; }
     private Rect bubbleRect;
-    private Rect[] choiceRects = Array.Empty<Rect>();
     private readonly Dictionary<uint, SolidColorBrush> brushes = new();
     public Scene(SaveData save, Behavior behavior, AudioService audio)
     {
@@ -165,6 +167,7 @@ public sealed partial class Scene : FrameworkElement
         turnFrames=new RegisteredPoseFrames(turning,manifest.TurnAnchors,manifest.TurnStandingHeights);
         world = new Atlas(Path.Combine(root, manifest.World), manifest.WorldRegions);
         LoadLifeAssets(root);
+        LoadTabletAssets(root);
         RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.HighQuality);
     }
     private SolidColorBrush Brush(byte a, byte r, byte g, byte b)
@@ -178,9 +181,9 @@ public sealed partial class Scene : FrameworkElement
     public void Born(string id) => births[id] = Time;
     public string? Hit(Point point)
     {
-        var special=LifeHit(point); if (special != null && special != "swingSeat") return special;
-        if (Time < ChoiceUntil) for (int i = 0; i < choiceRects.Length; i++) if (choiceRects[i].Contains(point)) return "choice:" + i;
-        if (Time < BubbleUntil && bubbleRect.Contains(point)) return "bubble";
+        var tablet=TabletHit(point); if (tablet != null) return tablet;
+        var special=behavior.Tablet.Active ? null : LifeHit(point); if (special != null && special != "swingSeat") return special;
+        if (!behavior.Tablet.Active && Time < BubbleUntil && bubbleRect.Contains(point)) return "bubble";
         for (int i=actorHits.Count-1; i>=0; i--)
         {
             var actor=actorHits[i];
@@ -257,10 +260,11 @@ public sealed partial class Scene : FrameworkElement
         DrawWeather(dc);
         DrawLifeWorld(dc);
         DrawPresentRin(dc);
+        DrawHeldTablet(dc);
         DrawCreation(dc);
         DrawMemoryControls(dc);
-        if (Time < ChoiceUntil) DrawChoices(dc);
-        else if (Time < BubbleUntil) DrawBubble(dc, Bubble);
+        DrawTablet(dc,theme);
+        if (!behavior.Tablet.Active && Time < BubbleUntil) DrawBubble(dc, Bubble);
         if (Editing) Text(dc, "整理世界 · 拖动物件 · 右键收起", 124, 316, 11, Ink);
     }
     private void DrawRin(DrawingContext dc)
@@ -268,14 +272,16 @@ public sealed partial class Scene : FrameworkElement
         var action=behavior.Current;
         bool move=behavior.IsLocomotion;
         var clip=MotionClips.Find(action.Id);
-        bool raw=clip != null;
+        bool tabletPose=behavior.Tablet.DedicatedPose && behavior.Tablet.Matches(save);
+        bool raw=clip != null || tabletPose;
         bool left=raw ? behavior.SequenceMirror : behavior.FacingLeft;
+        if (tabletPose) left=false;
         // The sky-watching pose was drawn looking left in its source frame.
         // Orient this pose toward the actual window instead of the walk facing.
         if (action.Id == "windowWatch" && save.SceneId == "indoor" && save.Layout.FirstOrDefault(p=>p.Id == "window" && !p.Hidden) is { } window) left=window.X>behavior.X;
         double breath=move || raw ? 0 : Math.Sin(Time*1.5)*.45;
         double seatOffset=action.Id == "swing" ? 45 : 0;
-        string key=(raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
+        string key=(tabletPose ? "tablet:"+behavior.Tablet.Generation : raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
         // Capture the last displayed raster before a reusable pose/transition
         // buffer is updated, including interrupted and nested crossfades.
         if (key != lastDrawKey)
@@ -287,7 +293,12 @@ public sealed partial class Scene : FrameworkElement
         }
         Atlas.Sprite sprite;
         Rect rect;
-        if (clip != null)
+        if (tabletPose)
+        {
+            int frame=behavior.Tablet.PoseFrame; sprite=tabletFrames.Sample(new ClipSample(frame,frame,0,0));
+            rect=new Rect(behavior.X+tabletFrames.Bounds.X,behavior.Y+tabletFrames.Bounds.Y,tabletFrames.Bounds.Width,tabletFrames.Bounds.Height);
+        }
+        else if (clip != null)
         {
             var sample=clip.Sample(behavior.Time);
             var mixer=action.Id == "hop" ? hopFrames : turnFrames;
@@ -447,18 +458,6 @@ public sealed partial class Scene : FrameworkElement
         bubbleRect = new Rect(Math.Clamp(behavior.X - width / 2, 5, 475 - width), Math.Max(6, behavior.Y - 192), width, 35);
         dc.DrawRoundedRectangle(White, new Pen(Brush(155, 196, 218, 222), .8), bubbleRect, 13, 13);
         Text(dc, text, bubbleRect.X + 14, bubbleRect.Y + 9, 12, Ink);
-    }
-    private void DrawChoices(DrawingContext dc)
-    {
-        DrawBubble(dc, "今天想创造什么？");
-        choiceRects = new Rect[Choices.Length];
-        double width = 78, start = Math.Clamp(behavior.X - Choices.Length * (width + 6) / 2, 8, 472 - Choices.Length * (width + 6));
-        for (int i = 0; i < Choices.Length; i++)
-        {
-            var rect = choiceRects[i] = new Rect(start + i * (width + 6), bubbleRect.Bottom + 5, width, 31);
-            dc.DrawRoundedRectangle(White, new Pen(Brush(180, 173, 210, 216), 1), rect, 10, 10);
-            Text(dc, Choices[i].StartsWith("theme:") ? Choices[i][6..] : ObjectDef.Get(Choices[i]).Name, rect.X + 14, rect.Y + 7, 12, Ink);
-        }
     }
     private void Text(DrawingContext dc, string text, double x, double y, double size, Brush brush) => dc.DrawText(new FormattedText(text, CultureInfo.GetCultureInfo("zh-CN"), FlowDirection.LeftToRight, new Typeface("Microsoft YaHei UI"), size, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip), new Point(x, y));
 }

@@ -26,6 +26,10 @@ docs/screenshots/*
 !docs/screenshots/swing-runtime.png
 !docs/screenshots/bedroom-runtime.png
 !docs/screenshots/bedroom-night.png
+!docs/screenshots/tablet-create.png
+!docs/screenshots/tablet-messages.png
+!docs/screenshots/tablet-letter.png
+!docs/screenshots/tablet-runtime.png
 assets/reference/*
 !assets/reference/README.md
 *.user

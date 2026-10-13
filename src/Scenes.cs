@@ -108,6 +108,8 @@ public sealed class LifeSequence
         "dismount" => Math.Clamp(16+(int)(Elapsed/1.1*4),16,19), _ => 2 };
     private double originalX,originalY,settleAngle,swingClock;
     private string scene="outdoor";
+    private bool memoryFree;
+    public event Action? MemoryCompleted;
     public LifeSequence(Behavior actor) => this.actor=actor;
     public void BeginSwing(SaveData s) => Begin(s,false);
     public bool BeginMemory(SaveData s) {
@@ -118,7 +120,7 @@ public sealed class LifeSequence
     }
     private void Begin(SaveData s,bool memory) {
         if (actor.Dragging || (!memory && s.SceneId != "swingTree")) return;
-        Cancel(); actor.RiseFromBed(s); scene=s.SceneId; originalX=actor.X; originalY=actor.Y;
+        actor.Tablet.Cancel(s); Cancel(); actor.RiseFromBed(s); scene=s.SceneId; memoryFree=s.Settings.FreeMode; originalX=actor.X; originalY=actor.Y;
         MemoryRequested=memory; IsMemory=false; RecallTime=0; swingClock=0; Angle=0;
         var seat=s.Layout.FirstOrDefault(p=>p.Id == "swingSeat"); SeatX=seat?.X ?? 300; SeatY=seat?.Y ?? 260;
         Phase="approach"; Elapsed=0; actor.Visit("ropeHold",scene == "indoor" ? 260 : SeatX,HomeY(s));
@@ -140,7 +142,7 @@ public sealed class LifeSequence
     }
     // false only while ordinary locomotion carries Rin to the correct anchor.
     public bool Tick(double dt,SaveData s) {
-        if (s.SceneId != scene) { Cancel(); return true; }
+        if (s.SceneId != scene || s.Settings.FreeMode != memoryFree) { Cancel(); return true; }
         if (Phase == "approach") { if (actor.Current.Id != "ropeHold") return false; Enter("hold"); return true; }
         Elapsed+=dt; if (IsMemory) RecallTime+=dt;
         switch (Phase) {
@@ -152,7 +154,7 @@ public sealed class LifeSequence
             case "fadeOut": if (Elapsed >= 1.5) Enter("memory"); break;
             case "memory": if (Elapsed >= 17) Enter("empty"); break;
             case "empty": Angle=2*Math.Sin(Elapsed*2)*Math.Exp(-Elapsed*.7); if (Elapsed >= 2) { Angle=0; Enter("fadeIn"); } break;
-            case "fadeIn": if (Elapsed >= 1.5) Enter("watch"); break;
+            case "fadeIn": if (Elapsed >= 1.5) { Enter("watch"); if (Story.CompleteMemory(s,scene,memoryFree)) MemoryCompleted?.Invoke(); } break;
             case "watch": if (Elapsed >= 3) Cancel(); break;
         }
         return true;

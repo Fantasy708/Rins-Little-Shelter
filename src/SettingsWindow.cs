@@ -26,7 +26,7 @@ public sealed class SettingsWindow : Window
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
         status.TextWrapping = TextWrapping.Wrap; status.FontSize = 11; status.Foreground = muted; footer.Children.Add(status);
-        footer.Children.Add(new TextBlock { Text = "Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
+        footer.Children.Add(new TextBlock { Text = "v0.3.0-preview.1 · Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var tabs = new TabControl { Background = Brushes.Transparent, BorderBrush = new SolidColorBrush(Color.FromRgb(218, 230, 231)) };
         tabs.Items.Add(new TabItem { Header = "陪伴设置", Content = SettingsPanel() });
@@ -63,6 +63,7 @@ public sealed class SettingsWindow : Window
         });
         var buttons = new WrapPanel { Margin = new Thickness(0, 18, 0, 4) };
         buttons.Children.Add(Button("请 Rin 创造", () => pet.OfferChoice(false)));
+        buttons.Children.Add(Button("查看平板消息",pet.OpenMessages));
         buttons.Children.Add(Button("看看理想世界", pet.ShowIdeal));
         buttons.Children.Add(Button("恢复位置", pet.Recover));
         buttons.Children.Add(Button("暂停 / 继续", pet.TogglePause)); stack.Children.Add(buttons);

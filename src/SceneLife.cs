@@ -38,7 +38,7 @@ public sealed partial class Scene
         lastDrawKey=null; lastDrawSprite=null; oldDrawSprite=null;
         births.Clear(); actorHits.Clear(); lifeHits.Clear(); hits.Clear();
         blurredPoses.Clear();
-        doorRect=memoryControl=seatHit=Rect.Empty; IdealUntil=0; ChoiceUntil=0; BubbleUntil=0;
+        doorRect=memoryControl=seatHit=Rect.Empty; IdealUntil=0; BubbleUntil=0; ClearTabletHits();
         InvalidateVisual();
     }
     private string? LifeHit(Point point)
@@ -213,6 +213,7 @@ public sealed partial class Scene
     private void DrawMemoryControls(DrawingContext dc)
     {
         memoryControl=Rect.Empty;
+        if (behavior.Tablet.Active) return;
         if (save.SceneId is not "indoor" and not "swingTree") return;
         if (!Scenes.MemoriesUnlocked(save)) return;
         memoryControl=new Rect(184,309,112,25);

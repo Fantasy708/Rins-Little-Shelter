@@ -40,7 +40,7 @@ public sealed class Atlas
         }
     }
     public Sprite[] Sprites { get; }
-    public Atlas(string path, double[][] regions)
+    public Atlas(string path, double[][] regions, bool isolateConnectedPose=false)
     {
         var source = new BitmapImage(); source.BeginInit(); source.UriSource = new Uri(Path.GetFullPath(path)); source.CacheOption = BitmapCacheOption.OnLoad; source.EndInit(); source.Freeze();
         var converted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0); converted.Freeze();
@@ -51,6 +51,29 @@ public sealed class Atlas
             int w = Math.Min((int)(bounds[2] * source.PixelWidth), source.PixelWidth - x), h = Math.Min((int)(bounds[3] * source.PixelHeight), source.PixelHeight - y);
             var cell = new CroppedBitmap(converted, new Int32Rect(x, y, w, h));
             var pixels = new byte[w * h * 4]; cell.CopyPixels(pixels, w * 4, 0);
+            BitmapSource cropSource=cell;
+            if (isolateConnectedPose) {
+                // Independently authored cells can have overlapping rectangular
+                // bounds. Keep the complete connected body, not a neighbour's
+                // sandal. Preserve its antialiased fringe without editing PNGs.
+                var visited=new bool[w*h]; var queue=new int[w*h]; int[] largest=Array.Empty<int>();
+                for(int start=0;start<w*h;start++) {
+                    if (visited[start] || pixels[start*4+3]<90) continue;
+                    int read=0,count=1; queue[0]=start; visited[start]=true;
+                    while(read<count) {
+                        int p=queue[read++],px=p%w,py=p/w;
+                        foreach(int q in new[]{px>0?p-1:-1,px+1<w?p+1:-1,py>0?p-w:-1,py+1<h?p+w:-1})
+                            if(q>=0 && !visited[q] && pixels[q*4+3]>=90) { visited[q]=true; queue[count++]=q; }
+                    }
+                    if(count>largest.Length) largest=queue.Take(count).ToArray();
+                }
+                var keep=new bool[w*h];
+                foreach(int p in largest) for(int dy=-2;dy<=2;dy++) for(int dx=-2;dx<=2;dx++) {
+                    int px=p%w+dx,py=p/w+dy; if(px>=0&&px<w&&py>=0&&py<h) keep[py*w+px]=true;
+                }
+                for(int p=0;p<keep.Length;p++) if(!keep[p]) Array.Clear(pixels,p*4,4);
+                cropSource=BitmapSource.Create(w,h,96,96,PixelFormats.Bgra32,null,pixels,w*4); cropSource.Freeze();
+            }
             int l = w, t = h, r = 0, b = 0;
             for (int py = 0; py < h; py++) for (int px = 0; px < w; px++)
             {
@@ -58,7 +81,7 @@ public sealed class Atlas
                 l = Math.Min(l, px); r = Math.Max(r, px); t = Math.Min(t, py); b = Math.Max(b, py);
             }
             if (r <= l || b <= t) throw new InvalidDataException("素材单元为空：" + path);
-            var trim = new CroppedBitmap(cell, new Int32Rect(l, t, r - l + 1, b - t + 1)); trim.Freeze();
+            var trim = new CroppedBitmap(cropSource, new Int32Rect(l, t, r - l + 1, b - t + 1)); trim.Freeze();
             sprites.Add(new Sprite(trim,l,t,w,h,y));
         }
         Sprites = sprites.ToArray();
@@ -117,6 +140,13 @@ public sealed class ResourceManifest
     public double[][] TabletFeet { get; set; } = Array.Empty<double[]>();
     public double[] TabletHeights { get; set; } = Array.Empty<double>();
     public double[][] TabletHands { get; set; } = Array.Empty<double[]>();
+    public string NurtureGrassAtlas { get; set; }="world/nurture-grass.png";
+    public double[][] NurtureGrassRegions { get; set; }=Array.Empty<double[]>();
+    public string NurtureAtlas { get; set; }="rin/nurture-life.png";
+    public double[][] NurtureRegions { get; set; }=Array.Empty<double[]>();
+    public double[][] NurtureAnchors { get; set; }=Array.Empty<double[]>();
+    public double[] NurtureStandingHeights { get; set; }=Array.Empty<double>();
+    public double[][][] NurtureContacts { get; set; }=Array.Empty<double[][]>();
 }
 
 public sealed partial class Scene : FrameworkElement
@@ -168,6 +198,7 @@ public sealed partial class Scene : FrameworkElement
         world = new Atlas(Path.Combine(root, manifest.World), manifest.WorldRegions);
         LoadLifeAssets(root);
         LoadTabletAssets(root);
+        LoadNurtureAssets(root);
         RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.HighQuality);
     }
     private SolidColorBrush Brush(byte a, byte r, byte g, byte b)
@@ -260,6 +291,7 @@ public sealed partial class Scene : FrameworkElement
         DrawWeather(dc);
         DrawLifeWorld(dc);
         DrawPresentRin(dc);
+        DrawNurtureGrass(dc);
         DrawHeldTablet(dc);
         DrawCreation(dc);
         DrawMemoryControls(dc);
@@ -273,15 +305,17 @@ public sealed partial class Scene : FrameworkElement
         bool move=behavior.IsLocomotion;
         var clip=MotionClips.Find(action.Id);
         bool tabletPose=behavior.Tablet.DedicatedPose && behavior.Tablet.Matches(save);
-        bool raw=clip != null || tabletPose;
+        bool nurturePose=behavior.Nurture.DedicatedPose;
+        bool raw=clip != null || tabletPose || nurturePose;
         bool left=raw ? behavior.SequenceMirror : behavior.FacingLeft;
         if (tabletPose) left=false;
+        if (nurturePose) left=false;
         // The sky-watching pose was drawn looking left in its source frame.
         // Orient this pose toward the actual window instead of the walk facing.
         if (action.Id == "windowWatch" && save.SceneId == "indoor" && save.Layout.FirstOrDefault(p=>p.Id == "window" && !p.Hidden) is { } window) left=window.X>behavior.X;
         double breath=move || raw ? 0 : Math.Sin(Time*1.5)*.45;
         double seatOffset=action.Id == "swing" ? 45 : 0;
-        string key=(tabletPose ? "tablet:"+behavior.Tablet.Generation : raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
+        string key=(nurturePose ? "nurture:"+behavior.Nurture.Generation : tabletPose ? "tablet:"+behavior.Tablet.Generation : raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
         // Capture the last displayed raster before a reusable pose/transition
         // buffer is updated, including interrupted and nested crossfades.
         if (key != lastDrawKey)
@@ -293,7 +327,13 @@ public sealed partial class Scene : FrameworkElement
         }
         Atlas.Sprite sprite;
         Rect rect;
-        if (tabletPose)
+        if (nurturePose)
+        {
+            int frame=behavior.Nurture.PoseFrame; sprite=nurtureFrames.Sample(new ClipSample(frame,frame,0,0));
+            double breathHeight=behavior.Nurture.Phase == "rest" ? .0015*Math.Sin(behavior.Nurture.Elapsed*1.5) : 0;
+            rect=new Rect(behavior.X+nurtureFrames.Bounds.X,behavior.Y+nurtureFrames.Bounds.Y*(1+breathHeight),nurtureFrames.Bounds.Width,nurtureFrames.Bounds.Height*(1+breathHeight));
+        }
+        else if (tabletPose)
         {
             int frame=behavior.Tablet.PoseFrame; sprite=tabletFrames.Sample(new ClipSample(frame,frame,0,0));
             rect=new Rect(behavior.X+tabletFrames.Bounds.X,behavior.Y+tabletFrames.Bounds.Y,tabletFrames.Bounds.Width,tabletFrames.Bounds.Height);

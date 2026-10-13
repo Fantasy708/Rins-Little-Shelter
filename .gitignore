@@ -30,6 +30,10 @@ docs/screenshots/*
 !docs/screenshots/tablet-messages.png
 !docs/screenshots/tablet-letter.png
 !docs/screenshots/tablet-runtime.png
+!docs/screenshots/nurture-grass.png
+!docs/screenshots/nurture-rest.png
+!docs/screenshots/nurture-animation.gif
+!docs/screenshots/nurture-runtime.png
 assets/reference/*
 !assets/reference/README.md
 *.user

@@ -64,6 +64,7 @@ public sealed class Behavior
 {
     public LifeSequence Life { get; }
     public TabletSession Tablet { get; }
+    public NurtureSequence Nurture { get; }
     public ActionDef Current { get; private set; } = Actions.Get("stand");
     public double Time { get; private set; }
     public double X { get; set; } = 240;
@@ -86,11 +87,13 @@ public sealed class Behavior
     private bool created;
     private string? arrivalAction, afterSettle;
     public event Action<string>? ObjectCreated;
-    public Behavior(int? seed = null) { random = seed.HasValue ? new(seed.Value) : new(); Life = new LifeSequence(this); Tablet = new TabletSession(this); }
+    public Behavior(int? seed = null) { random = seed.HasValue ? new(seed.Value) : new(); Life = new LifeSequence(this); Tablet = new TabletSession(this); Nurture=new NurtureSequence(this); }
     internal void EmitObjectCreated(string id) => ObjectCreated?.Invoke(id);
     public void Start(string id, double? x = null, double? y = null, string? target = null)
     {
         if (Dragging) return;
+        bool nurtureTransition=(Nurture.Phase is "approach" or "returning" && id is "stand" or "nurtureHug") || (Nurture.Phase is "waitingTablet" or "stowing" && id is "stand" or "invite");
+        if (Nurture.Active && !Nurture.InternalScheduling && !nurtureTransition) Nurture.Cancel();
         Current = Actions.Get(id); Time = 0; startX = X; startY = Y; ActionRevision++;
         SequenceMirror = FacingLeft;
         goalX = x ?? X; goalY = y ?? Y;
@@ -116,6 +119,7 @@ public sealed class Behavior
     public void RiseFromBed(SaveData save) { if (save.SceneId == "indoor" && Current.Id == "roomRest" && !Dragging) { Y=Scenes.Home(save).Y; Start("stand"); } }
     public void Click(SaveData? save=null)
     {
+        if (Nurture.Active) { Nurture.Cancel(save); if (save != null) Tablet.Close(save); return; }
         if (Tablet.Active && save != null) { Tablet.Close(save); return; }
         if (Life.Active) { Life.RequestStop(); return; }
         if (Current.Kind == "create" || Dragging) return;
@@ -140,9 +144,11 @@ public sealed class Behavior
     }
     public void Tick(double dt, SaveData save, bool night)
     {
-        if (Dragging) { if (Tablet.Active) Tablet.Cancel(save); return; }
+        if (Dragging) { if (Tablet.Active) Tablet.Cancel(save); Nurture.Cancel(save); return; }
         double step = Math.Clamp(dt,0,.15);
+        if (Nurture.Active && Tablet.Active) Nurture.EnsureValid(save);
         if (Tablet.Active && Tablet.Tick(step,save)) return;
+        if (Nurture.Active && Nurture.Tick(dt,save)) return;
         if (save.SceneId == "indoor" && !Life.Active && !Scenes.ActionAvailable(save,Current)) { Y=Scenes.Home(save).Y; Start("stand"); return; }
         if (save.SceneId == "indoor" && !Life.Active && ((afterSettle != null && !Scenes.ActionAvailable(save,Actions.Get(afterSettle))) || (arrivalAction != null && !Scenes.ActionAvailable(save,Actions.Get(arrivalAction))))) { Y=Scenes.Home(save).Y; Start("stand"); return; }
         Time += step;
@@ -167,6 +173,7 @@ public sealed class Behavior
         if (Current.Kind == "create" && Time >= Current.Duration * .58 && !created && CreationTarget != null)
         { created = true; ObjectCreated?.Invoke(CreationTarget); }
         if (Time < ActiveDuration) return;
+        if (Nurture.Active && Nurture.CompleteTurn(save)) return;
         if (afterSettle != null) { string id=afterSettle; Start(id); return; }
         if (arrivalAction != null)
         {

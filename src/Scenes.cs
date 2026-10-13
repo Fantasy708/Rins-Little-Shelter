@@ -21,6 +21,7 @@ public static class Scenes
     private static IEnumerable<ObjectDef> Pick(params string[] ids) => ids.Select(ObjectDef.Get);
     public static bool Foundation(string id) => id is "platform" or "meadowBase" or "roomBase" or "bigTree" or "swingSeat";
     public static bool ActionAvailable(SaveData s,ActionDef action) {
+        if (action.Id == "nurtureHug") return NurtureGround.TryFind(s,Home(s).X,out _);
         if (s.SceneId == "indoor" && action.Id is not ("stand" or "gaze" or "dress" or "tablet" or "walk" or "turn" or "visit" or "createTap" or "createPlace" or "createMusic" or "smile" or "retreat" or "invite" or "windowWatch" or "deskTablet" or "roomRest")) return false;
         return action.ObjectId == null || World.Available(s).Any(d=>d.Id == action.ObjectId) && s.Layout.Any(p=>p.Id == action.ObjectId && !p.Hidden);
     }
@@ -120,7 +121,7 @@ public sealed class LifeSequence
     }
     private void Begin(SaveData s,bool memory) {
         if (actor.Dragging || (!memory && s.SceneId != "swingTree")) return;
-        actor.Tablet.Cancel(s); Cancel(); actor.RiseFromBed(s); scene=s.SceneId; memoryFree=s.Settings.FreeMode; originalX=actor.X; originalY=actor.Y;
+        actor.Nurture.Cancel(s); actor.Tablet.Cancel(s); Cancel(); actor.RiseFromBed(s); scene=s.SceneId; memoryFree=s.Settings.FreeMode; originalX=actor.X; originalY=actor.Y;
         MemoryRequested=memory; IsMemory=false; RecallTime=0; swingClock=0; Angle=0;
         var seat=s.Layout.FirstOrDefault(p=>p.Id == "swingSeat"); SeatX=seat?.X ?? 300; SeatY=seat?.Y ?? 260;
         Phase="approach"; Elapsed=0; actor.Visit("ropeHold",scene == "indoor" ? 260 : SeatX,HomeY(s));

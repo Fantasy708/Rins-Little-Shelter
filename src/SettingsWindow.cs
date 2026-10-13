@@ -26,7 +26,7 @@ public sealed class SettingsWindow : Window
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
         status.TextWrapping = TextWrapping.Wrap; status.FontSize = 11; status.Foreground = muted; footer.Children.Add(status);
-        footer.Children.Add(new TextBlock { Text = "v0.3.0-preview.1 · Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
+        footer.Children.Add(new TextBlock { Text = "v0.3.0-preview.2 · Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var tabs = new TabControl { Background = Brushes.Transparent, BorderBrush = new SolidColorBrush(Color.FromRgb(218, 230, 231)) };
         tabs.Items.Add(new TabItem { Header = "陪伴设置", Content = SettingsPanel() });
@@ -99,7 +99,7 @@ public sealed class SettingsWindow : Window
         var button = new Button { Content = text, Padding = new Thickness(12, 6, 12, 6), Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush(Color.FromRgb(233, 241, 241)), BorderBrush = new SolidColorBrush(Color.FromRgb(200, 216, 219)), Foreground = ink };
         button.Click += (_, _) => action(); return button;
     }
-    private int lastDays = -1; private bool? lastFree; private string lastLayout = "";
+    private int lastDays = -1; private bool? lastFree,lastHug; private string lastLayout = "";
     private void UpdateStatus()
     {
         var save = pet.Save; modeText.Text = save.Settings.FreeMode ? "自由创造 · 全部开放" : "成长模式 · 已陪伴 " + save.Days + " 天";
@@ -108,6 +108,7 @@ public sealed class SettingsWindow : Window
         if (lastDays != save.Days || lastFree != save.Settings.FreeMode) { lastDays = save.Days; lastFree = save.Settings.FreeMode; UpdateCollection(); UpdateMotions(); }
         string layout = save.SceneId + string.Join(";", save.Layout.Select(p => p.Id + ":" + p.Hidden));
         if (lastLayout != layout) { lastLayout = layout; UpdateCollection(); UpdateMotions(); }
+        if (lastHug != pet.CanHugGrass) { lastHug=pet.CanHugGrass; UpdateMotions(); }
     }
     private void UpdateCollection()
     {
@@ -144,13 +145,13 @@ public sealed class SettingsWindow : Window
         motions.Children.Add(new TextBlock { Text = "选择一个动作，看看她现在想做什么。场景动作随景物解锁。", Foreground = muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
         foreach (var group in Actions.All.GroupBy(a => a.Kind))
         {
-            string label = group.Key switch { "idle" => "静静陪伴", "context" => "在小世界里", "move" => "轻轻走动", "create" => "创造的时刻", "special"=>"秋千日常", _ => "回应你" };
+            string label = group.Key switch { "idle" => "静静陪伴", "context" => "在小世界里", "move" => "轻轻走动", "create" => "创造的时刻", "special"=>"秋千日常", "easteregg"=>"安静的彩蛋", _ => "回应你" };
             motions.Children.Add(new TextBlock { Text = label, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 10) });
             var wrap = new WrapPanel();
             foreach (var a in group)
             {
                 var b = Button(a.Name, () => pet.PreviewAction(a.Id)); b.Margin = new Thickness(0, 0, 8, 8);
-                b.IsEnabled = Scenes.ActionAvailable(pet.Save,a); wrap.Children.Add(b);
+                b.IsEnabled = Scenes.ActionAvailable(pet.Save,a) && (a.Id != "nurtureHug" || pet.CanHugGrass); if (a.Id == "nurtureHug") b.ToolTip="仅在可见且有足够空位的草地上开放；不挪动已保存景物"; wrap.Children.Add(b);
             }
             motions.Children.Add(wrap);
         }

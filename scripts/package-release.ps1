@@ -1,6 +1,7 @@
 param(
-    [string]$Version = 'v0.3.0-preview.1',
-    [string]$ProgramDirectory = 'dist/RinsLittleShelter'
+    [string]$Version = 'v0.3.0-preview.2',
+    [string]$ProgramDirectory = 'dist/RinsLittleShelter',
+    [string]$ReleaseDirectory = ''
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -9,14 +10,15 @@ if ($Version -notmatch '^[A-Za-z0-9][A-Za-z0-9.\-]*$') { throw '版本号只能�
 $programRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $ProgramDirectory))
 $stage = Join-Path $projectRoot ('output/release-package-' + [Guid]::NewGuid().ToString('N'))
 $portableRoot = Join-Path $stage 'RinsLittleShelter'
-$releaseRoot = Join-Path $projectRoot ('dist/github/' + $Version)
+$releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $(if ($ReleaseDirectory.Length -gt 0) { $ReleaseDirectory } else { 'dist/github/' + $Version })))
+if (-not $releaseRoot.StartsWith($projectRoot+[System.IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw '版本包输出必须在项目内。' }
 New-Item -ItemType Directory -Path $portableRoot,$releaseRoot -Force | Out-Null
 
 # 复用已检查的EXE和原始PNG，不重新编译或改变程序哈希。
 $runtimeFiles = @('RinsLittleShelter.exe','assets/manifest.json','assets/catalog.json',
     'assets/rin/poses.png','assets/rin/walk.png','assets/rin/trot-v2.png',
     'assets/rin/hop.png','assets/rin/turn.png','assets/world/objects.png',
-    'assets/rin/swing-life.png','assets/rin/swing-loop.png','assets/rin/family-memory.png','assets/rin/tablet-life.png',
+    'assets/rin/swing-life.png','assets/rin/swing-loop.png','assets/rin/family-memory.png','assets/rin/tablet-life.png','assets/rin/nurture-life.png','assets/world/nurture-grass.png',
     'assets/world/scenes.png','assets/world/swing-tree.png','assets/world/bedroom.png')
 foreach ($relative in $runtimeFiles) {
     $target = Join-Path $portableRoot $relative
@@ -34,7 +36,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSES') -Destination $portabl
 $publicDocs = Join-Path $portableRoot 'docs'
 New-Item -ItemType Directory -Path $publicDocs -Force | Out-Null
 foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验证记录.md','docs/发布状态.md','docs/多场景素材制作.md',
-    'docs/平板创造交互设计.md','docs/平板消息界面设计.md')) {
+    'docs/平板创造交互设计.md','docs/平板消息界面设计.md','docs/开发日志.md','docs/Nurture素材制作.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $publicDocs
 }
 if (Test-Path -LiteralPath (Join-Path $projectRoot 'docs/平板参考核对.md')) {

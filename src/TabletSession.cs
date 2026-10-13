@@ -44,6 +44,7 @@ public sealed class TabletSession
         if (preselect != null && !Candidates.Contains(preselect)) return false;
         if (invited && Candidates.Length == 0) return false;
         if (invited) Candidates=Candidates.Take(2).ToArray();
+        actor.Nurture.Cancel(s);
         scene=s.SceneId; free=s.Settings.FreeMode; automatic=invited; confirmed=null; emitted=false; closingFromExpansion=1; stowingFromVisibility=1;
         Generation++; Page=page == "messages" ? "messages" : "create"; Selected=preselect;
         CandidatePage=preselect == null ? 0 : Array.IndexOf(Candidates,preselect)/4;
@@ -61,6 +62,13 @@ public sealed class TabletSession
         if (phase == "closing") closingFromExpansion=Expansion;
         if (phase == "stowing") stowingFromVisibility=DeviceVisibility;
         Phase=phase; Elapsed=0; if (phase != "approach") actor.Start("invite");
+    }
+    public void StowHeld(SaveData s)
+    {
+        if (Active) return;
+        scene=s.SceneId; free=s.Settings.FreeMode; Generation++;
+        confirmed=null; emitted=false; automatic=false; Reading=false; Candidates=Array.Empty<string>();
+        stowingFromVisibility=1; Phase="stowing"; Elapsed=0; actor.Start("invite");
     }
     private void Respond() { automatic=false; UnansweredSeconds=0; }
     public bool Select(SaveData s,string id)

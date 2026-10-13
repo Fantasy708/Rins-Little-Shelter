@@ -2,7 +2,7 @@
 
 一个安静的 Windows 桌面宠物。半Q版 Rin 会在桌面角落生活、回应鼠标，并用平板一点点创造小世界。
 
-**`v0.3.0-preview.1` 已加入平板“创造 / 消息”界面，沿用五场景与父女记忆。** 本地构建、绘图与短运行检查完成；本次发布到现有私有仓库，旧版本保留。实际检查与仍待实测内容见 [发布状态](docs/发布状态.md) 和 [验证记录](docs/验证记录.md)。
+**更新 `v0.3.0-preview.2`：室外草坡与院子草地重绘为铺满细草、小花的自然草甸，取消花环与黄色空心区，新增手动“Nurture·拥抱草地”彩蛋。** 保留平板创造/消息、五场景和父女记忆。本次按用户授权发布到现有公开GitHub仓库，旧版本保留；实际检查与待实测内容见 [发布状态](docs/发布状态.md) 和 [验证记录](docs/验证记录.md)。
 
 设计取舍、反馈修复和各轮更新过程见[开发日志](docs/开发日志.md)。
 
@@ -16,11 +16,11 @@
 
 ## 启动
 
-本地便携包为 `dist/RinsLittleShelter-win-x64.zip`；版本附件位于 `dist/github/v0.3.0-preview.1`，完整解压后打开 `RinsLittleShelter.exe`。程序已包含 .NET 运行环境，支持 Windows 10（19041及以上）和 Windows 11 x64，无须安装开发工具。保留旁边的 `assets` 文件夹。
+本地便携包为 `dist/RinsLittleShelter-win-x64.zip`；发行附件位于 `dist/github/v0.3.0-preview.2`，也可从[v0.3.0-preview.2 Release](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.2)下载，完整解压后打开 `RinsLittleShelter.exe`。程序已包含 .NET 运行环境，支持 Windows 10（19041及以上）和 Windows 11 x64，无须安装开发工具。保留旁边的 `assets` 文件夹。
 
-平板界面的发行入口为 [v0.3.0-preview.1](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.1)，下载其中的 `win-x64.zip` 并完整解压。[v0.2.0-preview.4](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.2.0-preview.4)及更早版本保留，它们不包含本次平板界面。
+GitHub上已有的[v0.3.0-preview.1](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.1)与更早发行保持原样；它们不包含本轮Nurture彩蛋。新版[v0.3.0-preview.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.2)提供便携包、完整源码素材包及SHA256。
 
-本工作区成品位于 `dist/RinsLittleShelter`，便携包为 `dist/RinsLittleShelter-win-x64.zip`。升级时先退出旧版，再运行新版；陪伴进度与布置保存在本机用户目录，默认继续读取原有存档。仓库保持私有，下载需要有仓库访问权的GitHub账号。
+本工作区成品位于 `dist/RinsLittleShelter`，便携包为 `dist/RinsLittleShelter-win-x64.zip`。升级时先退出旧版，再运行新版；陪伴进度与布置保存在本机用户目录，默认继续读取原有存档。仓库当前公开，用户已确认沿用当前可见性发布。
 
 请保持程序与旁边的 `assets` 文件夹在一起。便携压缩包解压后即可使用。
 
@@ -38,6 +38,7 @@
 | 右键 / 托盘 → 前往场景 | 切换已解锁的场景 |
 | 点击小屋的门 | 进入屋内 |
 | 点击秋千木座 | 走近、扶绳、坐下、轻荡、停稳、起身离开 |
+| 右键 / 动作页 → Nurture·拥抱草地 | 在足够空旷的可见草地上，走近、收起平板、俯卧休息，再撑起返回日常 |
 | 点击屋内高窗、圆几或床铺 | 看天气、使用平板或在床沿休息 |
 | 右键 / 托盘 → 请Rin创造 | 展开平板，选择、预览并确认景物 |
 | 右键 / 托盘 → 查看平板消息 | 打开同一块平板的消息页 |
@@ -95,6 +96,18 @@ Rin先拿起并展示手中的平板，屏幕连续展开到可操作尺寸。�
 
 ## 场景与父女记忆
 
+### Nurture·拥抱草地
+
+手动彩蛋致敬Porter Robinson《Nurture》标准封面的草地与俯卧姿态。Rin通过20个专用完整姿势屈膝、手撑地、放低身体、背向镜头、头朝右上脚朝左下、两臂展开俯卧，左向进入先真实转身，停留4.5秒后撑起并起身。保持长发与服装，不为露出正脸改变姿态。默认静音，不自动播放音乐或新增通知，也不加入随机日常。
+
+仅在已解锁、可见且有足够空位的室外草坡或院子草地开放。家具、小路挡住或草地隐藏时入口禁用，不挪动或重置布置；当前院子草地深度不足以容纳展开的双臂，本版院子入口禁用；请在室外草坡体验。云台、卧室、家具坐姿和秋千活动不执行。拖动、创造、记忆、整理和切场景/模式优先取消；暂停、隐藏和全屏按原规则冻结。两模式布置与成长保持，重启不恢复半段动作。
+
+![新草地与俯卧彩蛋](docs/screenshots/nurture-rest.png)
+
+![生产绘图完整动作预览](docs/screenshots/nurture-animation.gif)
+
+以上为生产WPF绘图导出，真实EXE窗口导出见 `docs/screenshots/nurture-runtime.png`。参考、完整提示词和锚点说明见[Nurture素材制作](docs/Nurture素材制作.md)。
+
 按“云台 → 屋内 → 屋外院子 → 室外草坡 → 树下秋千”顺序开放：初始云台，第2个累计陪伴日屋内，第7日院子，第10日室外草坡，第20日秋千，并同时开放屋内父女记忆。自由模式立即开放全部内容。解锁不强制切换，请从「前往场景」选择。
 
 日常屋内保留现在的Rin卧室陈设：浅帘高窗、黑铁床架与粉色花纹床品、圆几、淡绿色柜子和蓝衫小熊。桌面适配采用明亮、干净的动画背景画法，暖玫瑰墙面、浅灰地砖和柔和日光，不再使用裂墙和污旧纹理。记忆时临时呈现幼年房间，结束后恢复现在的卧室。窗玻璃显示随昼夜主题变化的天空，天气在窗外呈现。屋内休息限于可见床铺的床沿坐姿，不会在地板躺卧、抱膝、无座晃腿、接花瓣、小跑或轻跃；动作页中不适合当前场景的动作不可选。
@@ -151,7 +164,7 @@ pwsh -File scripts/build.ps1
 
 开发诊断参数与架构见 [开发说明](docs/开发说明.md)，素材提示词与来源见 [素材制作](docs/素材制作.md)，验收记录见 [验证记录](docs/验证记录.md)。
 
-本地版本附件由 `pwsh -File scripts/package-release.ps1 -Version v0.3.0-preview.1` 从已构建EXE生成，包含便携包、完整源码素材包和SHA256；不重新编译EXE，也不上传或发布到GitHub。个人存档、本机工具链、原始测试日志和官方参考图不纳入交付源码。
+本地版本附件由 `pwsh -File scripts/package-release.ps1 -Version v0.3.0-preview.2 -ReleaseDirectory dist/github/v0.3.0-preview.2` 从已构建EXE生成，包含便携包、完整源码素材包和SHA256；不重新编译EXE，也不上传或发布到GitHub。个人存档、本机工具链、原始测试日志和官方参考图不纳入交付源码。
 
 问题反馈请使用仓库Issues模板，提供版本、Windows环境、动作与复现步骤。
 

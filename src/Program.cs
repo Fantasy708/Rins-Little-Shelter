@@ -22,7 +22,7 @@ internal static class Program
             string? capture = Option(args, "--capture-dir");
             var pet = new PetWindow(storage, save, capture != null); app.MainWindow = pet;
             if (args.Contains("--qa-window")) { pet.Tag = "qa"; pet.ShowInTaskbar = true; }
-            if (capture != null) pet.EnableCapture(capture);
+            if (capture != null) pet.EnableCapture(capture,args.Contains("--capture-action-frames"));
             string? soak = Option(args, "--soak-log");
             if (soak != null) pet.EnableSoak(soak, double.TryParse(Option(args,"--soak-minutes"), out var minutes) ? Math.Max(1,minutes) : 60);
             if (args.Contains("--settings")) pet.Loaded += (_, _) => pet.OpenSettings();

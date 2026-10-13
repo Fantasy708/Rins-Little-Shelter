@@ -9,6 +9,8 @@
 
 父女记忆以[官方短片](https://www.youtube.com/watch?v=fzQ6gRAEoy0)约3:46的秋千及4:06的整理发饰为参考。父亲和幼年Rin均为本项目重新生成的插画，不附带原片画面或音轨。提示词与选帧记录见[多场景素材制作](docs/多场景素材制作.md)。
 
+Nurture草地与俯卧动作致敬[Porter Robinson官方商店的标准版正式封面](https://store.porterrobinson.com/products/nurture-2lp-standard-vinyl)，以自然草地和人物姿态为参考重新生成Rin插画。未附带摄影封面、歌曲或音轨；提示词和配准见[Nurture素材制作](docs/Nurture素材制作.md)。
+
 ## 软件组件
 
 采用.NET 10、WPF、NAudio 3.1.0及System.Numerics.Tensors 9.0.0。依赖版本记录在 `src/packages.lock.json`；第三方许可原文见 `LICENSES`，说明见 [第三方组件](THIRD-PARTY-NOTICES.md)。

@@ -104,7 +104,8 @@ public static class Actions
         new("swingLife", "树下轻荡秋千", 0, 34, "special", "swingSeat"),
         new("windowWatch", "窗边看天气", 2, 18, "context", "window"),
         new("deskTablet", "桌边使用平板", 4, 20, "context", "desk"),
-        new("roomRest", "床沿安静休息", 7, 22, "context", "chair")
+        new("roomRest", "床沿安静休息", 7, 22, "context", "chair"),
+        new("nurtureHug", "Nurture·拥抱草地", 0, 9, "easteregg")
     };
     public static ActionDef Get(string id) => All.First(a => a.Id == id);
 }

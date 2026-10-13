@@ -10,7 +10,7 @@ function Get-ShelterPublicFiles([string]$Root) {
     foreach ($relative in @(
         'README.md','design.md','AGENTS.md','global.json','.gitignore','.gitattributes',
         'CREDITS.md','THIRD-PARTY-NOTICES.md','assets/manifest.json','assets/catalog.json',
-        'assets/reference/README.md','docs/开发说明.md','docs/素材制作.md',
+        'assets/reference/README.md','docs/开发说明.md','docs/开发日志.md','docs/素材制作.md',
         'docs/验证记录.md','docs/发布状态.md','docs/多场景素材制作.md',
         'docs/平板创造交互设计.md','docs/平板消息界面设计.md',
         'docs/screenshots/bench-seat-on-white.png','docs/screenshots/hop-animation.gif',

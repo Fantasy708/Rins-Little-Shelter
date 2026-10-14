@@ -1,5 +1,5 @@
 param(
-    [string]$Version = 'v0.3.1',
+    [string]$Version = 'v0.3.1-preview.1',
     [string]$ProgramDirectory = 'dist/RinsLittleShelter',
     [string]$ReleaseDirectory = ''
 )

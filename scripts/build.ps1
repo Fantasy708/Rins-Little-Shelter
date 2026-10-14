@@ -10,6 +10,10 @@ try {
     $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
     $buildOutput = Join-Path $projectRoot 'output\build-script\'
     & (Join-Path $PSScriptRoot 'export-catalog.ps1')
+    foreach ($json in @('assets/manifest.json','assets/catalog.json')) {
+        $path = Join-Path $projectRoot $json
+        [System.IO.File]::WriteAllText($path,[System.IO.File]::ReadAllText($path).Replace("`r`n","`n"),[System.Text.UTF8Encoding]::new($false))
+    }
     if (-not $SkipTests) {
         & $dotnetPath run --project tests/CoreTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '核心检查失败。' }
@@ -34,7 +38,7 @@ try {
         & $dotnetPath run --project tests/AudioTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '声音启停检查失败。' }
     }
-    & $dotnetPath publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true "-p:BaseOutputPath=$buildOutput" -o $OutputDirectory
+    & $dotnetPath publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true "-p:BaseOutputPath=$buildOutput" -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '发布失败。请先退出正在运行的发布版本。' }
     Copy-Item -LiteralPath assets/catalog.json -Destination (Join-Path $OutputDirectory 'assets/catalog.json')
     foreach ($asset in @('assets\manifest.json','assets\rin\poses.png','assets\rin\walk.png','assets\rin\trot-v2.png','assets\rin\hop.png','assets\rin\turn.png','assets\world\objects.png','assets\world\scenes.png','assets\world\swing-tree.png','assets\world\bedroom.png','assets\rin\swing-life.png','assets\rin\swing-loop.png','assets\rin\family-memory.png','assets\rin\tablet-life.png','assets\rin\nurture-life.png','assets\world\nurture-grass.png')) {

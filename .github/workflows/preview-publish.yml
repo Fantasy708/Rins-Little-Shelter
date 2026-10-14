@@ -1,0 +1,188 @@
+# DRAFT ONLY: reviewed by root before copying to .github/workflows on existing main.
+# No branch creation. Manual dispatch only. The preview stays a draft.
+# Dispatch inputs are filled after the final local EXE has been tested and tagged.
+name: Reproduce v0.3.1-preview.1 and stage draft attachments
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Exact peeled commit of the tested v0.3.1-preview.1 tag (40 hex)
+        required: true
+        type: string
+      expected_exe_sha256:
+        description: SHA256 of the final locally tested preview EXE (64 hex)
+        required: true
+        type: string
+      expected_draft_id:
+        description: ID of the existing v0.3.1-preview.1 draft, confirmed by root
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rin-v0.3.1-preview.1-draft-upload
+  cancel-in-progress: false
+
+jobs:
+  reproduce:
+    if: github.repository == 'Fantasy708/Rins-Little-Shelter' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: v0.3.1-preview.1
+      EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+      EXPECTED_EXE_SHA256: ${{ inputs.expected_exe_sha256 }}
+      EXPECTED_DRAFT_ID: ${{ inputs.expected_draft_id }}
+      DOTNET_INSTALL_DIR: 'D:\Shelter桌宠\.tools\dotnet'
+      DOTNET_CLI_HOME: 'D:\Shelter桌宠\.tools\cli-home'
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+
+    steps:
+      - name: Check manual dispatch inputs
+        run: |
+          if ($env:EXPECTED_COMMIT -notmatch '^[0-9a-fA-F]{40}$') { throw 'Root must supply the final tagged commit' }
+          if ($env:EXPECTED_EXE_SHA256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Root must supply the final tested EXE hash' }
+          if ($env:EXPECTED_DRAFT_ID -notmatch '^[1-9][0-9]*$') { throw 'Root must supply the existing preview draft ID' }
+
+      - name: Checkout only the frozen preview tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/v0.3.1-preview.1
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify tag, source policy, and preview version
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $actualCommit = (& git rev-parse 'HEAD^{commit}').Trim()
+          if ($LASTEXITCODE -ne 0 -or $actualCommit -ne $env:EXPECTED_COMMIT) { throw 'Frozen preview commit mismatch' }
+          $tagCommit = (& git rev-parse 'refs/tags/v0.3.1-preview.1^{commit}').Trim()
+          if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $actualCommit) { throw 'Preview tag changed' }
+          [xml]$project = Get-Content -LiteralPath src/LittleShelter.csproj -Raw
+          if (@($project.Project.PropertyGroup.Version) -notcontains '0.3.1-preview.1') { throw 'Source is not the requested preview version' }
+          foreach ($file in Get-ChildItem -LiteralPath src -Recurse -File | Where-Object { $_.Extension -eq '.cs' -and $_.FullName -notmatch '\\(obj|bin)\\' }) {
+            if ([System.IO.File]::ReadAllBytes($file.FullName) -contains 13) { throw ('Compiled source must use LF: ' + $file.Name) }
+          }
+          Write-Output ('Frozen preview commit: ' + $actualCommit)
+
+      - name: Install exact SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.401
+
+      - name: Restore the tagged inputs at the same build path
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path -LiteralPath 'D:\Shelter桌宠\src') { throw 'Build source directory already exists' }
+          $archive = Join-Path $env:RUNNER_TEMP 'preview-input.zip'
+          & git archive --format=zip -o $archive $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Tag archive failed' }
+          Expand-Archive -LiteralPath $archive -DestinationPath 'D:\Shelter桌宠' -Force
+
+      - name: Build the preview with the same reproducible local settings
+        working-directory: 'D:\Shelter桌宠'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ((& dotnet --version).Trim() -ne '10.0.401') { throw 'Exact SDK version mismatch' }
+          $projectRoot = (Resolve-Path -LiteralPath '.').Path
+          # Root must use these same properties in the local tested build.
+          # No PDB; no SourceLink; stable source paths; uncompressed bundle.
+          # ZIP packaging still uses compression and is independent of the EXE.
+          & 'D:\Shelter桌宠\.tools\dotnet\dotnet.exe' publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            "-p:BaseOutputPath=$projectRoot\output\build-script\" -o output/preview-publish
+          if ($LASTEXITCODE -ne 0) { throw 'Preview build failed' }
+          Copy-Item -LiteralPath assets/catalog.json -Destination output/preview-publish/assets/catalog.json
+          foreach ($name in @('RinsLittleShelter.dll','RinsLittleShelter.deps.json','RinsLittleShelter.runtimeconfig.json','apphost.exe')) {
+            $path = Join-Path 'src/obj/Release/net10.0-windows10.0.19041.0/win-x64' $name
+            if (Test-Path -LiteralPath $path) { Write-Output ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash + '  ' + $name) }
+          }
+
+      - name: Mandatory tested EXE hash gate
+        id: gate
+        working-directory: 'D:\Shelter桌宠'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $actual = (Get-FileHash -LiteralPath output/preview-publish/RinsLittleShelter.exe -Algorithm SHA256).Hash
+          Write-Output ('Preview EXE SHA256: ' + $actual)
+          if ($actual -ne $env:EXPECTED_EXE_SHA256) { throw 'EXE differs from the tested local preview. No attachment write is allowed.' }
+          if (Test-Path -LiteralPath output/preview-publish/RinsLittleShelter.pdb) { throw 'Unexpected PDB in reproducible preview output' }
+          foreach ($relative in @('assets/manifest.json','assets/catalog.json') + @(
+              Get-ChildItem -LiteralPath assets/rin,assets/world -Recurse -File | ForEach-Object {
+                [System.IO.Path]::GetRelativePath('D:\Shelter桌宠',$_.FullName)
+              })) {
+            $source = Join-Path 'D:\Shelter桌宠' $relative
+            $published = Join-Path output/preview-publish $relative
+            if ((Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $published -Algorithm SHA256).Hash) { throw ('Published resource mismatch: ' + $relative) }
+          }
+          'exe_verified=true' | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Prepare portable ZIP and frozen tagged source ZIP
+        if: success() && steps.gate.outputs.exe_verified == 'true'
+        working-directory: 'D:\Shelter桌宠'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & ./scripts/package-release.ps1 -Version v0.3.1-preview.1 -ProgramDirectory output/preview-publish -ReleaseDirectory dist/github/v0.3.1-preview.1
+          $releaseRoot = Join-Path 'D:\Shelter桌宠' 'dist/github/v0.3.1-preview.1'
+          $sourceZip = Join-Path $releaseRoot 'RinsLittleShelter-v0.3.1-preview.1-source.zip'
+          & git -C $env:GITHUB_WORKSPACE archive --format=zip --prefix=RinsLittleShelter-source/ -o $sourceZip $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw 'Frozen tagged source ZIP failed' }
+          $portableZip = Join-Path $releaseRoot 'RinsLittleShelter-v0.3.1-preview.1-win-x64.zip'
+          Add-Type -AssemblyName System.IO.Compression
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($portableZip)
+          try {
+            $exe = $zip.GetEntry('RinsLittleShelter/RinsLittleShelter.exe')
+            if ($null -eq $exe) { throw 'Portable ZIP is missing the EXE' }
+            $stream = $exe.Open()
+            try { $packedHash = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($stream)) } finally { $stream.Dispose() }
+            if ($packedHash -ne $env:EXPECTED_EXE_SHA256) { throw 'Portable ZIP contains an untested EXE' }
+          } finally { $zip.Dispose() }
+          $lines = @(
+            ($env:EXPECTED_EXE_SHA256.ToUpperInvariant() + '  RinsLittleShelter/RinsLittleShelter.exe'),
+            ((Get-FileHash -LiteralPath $portableZip -Algorithm SHA256).Hash + '  ' + (Split-Path $portableZip -Leaf)),
+            ((Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash + '  ' + (Split-Path $sourceZip -Leaf))
+          )
+          [System.IO.File]::WriteAllLines((Join-Path $releaseRoot 'SHA256.txt'),$lines,[System.Text.UTF8Encoding]::new($false))
+
+      - name: Stage attachments only to the identified existing preview draft
+        if: success() && steps.gate.outputs.exe_verified == 'true'
+        working-directory: 'D:\Shelter桌宠'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: Fantasy708/Rins-Little-Shelter
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $endpoint = 'repos/' + $env:GH_REPO + '/releases/' + $env:EXPECTED_DRAFT_ID
+          $releaseRoot = Join-Path 'D:\Shelter桌宠' 'dist/github/v0.3.1-preview.1'
+          function Read-ExpectedDraft {
+            $draft = & gh api $endpoint | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0 -or -not $draft.draft -or -not $draft.prerelease -or $draft.tag_name -ne $env:RELEASE_TAG -or [string]$draft.id -ne $env:EXPECTED_DRAFT_ID) { throw 'Preview draft identity/state changed: stop before attachment write' }
+            return $draft
+          }
+          foreach ($name in @('RinsLittleShelter-v0.3.1-preview.1-win-x64.zip','RinsLittleShelter-v0.3.1-preview.1-source.zip','SHA256.txt')) {
+            $draft = Read-ExpectedDraft
+            $path = Join-Path $releaseRoot $name
+            $digest = 'sha256:' + (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            $existing = @($draft.assets | Where-Object name -eq $name)
+            if ($existing.Count -gt 0) {
+              if ($existing.Count -ne 1 -or $existing[0].state -ne 'uploaded' -or $existing[0].digest -ne $digest -or $existing[0].size -ne (Get-Item -LiteralPath $path).Length) { throw ('Existing preview attachment differs; root must review: ' + $name) }
+              Write-Output ('Identical preview draft attachment already exists: ' + $name)
+              continue
+            }
+            & gh release upload $env:RELEASE_TAG $path --repo $env:GH_REPO
+            if ($LASTEXITCODE -ne 0) { throw ('Preview draft attachment upload failed: ' + $name) }
+            $verified = Read-ExpectedDraft
+            $asset = @($verified.assets | Where-Object name -eq $name)
+            if ($asset.Count -ne 1 -or $asset[0].state -ne 'uploaded' -or $asset[0].digest -ne $digest -or $asset[0].size -ne (Get-Item -LiteralPath $path).Length) { throw ('Server digest/size mismatch: ' + $name) }
+            Write-Output ('Verified preview draft attachment: ' + $name + ' ' + $digest)
+          }
+          $null = Read-ExpectedDraft
+          Write-Output 'Preview attachments verified; release remains DRAFT. No release publication or old tag/asset changes.'

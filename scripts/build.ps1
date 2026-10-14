@@ -29,6 +29,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '平板生产窗口集成检查失败。' }
         & $dotnetPath run --project tests/NurtureVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/nurture-visual-qa
         if ($LASTEXITCODE -ne 0) { throw 'Nurture草地/动作绘图检查失败。' }
+        & $dotnetPath run --project tests/StartupTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/startup-qa
+        if ($LASTEXITCODE -ne 0) { throw '开场时序/存档/中断/绘图检查失败。' }
         & $dotnetPath run --project tests/AudioTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '声音启停检查失败。' }
     }
@@ -44,7 +46,7 @@ try {
     Copy-Item -LiteralPath LICENSES -Destination $OutputDirectory -Recurse -Force
     $docsDirectory = Join-Path $OutputDirectory 'docs'
     New-Item -ItemType Directory -Path $docsDirectory -Force | Out-Null
-    foreach ($document in @('开发说明.md','开发日志.md','素材制作.md','验证记录.md','发布状态.md','多场景素材制作.md','平板创造交互设计.md','平板消息界面设计.md','Nurture素材制作.md')) {
+    foreach ($document in @('开发说明.md','开发日志.md','素材制作.md','验证记录.md','发布状态.md','多场景素材制作.md','平板创造交互设计.md','平板消息界面设计.md','Nurture素材制作.md','开场动画设计.md')) {
         Copy-Item -LiteralPath (Join-Path 'docs' $document) -Destination $docsDirectory
     }
     if (Test-Path -LiteralPath 'docs/平板参考核对.md') { Copy-Item -LiteralPath 'docs/平板参考核对.md' -Destination $docsDirectory }

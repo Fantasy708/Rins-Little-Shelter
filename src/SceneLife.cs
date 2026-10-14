@@ -157,6 +157,7 @@ public sealed partial class Scene
     }
     private void DrawPresentRin(DrawingContext dc)
     {
+        if (StartupPresentation) { actorHits.Clear(); return; }
         var life=behavior.Life;
         if (life.PresentOpacity <= .001) { actorHits.Clear(); lastDrawSprite=null; return; }
         if (save.SceneId == "swingTree" && life.DedicatedPose)

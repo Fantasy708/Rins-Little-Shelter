@@ -2,7 +2,7 @@
 
 一个安静的 Windows 桌面宠物。半Q版 Rin 会在桌面角落生活、回应鼠标，并用平板一点点创造小世界。
 
-**更新 `v0.3.0-preview.2`：室外草坡与院子草地重绘为铺满细草、小花的自然草甸，取消花环与黄色空心区，新增手动“Nurture·拥抱草地”彩蛋。** 保留平板创造/消息、五场景和父女记忆。本次按用户授权发布到现有公开GitHub仓库，旧版本保留；实际检查与待实测内容见 [发布状态](docs/发布状态.md) 和 [验证记录](docs/验证记录.md)。
+**更新 `v0.3.1`：增加安静的启动开场，呈现星光、草甸、Rin苏醒与一朵花的生成。** 首次约14.4秒，之后约3.1秒；可以随时跳过、关闭或重看。保留Nurture草甸与彩蛋、平板创造/消息、五场景和父女记忆。本次按用户授权更新便携包并发布到现有公开GitHub仓库，旧版本保留；实际检查与待实测内容见 [发布状态](docs/发布状态.md) 和 [验证记录](docs/验证记录.md)。
 
 设计取舍、反馈修复和各轮更新过程见[开发日志](docs/开发日志.md)。
 
@@ -16,15 +16,27 @@
 
 ## 启动
 
-本地便携包为 `dist/RinsLittleShelter-win-x64.zip`；发行附件位于 `dist/github/v0.3.0-preview.2`，也可从[v0.3.0-preview.2 Release](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.2)下载，完整解压后打开 `RinsLittleShelter.exe`。程序已包含 .NET 运行环境，支持 Windows 10（19041及以上）和 Windows 11 x64，无须安装开发工具。保留旁边的 `assets` 文件夹。
+本地便携包为 `dist/RinsLittleShelter-win-x64.zip`；发行附件位于 `dist/github/v0.3.1`，也可从[v0.3.1 Release](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.1)下载，完整解压后打开 `RinsLittleShelter.exe`。程序已包含 .NET 运行环境，支持 Windows 10（19041及以上）和 Windows 11 x64，无须安装开发工具。保留旁边的 `assets` 文件夹。
 
-GitHub上已有的[v0.3.0-preview.1](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.1)与更早发行保持原样；它们不包含本轮Nurture彩蛋。新版[v0.3.0-preview.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.2)提供便携包、完整源码素材包及SHA256。
+GitHub上已有的[v0.3.0-preview.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.2)、[v0.3.0-preview.1](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.1)与更早发行保持原样。新版提供便携包、完整源码素材包及SHA256；旧版不包含本轮启动开场。
 
 本工作区成品位于 `dist/RinsLittleShelter`，便携包为 `dist/RinsLittleShelter-win-x64.zip`。升级时先退出旧版，再运行新版；陪伴进度与布置保存在本机用户目录，默认继续读取原有存档。仓库当前公开，用户已确认沿用当前可见性发布。
 
 请保持程序与旁边的 `assets` 文件夹在一起。便携压缩包解压后即可使用。
 
-初次打开是 Rin 和云台。右键 Rin → **进入自由创造**，即可看到完整的小世界。自由模式与成长模式拥有各自的布局，随时切回不会丢失成长进度。
+初次打开先播放开场，结束后进入 Rin 和云台。右键 Rin → **进入自由创造**，即可看到完整的小世界。自由模式与成长模式拥有各自的布局，随时切回不会丢失成长进度。
+
+## 启动开场
+
+默认首次完整播放，之后播放简版。完整开场约14.4秒，在原有小世界窗口内依次呈现柔和星光、天空与草甸、Rin苏醒和观察、拿起平板、种子落地并开花，最后显示标题“Rin's Little Shelter”与“这里有一个正在成长的小世界。”，以微笑回应接回当前存档的场景。简版约3.1秒。开场默认静音，不覆盖整屏、不抢键盘焦点。
+
+点击画面右下角 **跳过开场**，或使用托盘同名入口，即可直接进入桌面。在 **设置 → 启动开场** 中可选择“首次完整，之后简短”“每次完整播放”或“直接进入桌面”；同一设置页的 **重看开场** 可随时重新观看完整版本。
+
+开场中的草甸与花只是临时画面，不提前解锁景物、不改保存布置、不产生来信，也不消耗创造次数。完成或用户主动结束后记住已看状态。隐藏、暂停、整理、切换场景或模式、全屏和锁屏等操作优先结束开场，恢复后不自动重播。正常陪伴、音频联动在交接后继续运行。
+
+![启动开场的生产绘图预览](docs/screenshots/startup-animation.gif)
+
+以上为实际WPF生产绘图导出，不读取桌面背景。完整设计、素材复用与检查边界见[开场动画设计](docs/开场动画设计.md)；真实发布程序的窗口导出见 `docs/screenshots/startup-runtime.png`。本版本一小时稳定性和原生Windows输入、真实系统缩放与多屏观感仍待实测，不能用自动绘图或短运行代替。
 
 ## 日常操作
 
@@ -142,7 +154,7 @@ Rin先拿起并展示手中的平板，屏幕连续展开到可操作尺寸。�
 
 正常存档位于 `%LOCALAPPDATA%/RinsLittleShelter/shelter.json`，每30秒保存，并在退出时保存。旁边的 `.bak` 文件用于恢复损坏的主存档。
 
-存档包含陪伴日、今日计时、每个场景在成长与自由模式下的独立布局、当前场景、物件收藏、位置、设置，以及两种模式各自的记忆完成和来信已读状态。旧存档缺少新增故事字段时安全补充，不重置进度或布置；已达20日的旧成长存档需完整重看一次任意父女记忆来开放信件。平板展开、预选和页码不保存，重启恢复日常。可复制整个存档目录作备份。首次安装、测试和正常使用的存档相互独立。
+存档包含陪伴日、今日计时、每个场景在成长与自由模式下的独立布局、当前场景、物件收藏、位置、设置，以及两种模式各自的记忆完成和来信已读状态。v0.3.1另保存全局开场已看记录与播放设置，旧档缺失时采用首次完整默认值；切换成长/自由模式不重复首次开场。旧存档缺少新增故事字段时安全补充，不重置进度或布置；已达20日的旧成长存档需完整重看一次任意父女记忆来开放信件。平板展开、预选、页码和开场播放到一半的时刻不保存，重启按开场设置进入。可复制整个存档目录作备份。首次安装、测试和正常使用的存档相互独立。
 
 找不到 Rin 时，使用托盘“恢复位置和鼠标交互”。没有音频设备或曲目信息时，其余陪伴功能继续工作。
 
@@ -164,7 +176,7 @@ pwsh -File scripts/build.ps1
 
 开发诊断参数与架构见 [开发说明](docs/开发说明.md)，素材提示词与来源见 [素材制作](docs/素材制作.md)，验收记录见 [验证记录](docs/验证记录.md)。
 
-本地版本附件由 `pwsh -File scripts/package-release.ps1 -Version v0.3.0-preview.2 -ReleaseDirectory dist/github/v0.3.0-preview.2` 从已构建EXE生成，包含便携包、完整源码素材包和SHA256；不重新编译EXE，也不上传或发布到GitHub。个人存档、本机工具链、原始测试日志和官方参考图不纳入交付源码。
+本地版本附件由 `pwsh -File scripts/package-release.ps1 -Version v0.3.1 -ReleaseDirectory dist/github/v0.3.1` 从已构建EXE生成，包含便携包、完整源码素材包和SHA256；不重新编译EXE，也不上传或发布到GitHub。个人存档、本机工具链、原始测试日志和官方参考图不纳入交付源码。
 
 问题反馈请使用仓库Issues模板，提供版本、Windows环境、动作与复现步骤。
 

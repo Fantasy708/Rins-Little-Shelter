@@ -26,7 +26,7 @@ public sealed class SettingsWindow : Window
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
         status.TextWrapping = TextWrapping.Wrap; status.FontSize = 11; status.Foreground = muted; footer.Children.Add(status);
-        footer.Children.Add(new TextBlock { Text = "v0.3.0-preview.2 · Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
+        footer.Children.Add(new TextBlock { Text = "v0.3.1 · Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var tabs = new TabControl { Background = Brushes.Transparent, BorderBrush = new SolidColorBrush(Color.FromRgb(218, 230, 231)) };
         tabs.Items.Add(new TabItem { Header = "陪伴设置", Content = SettingsPanel() });
@@ -47,6 +47,9 @@ public sealed class SettingsWindow : Window
         SliderRow(stack, "透明度", .35, 1, s.Opacity, value => s.Opacity = value, "");
         ComboRow(stack, "天空", new[] { "自动", "清晨", "白天", "傍晚", "夜晚", "深夜" }, s.Theme, value => s.Theme = value);
         ComboRow(stack, "天气", new[] { "晴", "雨", "风", "雪" }, s.Weather, value => s.Weather = value);
+        ComboRow(stack,"启动开场",new[]{"首次完整，之后简短","每次完整播放","直接进入桌面"},!s.StartupAnimationEnabled || s.StartupAnimationPlayback=="off" ? "直接进入桌面" : s.StartupAnimationPlayback=="always" ? "每次完整播放" : "首次完整，之后简短",value=> {
+            s.StartupAnimationEnabled=value!="直接进入桌面"; s.StartupAnimationPlayback=value=="每次完整播放" ? "always" : value=="直接进入桌面" ? "off" : "adaptive";
+        });
         Check(stack, "节能模式（30 FPS；默认60 FPS）", s.EnergySaving, value => s.EnergySaving = value);
         Check(stack, "鼠标完全穿透（仍可通过托盘恢复）", s.ClickThrough, value => s.ClickThrough = value);
         stack.Children.Add(new TextBlock { Text = "安静陪伴", FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 15, 0, 8) });
@@ -64,6 +67,7 @@ public sealed class SettingsWindow : Window
         var buttons = new WrapPanel { Margin = new Thickness(0, 18, 0, 4) };
         buttons.Children.Add(Button("请 Rin 创造", () => pet.OfferChoice(false)));
         buttons.Children.Add(Button("查看平板消息",pet.OpenMessages));
+        buttons.Children.Add(Button("重看开场",pet.ReplayStartup));
         buttons.Children.Add(Button("看看理想世界", pet.ShowIdeal));
         buttons.Children.Add(Button("恢复位置", pet.Recover));
         buttons.Children.Add(Button("暂停 / 继续", pet.TogglePause)); stack.Children.Add(buttons);

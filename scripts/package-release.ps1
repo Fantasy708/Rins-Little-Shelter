@@ -1,5 +1,5 @@
 param(
-    [string]$Version = 'v0.3.0-preview.2',
+    [string]$Version = 'v0.3.1',
     [string]$ProgramDirectory = 'dist/RinsLittleShelter',
     [string]$ReleaseDirectory = ''
 )
@@ -36,7 +36,7 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSES') -Destination $portabl
 $publicDocs = Join-Path $portableRoot 'docs'
 New-Item -ItemType Directory -Path $publicDocs -Force | Out-Null
 foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验证记录.md','docs/发布状态.md','docs/多场景素材制作.md',
-    'docs/平板创造交互设计.md','docs/平板消息界面设计.md','docs/开发日志.md','docs/Nurture素材制作.md')) {
+    'docs/平板创造交互设计.md','docs/平板消息界面设计.md','docs/开发日志.md','docs/Nurture素材制作.md','docs/开场动画设计.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $publicDocs
 }
 if (Test-Path -LiteralPath (Join-Path $projectRoot 'docs/平板参考核对.md')) {

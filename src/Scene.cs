@@ -212,6 +212,7 @@ public sealed partial class Scene : FrameworkElement
     public void Born(string id) => births[id] = Time;
     public string? Hit(Point point)
     {
+        if (StartupPresentation) return null;
         var tablet=TabletHit(point); if (tablet != null) return tablet;
         var special=behavior.Tablet.Active ? null : LifeHit(point); if (special != null && special != "swingSeat") return special;
         if (!behavior.Tablet.Active && Time < BubbleUntil && bubbleRect.Contains(point)) return "bubble";

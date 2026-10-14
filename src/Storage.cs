@@ -44,6 +44,7 @@ public sealed class Storage
     private static void Sanitize(SaveData s)
     {
         Story.Sanitize(s);
+        if (s.Settings.StartupAnimationPlayback is not ("adaptive" or "always" or "off")) s.Settings.StartupAnimationPlayback="adaptive";
         s.Settings.Scale = double.IsFinite(s.Settings.Scale) ? Math.Clamp(s.Settings.Scale, .65, 1.8) : 1;
         s.Settings.Opacity = double.IsFinite(s.Settings.Opacity) ? Math.Clamp(s.Settings.Opacity, .35, 1) : 1;
         s.Settings.InteractionMinutes = double.IsFinite(s.Settings.InteractionMinutes) ? Math.Clamp(s.Settings.InteractionMinutes, 15, 120) : 35;

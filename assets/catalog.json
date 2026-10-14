@@ -1,92 +1,45 @@
 {
   "Version": 5,
   "Nurture": {
-    "LowerSeconds": 1.2,
-    "ManualOnly": true,
-    "FrameOrigins": [
+    "RiseSeconds": 1.2,
+    "GrassAtlas": "world/nurture-grass.png",
+    "RestSeconds": 4.5,
+    "StandingReferences": [
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      288,
+      297
+    ],
+    "GrassRegions": [
       [
-        114,
-        289
+        0,
+        0,
+        1,
+        0.625
       ],
       [
-        120,
-        282
-      ],
-      [
-        112,
-        233
-      ],
-      [
-        98,
-        188
-      ],
-      [
-        110,
-        159
-      ],
-      [
-        141,
-        188
-      ],
-      [
-        150,
-        178
-      ],
-      [
-        148,
-        159
-      ],
-      [
-        165,
-        170
-      ],
-      [
-        118,
-        211
-      ],
-      [
-        133,
-        223
-      ],
-      [
-        124,
-        231
-      ],
-      [
-        149,
-        243
-      ],
-      [
-        128,
-        227
-      ],
-      [
-        79,
-        219
-      ],
-      [
-        93,
-        250
-      ],
-      [
-        119,
-        238
-      ],
-      [
-        102,
-        246
-      ],
-      [
-        101,
-        288
-      ],
-      [
-        104,
-        297
+        0,
+        0.625,
+        1,
+        0.375
       ]
     ],
-    "ClipOrigin": "start of lowering; variable footsteps and tablet stow are outside clip",
-    "GrassAtlas": "world/nurture-grass.png",
     "Contacts": [
       [
         [
@@ -313,161 +266,122 @@
         ]
       ]
     ],
-    "Silent": true,
-    "GrassRegions": [
-      [
-        0,
-        0,
-        1,
-        0.625
-      ],
-      [
-        0,
-        0.625,
-        1,
-        0.375
-      ]
-    ],
-    "RestSeconds": 4.5,
-    "RiseSeconds": 1.2,
     "Source": "src/Nurture.cs",
-    "StandingReferences": [
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      288,
-      297
-    ]
-  },
-  "Scenes": [
-    {
-      "Day": 0,
-      "Id": "cloud",
-      "Name": "云台"
-    },
-    {
-      "Day": 2,
-      "Id": "indoor",
-      "Name": "屋内"
-    },
-    {
-      "Day": 7,
-      "Id": "outdoor",
-      "Name": "屋外院子"
-    },
-    {
-      "Day": 10,
-      "Id": "meadow",
-      "Name": "室外草坡"
-    },
-    {
-      "Day": 20,
-      "Id": "swingTree",
-      "Name": "树下秋千"
-    }
-  ],
-  "Swing": {
-    "LoopKeys": 34,
-    "LoopFrames": 18,
-    "CycleSeconds": 4.6,
-    "BoardingFrames": 20,
-    "HipAnchors": [
-      [
-        188,
-        211
-      ],
-      [
-        128,
-        213
-      ],
-      [
-        115,
-        214
-      ],
-      [
-        115,
-        211
-      ],
-      [
-        180,
-        175
-      ],
-      [
-        127,
-        190
-      ],
+    "LowerSeconds": 1.2,
+    "FrameOrigins": [
       [
         114,
-        179
+        289
       ],
       [
-        128,
-        181
+        120,
+        282
       ],
       [
-        178,
-        177
+        112,
+        233
       ],
       [
-        126,
-        181
+        98,
+        188
       ],
       [
-        119,
-        175
+        110,
+        159
       ],
       [
-        127,
-        180
+        141,
+        188
       ],
       [
-        179,
-        173
+        150,
+        178
       ],
       [
-        127,
-        174
+        148,
+        159
       ],
       [
-        119,
-        175
-      ],
-      [
-        122,
-        174
-      ],
-      [
-        180,
-        149
-      ],
-      [
-        125,
-        143
+        165,
+        170
       ],
       [
         118,
-        149
+        211
       ],
       [
-        131,
-        155
+        133,
+        223
+      ],
+      [
+        124,
+        231
+      ],
+      [
+        149,
+        243
+      ],
+      [
+        128,
+        227
+      ],
+      [
+        79,
+        219
+      ],
+      [
+        93,
+        250
+      ],
+      [
+        119,
+        238
+      ],
+      [
+        102,
+        246
+      ],
+      [
+        101,
+        288
+      ],
+      [
+        104,
+        297
       ]
     ],
+    "ClipOrigin": "start of lowering; variable footsteps and tablet stow are outside clip",
+    "ManualOnly": true,
+    "Silent": true
+  },
+  "Scenes": [
+    {
+      "Id": "cloud",
+      "Name": "云台",
+      "Day": 0
+    },
+    {
+      "Id": "indoor",
+      "Name": "屋内",
+      "Day": 2
+    },
+    {
+      "Id": "outdoor",
+      "Name": "屋外院子",
+      "Day": 7
+    },
+    {
+      "Id": "meadow",
+      "Name": "室外草坡",
+      "Day": 10
+    },
+    {
+      "Id": "swingTree",
+      "Name": "树下秋千",
+      "Day": 20
+    }
+  ],
+  "Swing": {
     "Hands": [
       [
         141,
@@ -589,14 +503,100 @@
         173,
         166
       ]
+    ],
+    "LoopKeys": 34,
+    "LoopFrames": 18,
+    "BoardingFrames": 20,
+    "CycleSeconds": 4.6,
+    "HipAnchors": [
+      [
+        188,
+        211
+      ],
+      [
+        128,
+        213
+      ],
+      [
+        115,
+        214
+      ],
+      [
+        115,
+        211
+      ],
+      [
+        180,
+        175
+      ],
+      [
+        127,
+        190
+      ],
+      [
+        114,
+        179
+      ],
+      [
+        128,
+        181
+      ],
+      [
+        178,
+        177
+      ],
+      [
+        126,
+        181
+      ],
+      [
+        119,
+        175
+      ],
+      [
+        127,
+        180
+      ],
+      [
+        179,
+        173
+      ],
+      [
+        127,
+        174
+      ],
+      [
+        119,
+        175
+      ],
+      [
+        122,
+        174
+      ],
+      [
+        180,
+        149
+      ],
+      [
+        125,
+        143
+      ],
+      [
+        118,
+        149
+      ],
+      [
+        131,
+        155
+      ]
     ]
   },
   "Memory": {
-    "Silent": true,
-    "StorySeconds": 25,
     "FadeSeconds": 1.5,
-    "UserTriggered": true,
-    "TemporaryLayout": true
+    "StorySeconds": 25,
+    "TemporaryLayout": true,
+    "Silent": true,
+    "UserTriggered": true
   },
   "Source": "src/Models.cs",
   "ClipSource": "src/MotionClips.cs",

@@ -9,7 +9,7 @@ using Microsoft.Win32;
 using Forms = System.Windows.Forms;
 namespace LittleShelter;
 
-public sealed class PetWindow : Window
+public sealed partial class PetWindow : Window
 {
     public readonly SaveData Save;
     public readonly Behavior Behavior = new();
@@ -46,7 +46,7 @@ public sealed class PetWindow : Window
         Title = "Rin’s Little Shelter"; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = true; Background = Brushes.Transparent; ShowInTaskbar = false; ShowActivated = false; Topmost = true;
         Scene = new Scene(save, Behavior, Audio) { Width = 480, Height = 340 };
-        Content = Scene;
+        InstallStartupPresentation();
         ApplySize();
         SourceInitialized += (_, _) => {
             var handle = new WindowInteropHelper(this).Handle;
@@ -72,6 +72,7 @@ public sealed class PetWindow : Window
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
         var menu = new Forms.ContextMenuStrip();
         AddTray(menu, "打开设置与世界图鉴", OpenSettings);
+        AddTray(menu,"跳过开场",SkipStartup);
         AddTray(menu, "显示 / 隐藏  Ctrl+Shift+R", ToggleHidden);
         AddTray(menu, "暂停 / 继续陪伴", TogglePause);
         AddTray(menu, "切换成长 / 自由创造", SwitchMode);
@@ -111,6 +112,7 @@ public sealed class PetWindow : Window
         if (paused || fullscreen || manualHidden || locked || !IsVisible) return;
         runtime += Math.Min(dt, .1); Scene.Time = runtime;
         frames++;
+        if (Opening.Active) { AdvanceStartup(dt); return; }
         Audio.Tick(dt);
         var theme = World.Theme(Save.Settings, DateTime.Now.Hour);
         // Hold the quiet seated pose throughout the temporary ideal world;
@@ -132,13 +134,13 @@ public sealed class PetWindow : Window
     private async void Heartbeat(object? sender, EventArgs e)
     {
         if (closed) return;
-        clock.Tick(Save, DateTime.Now, locked, paused);
+        clock.Tick(Save, DateTime.Now, locked, paused || Opening.Active);
         bool isFull = Native.Fullscreen(this);
         if (isFull != fullscreen) { fullscreen = isFull; UpdateVisibility(); }
-        if (++seconds % 3 == 0) await Audio.Poll(Save.Settings.Music && !locked && !paused);
+        if (++seconds % 3 == 0) await Audio.Poll(Save.Settings.Music && !locked && !paused && !Opening.Active);
         if (closed) return;
         if (watch.Elapsed.TotalSeconds - lastSave >= 30) { lastSave = watch.Elapsed.TotalSeconds; Persist(); }
-        if (!fullscreen && !manualHidden && !locked && !paused)
+        if (!fullscreen && !manualHidden && !locked && !paused && !Opening.Active)
         {
             if (!Behavior.Nurture.Active && !Behavior.Tablet.Active && !Behavior.Life.Active && runtime - lastOffer >= Save.Settings.InteractionMinutes * 60 && Behavior.Current.Kind == "idle") OfferChoice(true);
             if (!Behavior.Nurture.Active && !Behavior.Tablet.Active && !Behavior.Life.Active && Save.Settings.Reminders && runtime - lastReminder >= 3600)
@@ -153,7 +155,7 @@ public sealed class PetWindow : Window
             double cpu = process.TotalProcessorTime.TotalSeconds;
             double percent = (cpu - lastCpu) / (wall - lastSample) / Environment.ProcessorCount * 100;
             var culture = System.Globalization.CultureInfo.InvariantCulture;
-            File.AppendAllText(soakPath, string.Join(",", wall.ToString("F1",culture), percent.ToString("F3",culture), (process.WorkingSet64 / 1048576.0).ToString("F1",culture), process.HandleCount, frames, Behavior.Current.Id, Audio.Level.ToString("F3",culture), Audio.Status) + Environment.NewLine);
+            File.AppendAllText(soakPath, string.Join(",", wall.ToString("F1",culture), percent.ToString("F3",culture), (process.WorkingSet64 / 1048576.0).ToString("F1",culture), process.HandleCount, frames, Opening.Active ? "startup:"+Opening.Stage : Behavior.Current.Id, Audio.Level.ToString("F3",culture), Audio.Status) + Environment.NewLine);
             lastSample = wall; lastCpu = cpu;
             if (wall >= soakMinutes * 60) { File.WriteAllText(soakPath + ".complete", DateTime.Now.ToString("O")); Close(); }
         }
@@ -164,7 +166,7 @@ public sealed class PetWindow : Window
     private void UpdateVisibility() { if (manualHidden || fullscreen || locked) { CancelTablet(); Hide(); } else { Show(); lastFrame = watch.Elapsed.TotalSeconds; } }
     public void ToggleHidden() { manualHidden = !manualHidden; UpdateVisibility(); }
     public void TogglePause() { paused = !paused; if (paused) CancelTablet(); clock.Reset(); _ = Audio.Poll(Save.Settings.Music && !paused); CompanionChanged?.Invoke(); }
-    private void CancelTablet() { Behavior.Tablet.Cancel(Save); Scene.ClearTabletHits(); Scene.InvalidateVisual(); }
+    private void CancelTablet() { SkipStartup(); Behavior.Tablet.Cancel(Save); Scene.ClearTabletHits(); Scene.InvalidateVisual(); }
     public void SwitchMode()
     {
         Behavior.Nurture.Cancel(Save);
@@ -188,21 +190,23 @@ public sealed class PetWindow : Window
     public void ViewMemory() { Behavior.Nurture.Cancel(Save); CancelTablet(); if (Scene.Editing) ToggleEditing(); if (Behavior.Life.BeginMemory(Save)) { Scene.BubbleUntil=0; Scene.IdealUntil=0; } }
     public void EndMemory() { Behavior.Life.RequestStop(); Scene.InvalidateVisual(); }
     public void Swing() { if (Save.SceneId == "swingTree") { CancelTablet(); Scene.Editing=false; Behavior.Life.BeginSwing(Save); } }
-    public void Recover() { Save.Settings.ClickThrough = false; pointerThrough = false; manualHidden = false; Native.KeepOnScreen(this, true); Native.Configure(this, false); UpdateVisibility(); Persist(); }
+    public void Recover() { SkipStartup(); Save.Settings.ClickThrough = false; pointerThrough = false; manualHidden = false; Native.KeepOnScreen(this, true); Native.Configure(this, false); UpdateVisibility(); Persist(); }
     public void OpenSettings()
     {
+        SkipStartup();
         if (settings != null) { settings.Activate(); return; }
         settings = new SettingsWindow(this); settings.Closed += (_, _) => settings = null; settings.Show(); settings.Activate();
     }
     public void ApplySettings()
     {
+        if (!Save.Settings.StartupAnimationEnabled || Save.Settings.StartupAnimationPlayback=="off") SkipStartup();
         if (Save.Settings.ClickThrough) CancelTablet();
         ApplySize(); if (IsLoaded) { Native.KeepOnScreen(this); pointerThrough = Save.Settings.ClickThrough; Native.Configure(this, pointerThrough); }
-        if (!Save.Settings.Music) Audio.Disable();
+        if (!Save.Settings.Music || Opening.Active) Audio.Disable();
         else _ = Audio.Poll(!paused && !locked);
         Persist(); CompanionChanged?.Invoke();
     }
-    private void ApplySize() { Width = 480 * Save.Settings.Scale; Height = 340 * Save.Settings.Scale; Opacity = Save.Settings.Opacity; if (Scene != null) Scene.LayoutTransform = new ScaleTransform(Save.Settings.Scale, Save.Settings.Scale); }
+    private void ApplySize() { Width = 480 * Save.Settings.Scale; Height = 340 * Save.Settings.Scale; Opacity = Save.Settings.Opacity; viewport.LayoutTransform = new ScaleTransform(Save.Settings.Scale, Save.Settings.Scale); }
     public void OfferChoice(bool automatic)
     {
         if (OpenTablet("create",null,automatic)) { if (automatic) Persist(); }
@@ -210,6 +214,8 @@ public sealed class PetWindow : Window
     }
     public bool OpenTablet(string page="create",string? preselect=null,bool automatic=false)
     {
+        if (automatic && Opening.Active) return false;
+        if (!automatic) SkipStartup();
         if (paused || manualHidden || fullscreen || locked || Save.Settings.ClickThrough || Scene.Editing || !IsVisible) return false;
         if (!Behavior.Tablet.Open(Save,automatic,page,preselect)) return false;
         lastOffer=runtime; Scene.IdealUntil=0; Scene.BubbleUntil=0; Scene.ClearTabletHits(); Scene.InvalidateVisual(); return true;
@@ -219,10 +225,11 @@ public sealed class PetWindow : Window
     {
         OpenTablet("create",id);
     }
-    public void ShowIdeal() { if (Behavior.Nurture.Active || Behavior.Tablet.Active || Behavior.Life.Active || Save.SceneId is not "outdoor" and not "cloud") return; Scene.IdealUntil = runtime + 45; Scene.ShelterUntil = runtime + 55; Behavior.Start("knees"); Scene.Bubble = "这里有我们的天空。"; Scene.BubbleUntil = runtime + 6; }
-    public bool CanHugGrass => !paused && !manualHidden && !fullscreen && !locked && !Scene.Editing && !Save.Settings.ClickThrough && Behavior.Nurture.CanBegin(Save);
+    public void ShowIdeal() { SkipStartup(); if (Behavior.Nurture.Active || Behavior.Tablet.Active || Behavior.Life.Active || Save.SceneId is not "outdoor" and not "cloud") return; Scene.IdealUntil = runtime + 45; Scene.ShelterUntil = runtime + 55; Behavior.Start("knees"); Scene.Bubble = "这里有我们的天空。"; Scene.BubbleUntil = runtime + 6; }
+    public bool CanHugGrass => !Opening.Active && !paused && !manualHidden && !fullscreen && !locked && !Scene.Editing && !Save.Settings.ClickThrough && Behavior.Nurture.CanBegin(Save);
     public bool HugGrass()
     {
+        SkipStartup();
         if (!CanHugGrass || !IsVisible || !Behavior.Nurture.Begin(Save)) return false;
         Scene.IdealUntil=0; Scene.BubbleUntil=0; Scene.ClearTabletButtons(); Scene.InvalidateVisual(); return true;
     }

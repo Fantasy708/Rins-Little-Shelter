@@ -34,6 +34,9 @@ docs/screenshots/*
 !docs/screenshots/nurture-rest.png
 !docs/screenshots/nurture-animation.gif
 !docs/screenshots/nurture-runtime.png
+!docs/screenshots/startup-animation.gif
+!docs/screenshots/startup-title.png
+!docs/screenshots/startup-runtime.png
 assets/reference/*
 !assets/reference/README.md
 *.user

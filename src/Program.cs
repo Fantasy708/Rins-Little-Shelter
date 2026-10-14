@@ -21,6 +21,9 @@ internal static class Program
             if (Option(args,"--scene") is { } sceneId) Scenes.Switch(save,sceneId);
             string? capture = Option(args, "--capture-dir");
             var pet = new PetWindow(storage, save, capture != null); app.MainWindow = pet;
+            var opening=StartupAnimationController.Choose(save,args.Any(a=>a is "--action" or "--tablet" or "--memory" or "--settings" or "--soak-log" or "--capture-dir"),Option(args,"--startup"));
+            pet.Loaded+=(_,_)=>pet.BeginStartup(opening);
+            if(args.Contains("--capture-startup-frames")) pet.EnableStartupCapture();
             if (args.Contains("--qa-window")) { pet.Tag = "qa"; pet.ShowInTaskbar = true; }
             if (capture != null) pet.EnableCapture(capture,args.Contains("--capture-action-frames"));
             string? soak = Option(args, "--soak-log");

@@ -21,6 +21,8 @@ public sealed class Settings
     public string GrowthScene { get; set; } = "cloud";
     public string FreeScene { get; set; } = "outdoor";
     public bool LegacyOutdoorAccess { get; set; }
+    public bool StartupAnimationEnabled { get; set; } = true;
+    public string StartupAnimationPlayback { get; set; } = "adaptive";
 }
 
 public sealed class Placement
@@ -47,6 +49,7 @@ public sealed class SaveData
     public long Interactions { get; set; }
     public double MusicSeconds { get; set; }
     public int IndoorStyleVersion { get; set; }
+    public bool HasSeenStartup { get; set; }
     public StoryState GrowthStory { get; set; } = new();
     public StoryState FreeStory { get; set; } = new();
     [JsonIgnore] public int Days => CompanionDates.Count;

@@ -89,6 +89,7 @@ public sealed class Behavior
     public event Action<string>? ObjectCreated;
     public Behavior(int? seed = null) { random = seed.HasValue ? new(seed.Value) : new(); Life = new LifeSequence(this); Tablet = new TabletSession(this); Nurture=new NurtureSequence(this); }
     internal void EmitObjectCreated(string id) => ObjectCreated?.Invoke(id);
+    public void Welcome() { FacingLeft=false; Start("smile"); }
     public void Start(string id, double? x = null, double? y = null, string? target = null)
     {
         if (Dragging) return;

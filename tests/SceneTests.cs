@@ -77,7 +77,7 @@ try {
 } finally { Directory.Delete(directory,true); }
 foreach(var id in new[]{"outdoor","meadow","indoor","swingTree"}) {
     Scenes.Switch(free,id); var b=new Behavior(9); Scenes.PlaceActor(free,b); var home=Scenes.Home(free);
-    double floor=id switch { "meadow"=>free.Layout.First(p=>p.Id == "meadowBase").Y-28, "indoor"=>free.Layout.First(p=>p.Id == "roomBase").Y-36, "swingTree"=>free.Layout.First(p=>p.Id == "swingSeat").Y+44, _=>252 };
+    double floor=id switch { "meadow"=>free.Layout.First(p=>p.Id == "meadowBase").Y-28, "indoor"=>free.Layout.First(p=>p.Id == "roomBase").Y-12, "swingTree"=>free.Layout.First(p=>p.Id == "swingSeat").Y+44, _=>252 };
     Check(b.Y == floor,id+"启动落点跟随该场景地面");
     b.Start("walk",home.X+15,home.Y); Advance(b,2,free); Check(b.Y == floor,id+"散步不返回屋外高度");
     if (id is "indoor" or "swingTree") {
@@ -85,4 +85,32 @@ foreach(var id in new[]{"outdoor","meadow","indoor","swingTree"}) {
         Check(!b.Life.Active && b.X == x && b.Y == floor,id+"记忆恢复正确地面落点");
     }
 }
+foreach(bool night in new[]{false,true}) foreach(bool hiddenBed in new[]{false,true}) foreach(bool freeMode in new[]{false,true}) {
+    var room=WithDays(20); room.Settings.FreeMode=freeMode; Scenes.Switch(room,"indoor");
+    room.Layout.First(p=>p.Id == "chair").Hidden=hiddenBed;
+    var selected=new HashSet<string>();
+    foreach(int seed in Enumerable.Range(0,12)) {
+        var b=new Behavior(seed); Scenes.PlaceActor(room,b);
+        for(int i=0;i<8000;i++) {
+            b.Tick(.15,room,night); selected.Add(b.Current.Id);
+            if (!Scenes.ActionAvailable(room,b.Current)) throw new Exception("屋内自动行为越界: "+b.Current.Id);
+        }
+    }
+    Check(!selected.Overlaps(new[]{"lie","nap","knees","swing","catch","sky","trot","hop"}),"屋内昼夜/两模式不使用地板休息和户外动作 "+night+"/"+hiddenBed+"/"+freeMode);
+    Check(hiddenBed ? !selected.Contains("roomRest") : selected.Contains("roomRest"),"床隐藏时禁止休息，可见时能够床沿休息");
+}
+Scenes.Switch(free,"indoor"); var bedPlacement=free.Layout.First(p=>p.Id == "chair"); bedPlacement.Hidden=false;
+var interruptedRoom=new Behavior(6); Scenes.PlaceActor(free,interruptedRoom); interruptedRoom.PreviewVisit(free,"roomRest"); bedPlacement.Hidden=true; interruptedRoom.Tick(.1,free,false);
+Check(interruptedRoom.Current.Id == "stand" && interruptedRoom.Y == Scenes.Home(free).Y,"走向床时床被收起，取消排队坐姿并回地面");
+foreach(var id in new[]{"lie","nap","knees","swing","catch","sky","hop","trot","createRaise","createSwipe"}) {
+    var b=new Behavior(); b.Start(id); b.Tick(.01,free,true);
+    Check(b.Current.Id == "stand","屋内拒绝遗留/强制动作 "+id);
+}
+bedPlacement.Hidden=false; var rising=new Behavior(); rising.X=bedPlacement.X; rising.Y=bedPlacement.Y; rising.Start("roomRest"); rising.Click(free);
+Check(rising.Y == Scenes.Home(free).Y && rising.Current.Kind == "interact","床沿点击回应先回到地板高度");
+rising.Start("roomRest"); rising.Y=bedPlacement.Y; rising.PreviewVisit(free,"deskTablet");
+Check(rising.Y == Scenes.Home(free).Y && rising.IsLocomotion,"从床去圆几沿家具前地板走动");
+rising.Y=bedPlacement.Y; rising.Start("roomRest"); rising.Life.BeginMemory(free);
+Check(rising.Y == Scenes.Home(free).Y,"床沿进入记忆先起身到地板");
+rising.Life.RequestStop(); Check(rising.Y == Scenes.Home(free).Y && rising.Current.Id == "stand","床沿进入记忆后取消不悬空");
 Console.WriteLine("All "+checks+" scene checks passed.");

@@ -1,5 +1,5 @@
 param(
-    [string]$Version = 'v0.2.0-preview.2',
+    [string]$Version = 'v0.2.0-preview.3',
     [string]$ProgramDirectory = 'dist/RinsLittleShelter'
 )
 $ErrorActionPreference = 'Stop'

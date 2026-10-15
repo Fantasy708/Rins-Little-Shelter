@@ -20,11 +20,24 @@ public static class Scenes
         "swingTree" => Pick("bigTree","swingSeat","flower","bird","stars"), _ => ObjectDef.All };
     private static IEnumerable<ObjectDef> Pick(params string[] ids) => ids.Select(ObjectDef.Get);
     public static bool Foundation(string id) => id is "platform" or "meadowBase" or "roomBase" or "bigTree" or "swingSeat";
+    public static bool ActionAvailable(SaveData s,ActionDef action) {
+        if (s.SceneId == "indoor" && action.Id is not ("stand" or "gaze" or "dress" or "tablet" or "walk" or "turn" or "visit" or "createTap" or "createPlace" or "createMusic" or "smile" or "retreat" or "invite" or "windowWatch" or "deskTablet" or "roomRest")) return false;
+        return action.ObjectId == null || World.Available(s).Any(d=>d.Id == action.ObjectId) && s.Layout.Any(p=>p.Id == action.ObjectId && !p.Hidden);
+    }
+    public static (double X,double Y) VisitTarget(SaveData s,ActionDef action,Placement p) {
+        var home=Home(s);
+        if (action.Id is "benchSit" or "roomRest") return (p.X,p.Y);
+        if (s.SceneId == "indoor") {
+            var room=s.Layout.First(p=>p.Id == "roomBase");
+            return (Math.Clamp(p.X+(action.Id == "deskTablet" ? 30 : 20),room.X-135,room.X+135),home.Y);
+        }
+        return (p.X-30,home.Y);
+    }
     public static (double X,double Y) Home(SaveData s) {
         double Bottom(string id,double fallback) => s.Layout.FirstOrDefault(p=>p.Id == id)?.Y ?? fallback;
         return s.SceneId switch {
             "meadow" => (240,Math.Clamp(Bottom("meadowBase",305)-28,130,315)),
-            "indoor" => (240,Math.Clamp(Bottom("roomBase",306)-36,130,315)),
+            "indoor" => (s.Layout.FirstOrDefault(p=>p.Id == "roomBase")?.X ?? 240,Math.Clamp(Bottom("roomBase",306)-12,130,315)),
             "swingTree" => (230,Math.Clamp(Bottom("swingSeat",260)+44,130,315)),
             _ => (240,252)
         };
@@ -105,7 +118,7 @@ public sealed class LifeSequence
     }
     private void Begin(SaveData s,bool memory) {
         if (actor.Dragging || (!memory && s.SceneId != "swingTree")) return;
-        Cancel(); scene=s.SceneId; originalX=actor.X; originalY=actor.Y;
+        Cancel(); actor.RiseFromBed(s); scene=s.SceneId; originalX=actor.X; originalY=actor.Y;
         MemoryRequested=memory; IsMemory=false; RecallTime=0; swingClock=0; Angle=0;
         var seat=s.Layout.FirstOrDefault(p=>p.Id == "swingSeat"); SeatX=seat?.X ?? 300; SeatY=seat?.Y ?? 260;
         Phase="approach"; Elapsed=0; actor.Visit("ropeHold",scene == "indoor" ? 260 : SeatX,HomeY(s));

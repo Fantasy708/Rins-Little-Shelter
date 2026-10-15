@@ -149,7 +149,7 @@ public sealed class SettingsWindow : Window
             foreach (var a in group)
             {
                 var b = Button(a.Name, () => pet.PreviewAction(a.Id)); b.Margin = new Thickness(0, 0, 8, 8);
-                b.IsEnabled = a.ObjectId == null || World.Available(pet.Save).Any(d => d.Id == a.ObjectId); wrap.Children.Add(b);
+                b.IsEnabled = Scenes.ActionAvailable(pet.Save,a); wrap.Children.Add(b);
             }
             motions.Children.Add(wrap);
         }

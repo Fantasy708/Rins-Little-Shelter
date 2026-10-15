@@ -27,4 +27,5 @@ m['BedroomAtlas']='world/bedroom.png'
 m['BedroomRegions']=[[x/1536,y/1024,w/1536,h/1024] for x,y,w,h in [[0,0,666,512],[666,0,519,512],[1185,0,351,512],[0,512,575,512],[575,512,365,512]]]
 m['BedSeatAnchor']=[.48,.57]
 m['BedroomWindowPane']=[.24,.035,.48,.91]
+m['BedroomGlassRegions']=[[(x-1199)/318,(y-18)/494,w/318,h/494] for x,w in [(1308,5),(1323,35),(1367,34),(1408,4)] for y,h in [(57,47),(114,72),(199,89),(299,77),(389,62)]]
 path.write_text(json.dumps(m,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -89,6 +90,38 @@ internal static class SceneVisualTests
         Scenes.Switch(save,"cloud"); actor.Life.Cancel(); Scenes.PlaceActor(save,actor); actor.Start("stand"); scene.ResetLifeVisuals(); var cloudLayout=System.Text.Json.JsonSerializer.Serialize(save.Layout);
         scene.IdealUntil=time+5; Render("cloud-ideal"); Check(System.Text.Json.JsonSerializer.Serialize(save.Layout) == cloudLayout,"cloud ideal never overwrites initial layout");
         scene.IdealUntil=0; Render("cloud-restored"); Check(save.Layout.Single().Id == "platform","cloud ideal restores only its platform");
+        Scenes.Switch(save,"indoor"); actor.Life.Cancel(); Scenes.PlaceActor(save,actor); actor.Start("stand"); scene.ResetLifeVisuals();
+        var paneColors=new Dictionary<string,byte[]>();
+        foreach(var theme in new[]{"清晨","白天","傍晚","夜晚","深夜"}) foreach(double dpi in new[]{1.0,1.5,2.0}) {
+            save.Settings.Theme=theme; save.Settings.Weather="晴";
+            var image=Render("bedroom-sky-"+theme+"-"+dpi.ToString("0.0",System.Globalization.CultureInfo.InvariantCulture),dpi);
+            var sample=scene.BedroomGlassCenters[6]; byte[] color=new byte[4]; image.CopyPixels(new Int32Rect((int)(sample.X*dpi),(int)(sample.Y*dpi),1,1),color,4,0);
+            Check(color[3]>=240,"sky fills glass without turning window into a transparent hole");
+            if(dpi == 1) paneColors[theme]=color;
+            Check(scene.Hit(sample) == "window","sky glass keeps window interaction");
+        }
+        Check(paneColors["白天"][0]>paneColors["深夜"][0]+60,"window responds to local/fixed day and night");
+        foreach(var weather in new[]{"雨","雪","风"}) {
+            save.Settings.Theme="白天"; save.Settings.Weather="晴"; var clear=Render();
+            save.Settings.Weather=weather; var wet=Render("bedroom-weather-"+weather);
+            byte[] a=new byte[480*340*4],b=new byte[a.Length]; clear.CopyPixels(a,480*4,0); wet.CopyPixels(b,480*4,0);
+            int changed=0;
+            for(int y=0;y<340;y++) for(int x=0;x<480;x++) {
+                int index=(y*480+x)*4;
+                if (a[index] == b[index] && a[index+1] == b[index+1] && a[index+2] == b[index+2] && a[index+3] == b[index+3]) continue;
+                changed++; if(x<89 || x>126 || y<46 || y>174) throw new Exception("屋内天气越过玻璃进入家具或地板");
+            }
+            Check(changed>0,"weather visible only behind glass: "+weather);
+        }
+        save.Settings.Weather="晴"; var win=save.Layout.First(p=>p.Id == "window"); win.X+=23; win.Y+=11; Render("bedroom-window-moved"); Check(scene.Hit(scene.BedroomGlassCenters[6]) == "window","sky follows moved window");
+        win.Hidden=true; Render("bedroom-window-hidden"); Check(scene.Hit(scene.BedroomGlassCenters[6]) != "window","hidden window leaves no sky hit region"); win.Hidden=false;
+        save.Settings.Theme="白天"; save.Settings.Weather="晴";
+        foreach(var action in new[]{"deskTablet","windowWatch"}) {
+            Scenes.PlaceActor(save,actor); actor.Start("stand"); actor.PreviewVisit(save,action);
+            for(int i=0;i<500 && actor.Current.Id != action;i++) Step(.02);
+            Check(actor.Current.Id == action && actor.Y == Scenes.Home(save).Y,"indoor furniture interaction stands on front floor: "+action);
+            Render(); Step(.4); Render("bedroom-interaction-"+action);
+        }
         Console.WriteLine("PASS: "+checks+" production scene render/rope/contact/cancel/DPI checks. "+output);
     }
 }

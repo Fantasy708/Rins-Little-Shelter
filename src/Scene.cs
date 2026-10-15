@@ -101,6 +101,7 @@ public sealed class ResourceManifest
     public double[][] BedroomRegions { get; set; } = Atlas.Grid(3,2);
     public double[] BedSeatAnchor { get; set; } = new[]{.48,.57};
     public double[] BedroomWindowPane { get; set; } = new[]{.24,.035,.48,.91};
+    public double[][] BedroomGlassRegions { get; set; } = Array.Empty<double[]>();
     public double[][] SwingRegions { get; set; } = Array.Empty<double[]>();
     public double[][] FamilyRegions { get; set; } = Array.Empty<double[]>();
     public double[][] SwingHips { get; set; } = Array.Empty<double[]>();
@@ -193,6 +194,7 @@ public sealed partial class Scene : FrameworkElement
         foreach (var pair in hits.Reverse())
         {
             var rect = pair.Value.Rect;
+            if (pair.Key == "window" && save.SceneId == "indoor" && glassClip?.FillContains(point) == true) return "window";
             if (rect.Contains(point) && pair.Value.Sprite.Solid((point.X - rect.X) / rect.Width, (point.Y - rect.Y) / rect.Height)) return pair.Key;
         }
         return null;
@@ -230,8 +232,9 @@ public sealed partial class Scene : FrameworkElement
             dc.PushTransform(new ScaleTransform(.85 + .15 * appear, .85 + .15 * appear, p.X, p.Y));
             dc.PushTransform(new RotateTransform(angle, p.X, p.Y));
             if (p.Id == "stars") dc.PushOpacity(night || ideal || audio.IsShelter ? .95 : .28);
-            else dc.PushOpacity(theme == "深夜" ? .7 : night ? .79 : 1);
+            else dc.PushOpacity(save.SceneId == "indoor" ? 1 : theme == "深夜" ? .7 : night ? .79 : 1);
             dc.DrawImage(sprite.Image, rect);
+            if (p.Id == "window" && save.SceneId == "indoor") DrawBedroomSky(dc,rect,theme);
             if (p.Id == "roomBase" && behavior.Life.Atmosphere > 0) { dc.PushOpacity(behavior.Life.Atmosphere); dc.DrawImage(environments.Sprites[1].Image,rect); dc.Pop(); }
             dc.Pop(); dc.Pop(); dc.Pop(); dc.Pop(); if (visibleOpacity > .5) hits[p.Id] = (rect, sprite);
             if (p.Id == "house" && save.SceneId == "outdoor") doorRect=new Rect(rect.X+rect.Width*.26,rect.Y+rect.Height*.52,rect.Width*.15,rect.Height*.39);
@@ -265,6 +268,9 @@ public sealed partial class Scene : FrameworkElement
         var clip=MotionClips.Find(action.Id);
         bool raw=clip != null;
         bool left=raw ? behavior.SequenceMirror : behavior.FacingLeft;
+        // The sky-watching pose was drawn looking left in its source frame.
+        // Orient this pose toward the actual window instead of the walk facing.
+        if (action.Id == "windowWatch" && save.SceneId == "indoor" && save.Layout.FirstOrDefault(p=>p.Id == "window" && !p.Hidden) is { } window) left=window.X>behavior.X;
         double breath=move || raw ? 0 : Math.Sin(Time*1.5)*.45;
         double seatOffset=action.Id == "swing" ? 45 : 0;
         string key=(raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
@@ -392,12 +398,7 @@ public sealed partial class Scene : FrameworkElement
     private void DrawWeather(DrawingContext dc)
     {
         bool indoors=save.SceneId == "indoor";
-        if (indoors) {
-            if (!hits.TryGetValue("window",out var window)) return;
-            var r=window.Rect;
-            var pane=manifest.BedroomWindowPane;
-            dc.PushClip(new RectangleGeometry(new Rect(r.X+r.Width*pane[0],r.Y+r.Height*pane[1],r.Width*pane[2],r.Height*pane[3])));
-        }
+        if (indoors) return; // Indoor weather is drawn behind individual window panes.
         switch (save.Settings.Weather)
         {
             case "雨":
@@ -410,7 +411,6 @@ public sealed partial class Scene : FrameworkElement
                 for (int i = 0; i < 9; i++) dc.DrawEllipse(Brush(90, 238, 177, 195), null, new Point(40 + (Time * 22 + i * 43) % 395, 120 + Math.Sin(Time + i) * 20 + i * 9), 3, 1);
                 break;
         }
-        if (indoors) dc.Pop();
     }
     private void DrawCreation(DrawingContext dc)
     {

@@ -25,6 +25,7 @@ docs/screenshots/*
 !docs/screenshots/indoor-memory.png
 !docs/screenshots/swing-runtime.png
 !docs/screenshots/bedroom-runtime.png
+!docs/screenshots/bedroom-night.png
 assets/reference/*
 !assets/reference/README.md
 *.user

@@ -200,28 +200,28 @@ public sealed class PetWindow : Window
         if (options.Length < 2) options = new[] { "theme:白天", "theme:夜晚" };
         Scene.Choices = options; Scene.ChoiceUntil = runtime + 20; lastOffer = runtime;
         if (automatic) { Save.ChoiceCounts[key] = Save.ChoiceCounts.GetValueOrDefault(key) + 1; Persist(); }
-        Behavior.Start("invite");
+        Behavior.RiseFromBed(Save); Behavior.Start("invite");
     }
     public void CreateObject(string id)
     {
         if (Behavior.Life.Active) Behavior.Life.Cancel();
         if (!World.Available(Save).Any(d=>d.Id == id)) return;
-        Behavior.Create(id, Audio.Level > .12); Scene.ChoiceUntil = 0;
+        Behavior.RiseFromBed(Save); Behavior.Create(id, Audio.Level > .12); Scene.ChoiceUntil = 0;
     }
     public void ShowIdeal() { if (Behavior.Life.Active || Save.SceneId is not "outdoor" and not "cloud") return; Scene.IdealUntil = runtime + 45; Scene.ShelterUntil = runtime + 55; Behavior.Start("knees"); Scene.Bubble = "这里有我们的天空。"; Scene.BubbleUntil = runtime + 6; }
     public void PreviewAction(string id)
     {
+        var a = Actions.Get(id); if (!Scenes.ActionAvailable(Save,a)) return;
         if (id is "swingLife" or "ropeHold") { Swing(); return; }
-        Behavior.Life.Cancel();
-        var a = Actions.Get(id);
+        Behavior.Life.Cancel(); Behavior.RiseFromBed(Save);
         if (a.Kind == "create") { var d = World.Available(Save).LastOrDefault(d => d.Id != "platform"); Behavior.Start(id, target: d?.Id); }
         else if (a.Kind == "move") Behavior.Start(id, Behavior.X < 240 ? 290 : 190, Scenes.Home(Save).Y);
-        else if (a.ObjectId != null && Save.Layout.FirstOrDefault(p => p.Id == a.ObjectId) is { } p) Behavior.Visit(id, p.X, id is "benchSit" or "roomRest" ? p.Y : Scenes.Home(Save).Y);
+        else if (a.ObjectId != null) Behavior.PreviewVisit(Save,id);
         else Behavior.Start(id);
         Scene.Bubble = a.Name; Scene.BubbleUntil = runtime + 3;
     }
-    public void HideObject(string id) { Behavior.Life.Cancel(); var p = Save.Layout.FirstOrDefault(p => p.Id == id); if (p != null && !Scenes.Foundation(id)) { if (Behavior.Current.ObjectId == id) Behavior.Start("stand"); p.Hidden = true; } Persist(); CompanionChanged?.Invoke(); }
-    public void RestoreLayout() { Behavior.Life.Cancel(); Save.Layout.Clear(); Save.Layout.AddRange(Save.SceneId == "outdoor" ? World.Available(Save).Select(World.Default) : Scenes.Defaults(Save.SceneId)); Behavior.Start("stand"); Scene.ResetLifeVisuals(); Persist(); CompanionChanged?.Invoke(); }
+    public void HideObject(string id) { Behavior.Life.Cancel(); var p = Save.Layout.FirstOrDefault(p => p.Id == id); if (p != null && !Scenes.Foundation(id)) { if (Behavior.Current.ObjectId == id) { Behavior.RiseFromBed(Save); Behavior.Start("stand"); } p.Hidden = true; } Persist(); CompanionChanged?.Invoke(); }
+    public void RestoreLayout() { Behavior.Life.Cancel(); Save.Layout.Clear(); Save.Layout.AddRange(Save.SceneId == "outdoor" ? World.Available(Save).Select(World.Default) : Scenes.Defaults(Save.SceneId)); Scenes.PlaceActor(Save,Behavior); Behavior.Start("stand"); Scene.ResetLifeVisuals(); Persist(); CompanionChanged?.Invoke(); }
     private void OnSceneMouseDown(object sender, MouseButtonEventArgs e)
     {
         var point = e.GetPosition(Scene); pressedTarget = Scene.Hit(point);
@@ -271,13 +271,13 @@ public sealed class PetWindow : Window
         {
             Save.Interactions++;
             if (Behavior.Life.Active && pressedTarget is not "rin" and not "swingSeat") Behavior.Life.Cancel();
-            if (pressedTarget == "rin") Behavior.Click();
+            if (pressedTarget == "rin") Behavior.Click(Save);
             else {
                 Scene.FeedbackObject = pressedTarget; Scene.FeedbackUntil = runtime + 3;
                 if (pressedTarget == "bench") { var p = Save.Layout.First(o => o.Id == "bench"); Behavior.Visit("benchSit", p.X, p.Y); }
                 if (pressedTarget == "bird") Behavior.Start("watchBird");
                 if (pressedTarget == "swingSeat") Swing();
-                if (pressedTarget == "chair") { var p=Save.Layout.First(o=>o.Id == "chair"); Behavior.Visit("roomRest",p.X,p.Y); }
+                if (pressedTarget == "chair") Behavior.PreviewVisit(Save,"roomRest");
                 if (pressedTarget == "window") Behavior.PreviewVisit(Save,"windowWatch");
                 if (pressedTarget == "desk") Behavior.PreviewVisit(Save,"deskTablet");
             }

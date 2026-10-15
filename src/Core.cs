@@ -110,10 +110,12 @@ public sealed class Behavior
         string action = music ? "createMusic" : id switch { "cloud" or "path" => "createSwipe", "stars" or "bird" => "createRaise", "bench" or "house" or "lamp" or "windmill" => "createPlace", _ => "createTap" };
         Start(action, target: id);
     }
-    public void Click()
+    public void RiseFromBed(SaveData save) { if (save.SceneId == "indoor" && Current.Id == "roomRest" && !Dragging) { Y=Scenes.Home(save).Y; Start("stand"); } }
+    public void Click(SaveData? save=null)
     {
         if (Life.Active) { Life.RequestStop(); return; }
         if (Current.Kind == "create" || Dragging) return;
+        if (save != null) RiseFromBed(save);
         string id = new[] { "smile", "retreat", "invite" }[random.Next(3)];
         Start(id, id == "retreat" ? Math.Clamp(X - 12, 60, 420) : X);
     }
@@ -127,12 +129,16 @@ public sealed class Behavior
     }
     public void PreviewVisit(SaveData save,string id)
     {
-        Life.Cancel(); var action=Actions.Get(id); var p=save.Layout.FirstOrDefault(p=>p.Id == action.ObjectId && !p.Hidden);
-        if (p != null) Visit(id,p.X-30,Scenes.Home(save).Y);
+        var action=Actions.Get(id); if (!Scenes.ActionAvailable(save,action)) return;
+        RiseFromBed(save);
+        Life.Cancel(); var p=save.Layout.FirstOrDefault(p=>p.Id == action.ObjectId && !p.Hidden);
+        if (p != null) { var target=Scenes.VisitTarget(save,action,p); Visit(id,target.X,target.Y); }
     }
     public void Tick(double dt, SaveData save, bool night)
     {
         if (Dragging) return;
+        if (save.SceneId == "indoor" && !Life.Active && !Scenes.ActionAvailable(save,Current)) { Y=Scenes.Home(save).Y; Start("stand"); return; }
+        if (save.SceneId == "indoor" && !Life.Active && ((afterSettle != null && !Scenes.ActionAvailable(save,Actions.Get(afterSettle))) || (arrivalAction != null && !Scenes.ActionAvailable(save,Actions.Get(arrivalAction))))) { Y=Scenes.Home(save).Y; Start("stand"); return; }
         double step = Math.Clamp(dt,0,.15); Time += step;
         if (Life.Active && Life.Tick(step, save)) return;
         if (Current.Id == "turn")
@@ -162,22 +168,24 @@ public sealed class Behavior
         }
         if (save.SceneId == "swingTree" && random.NextDouble() < .3) { Life.BeginSwing(save); return; }
         var home=Scenes.Home(save);
+        if (save.SceneId == "indoor" && Current.Id == "roomRest") { Y=home.Y; Start("stand"); return; }
         if (Math.Abs(X-home.X) > 145 || Math.Abs(Y-home.Y) > 38) { Start("walk",home.X,home.Y); return; }
         var pending = World.Pending(save);
         if (pending != null && random.NextDouble() < .6) { Create(pending.Id); return; }
         if (Current.Kind == "create" || Current.Kind == "interact" || Current.Kind == "move") { Start("stand"); return; }
-        var contextual = Actions.All.Where(a => a.Kind == "context" && World.Available(save).Any(d=>d.Id == a.ObjectId) && save.Layout.Any(p => !p.Hidden && p.Id == a.ObjectId)).ToArray();
-        if (contextual.Length > 0 && random.NextDouble() < .22)
+        var contextual = Actions.All.Where(a => a.Kind == "context" && Scenes.ActionAvailable(save,a)).ToArray();
+        if (contextual.Length > 0 && random.NextDouble() < (save.SceneId == "indoor" && night ? .35 : .22))
         {
             var a = contextual[random.Next(contextual.Length)]; var obj = save.Layout.First(p => p.Id == a.ObjectId);
-            Visit(a.Id, obj.X + (a.Id is "benchSit" or "roomRest" ? 0 : -30), a.Id is "benchSit" or "roomRest" ? obj.Y : home.Y); return;
+            var target=Scenes.VisitTarget(save,a,obj); Visit(a.Id,target.X,target.Y); return;
         }
         if (!night && random.NextDouble() < .14)
         {
-            string id = new[] { "walk", "trot", "hop", "turn", "visit" }[random.Next(5)];
-            Start(id, random.Next(180, 310), home.Y); return;
+            var moves=save.SceneId == "indoor" ? new[]{"walk","turn"} : new[]{"walk","trot","hop","turn","visit"};
+            string id=moves[random.Next(moves.Length)];
+            Start(id, save.SceneId == "indoor" ? home.X+random.Next(-90,76) : random.Next(180,310),home.Y); return;
         }
-        var ids = night ? new[] { "knees", "lie", "nap", "sky", "tablet" } : save.SceneId == "indoor" ? new[] { "stand", "gaze", "tablet", "dress" } : new[] { "stand", "knees", "swing", "gaze", "sky", "dress", "tablet", "catch" };
+        var ids = save.SceneId == "indoor" ? new[] { "stand", "gaze", "tablet", "dress" } : night ? new[] { "knees", "lie", "nap", "sky", "tablet" } : new[] { "stand", "knees", "swing", "gaze", "sky", "dress", "tablet", "catch" };
         Start(ids[random.Next(ids.Length)]);
     }
 }

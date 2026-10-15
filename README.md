@@ -10,6 +10,8 @@
 
 设计取舍、反馈修复和各轮更新过程见[开发日志](docs/开发日志.md)。
 
+2026-10-15已补齐三个历史预览：[v0.2.0-preview.1 · 多场景与父女记忆](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.2.0-preview.1)、[preview.2 · 原片卧室与成长顺序](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.2.0-preview.2)、[preview.3 · 屋内场景修正](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.2.0-preview.3)。附件保留当时的程序和源码，适合回看开发过程；日常使用建议下载上方的 `v0.3.1-preview.2`。全部九个公开预览及发布日期见[发行索引](docs/发布状态.md#发行索引2026-10-15)。
+
 本轮译文依据用户2026-10-15提供的日文正文，没有重新逐帧核对原片。preview.2图标最终EXE完成434项平板/故事、1775项平板绘图、253项窗口接口和745项启动检查；使用独立旧存档单次运行61.0秒、2880个实际绘制帧，正常结束，进度、布局、故事、已读与备份保持。短运行不能代替一小时及原生桌面验收，详细边界见验证记录。图标原稿为`assets/app/rin-shelter.png`，程序使用同目录的`rin-shelter.ico`。
 
 ![Rin的小世界](docs/screenshots/bench-seat-on-white.png)

@@ -39,11 +39,12 @@ public sealed class CompanionClock
 
 public static class World
 {
-    public static IEnumerable<ObjectDef> Available(SaveData save) => ObjectDef.All.Where(d => save.Settings.FreeMode || d.Day <= save.Days);
+    public static IEnumerable<ObjectDef> Available(SaveData save) => Scenes.Objects(save.SceneId).Where(d => save.Settings.FreeMode || d.Day <= save.Days);
     public static void Initialize(SaveData save)
     {
         if (save.GrowthLayout.All(p => p.Id != "platform")) save.GrowthLayout.Add(Default(ObjectDef.All[0]));
         if (save.FreeLayout.Count == 0) save.FreeLayout.AddRange(ObjectDef.All.Select(Default));
+        Scenes.Initialize(save);
     }
     public static Placement Default(ObjectDef d) => new() { Id = d.Id, X = d.X, Y = d.Y };
     public static ObjectDef? Pending(SaveData save) => Available(save).FirstOrDefault(d => save.Layout.All(p => p.Id != d.Id));
@@ -60,6 +61,7 @@ public static class World
 
 public sealed class Behavior
 {
+    public LifeSequence Life { get; }
     public ActionDef Current { get; private set; } = Actions.Get("stand");
     public double Time { get; private set; }
     public double X { get; set; } = 240;
@@ -82,7 +84,7 @@ public sealed class Behavior
     private bool created;
     private string? arrivalAction, afterSettle;
     public event Action<string>? ObjectCreated;
-    public Behavior(int? seed = null) => random = seed.HasValue ? new(seed.Value) : new();
+    public Behavior(int? seed = null) { random = seed.HasValue ? new(seed.Value) : new(); Life = new LifeSequence(this); }
     public void Start(string id, double? x = null, double? y = null, string? target = null)
     {
         if (Dragging) return;
@@ -110,11 +112,12 @@ public sealed class Behavior
     }
     public void Click()
     {
+        if (Life.Active) { Life.RequestStop(); return; }
         if (Current.Kind == "create" || Dragging) return;
         string id = new[] { "smile", "retreat", "invite" }[random.Next(3)];
         Start(id, id == "retreat" ? Math.Clamp(X - 12, 60, 420) : X);
     }
-    public void Released() { Dragging = false; Start("gaze"); }
+    public void Released() { Dragging = false; Life.Cancel(); Start("gaze"); }
     public void Visit(string id, double x, double y)
     {
         if (Dragging) return;
@@ -122,10 +125,16 @@ public sealed class Behavior
         if (Math.Abs(x-X) < 2 && Math.Abs(y-Y) < 2) { Start("stand"); afterSettle=id; return; }
         Start("visit", x, y); arrivalAction = id;
     }
+    public void PreviewVisit(SaveData save,string id)
+    {
+        Life.Cancel(); var action=Actions.Get(id); var p=save.Layout.FirstOrDefault(p=>p.Id == action.ObjectId && !p.Hidden);
+        if (p != null) Visit(id,p.X-30,Scenes.Home(save).Y);
+    }
     public void Tick(double dt, SaveData save, bool night)
     {
         if (Dragging) return;
         double step = Math.Clamp(dt,0,.15); Time += step;
+        if (Life.Active && Life.Tick(step, save)) return;
         if (Current.Id == "turn")
         {
             // The art itself turns through front view. Do not mirror it halfway
@@ -151,22 +160,24 @@ public sealed class Behavior
         {
             string id=arrivalAction; Start("stand"); afterSettle=id; return;
         }
-        if (Math.Abs(X - 240) > 145 || Math.Abs(Y - 252) > 38) { Start("walk", 240, 252); return; }
+        if (save.SceneId == "swingTree" && random.NextDouble() < .3) { Life.BeginSwing(save); return; }
+        var home=Scenes.Home(save);
+        if (Math.Abs(X-home.X) > 145 || Math.Abs(Y-home.Y) > 38) { Start("walk",home.X,home.Y); return; }
         var pending = World.Pending(save);
         if (pending != null && random.NextDouble() < .6) { Create(pending.Id); return; }
         if (Current.Kind == "create" || Current.Kind == "interact" || Current.Kind == "move") { Start("stand"); return; }
-        var contextual = Actions.All.Where(a => a.Kind == "context" && save.Layout.Any(p => !p.Hidden && p.Id == a.ObjectId)).ToArray();
+        var contextual = Actions.All.Where(a => a.Kind == "context" && World.Available(save).Any(d=>d.Id == a.ObjectId) && save.Layout.Any(p => !p.Hidden && p.Id == a.ObjectId)).ToArray();
         if (contextual.Length > 0 && random.NextDouble() < .22)
         {
             var a = contextual[random.Next(contextual.Length)]; var obj = save.Layout.First(p => p.Id == a.ObjectId);
-            Visit(a.Id, obj.X + (a.Id == "benchSit" ? 0 : -30), a.Id == "benchSit" ? obj.Y : 252); return;
+            Visit(a.Id, obj.X + (a.Id is "benchSit" or "roomRest" ? 0 : -30), a.Id is "benchSit" or "roomRest" ? obj.Y : home.Y); return;
         }
         if (!night && random.NextDouble() < .14)
         {
             string id = new[] { "walk", "trot", "hop", "turn", "visit" }[random.Next(5)];
-            Start(id, random.Next(180, 310), 252); return;
+            Start(id, random.Next(180, 310), home.Y); return;
         }
-        var ids = night ? new[] { "knees", "lie", "nap", "sky", "tablet" } : new[] { "stand", "knees", "swing", "gaze", "sky", "dress", "tablet", "catch" };
+        var ids = night ? new[] { "knees", "lie", "nap", "sky", "tablet" } : save.SceneId == "indoor" ? new[] { "stand", "gaze", "tablet", "dress" } : new[] { "stand", "knees", "swing", "gaze", "sky", "dress", "tablet", "catch" };
         Start(ids[random.Next(ids.Length)]);
     }
 }

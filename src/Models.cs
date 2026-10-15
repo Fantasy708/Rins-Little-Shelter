@@ -18,6 +18,8 @@ public sealed class Settings
     public double Left { get; set; } = double.NaN;
     public double Top { get; set; } = double.NaN;
     public double InteractionMinutes { get; set; } = 35;
+    public string GrowthScene { get; set; } = "outdoor";
+    public string FreeScene { get; set; } = "outdoor";
 }
 
 public sealed class Placement
@@ -38,11 +40,14 @@ public sealed class SaveData
     public Dictionary<string, int> ChoiceCounts { get; set; } = new();
     public List<Placement> GrowthLayout { get; set; } = new();
     public List<Placement> FreeLayout { get; set; } = new();
+    public Dictionary<string, List<Placement>> GrowthSceneLayouts { get; set; } = new();
+    public Dictionary<string, List<Placement>> FreeSceneLayouts { get; set; } = new();
     public HashSet<string> Created { get; set; } = new();
     public long Interactions { get; set; }
     public double MusicSeconds { get; set; }
     [JsonIgnore] public int Days => CompanionDates.Count;
-    [JsonIgnore] public List<Placement> Layout => Settings.FreeMode ? FreeLayout : GrowthLayout;
+    [JsonIgnore] public string SceneId => Scenes.Current(this);
+    [JsonIgnore] public List<Placement> Layout => Scenes.Layout(this);
 }
 
 public sealed record ObjectDef(string Id, string Name, int Day, int Tile, double Width, double Height, double X, double Y)
@@ -61,7 +66,7 @@ public sealed record ObjectDef(string Id, string Name, int Day, int Tile, double
         new("house", "小屋", 14, 7, 132, 132, 170, 247),
         new("stars", "星光", 20, 11, 145, 65, 305, 72)
     };
-    public static ObjectDef Get(string id) => All.First(d => d.Id == id);
+    public static ObjectDef Get(string id) => All.Concat(Scenes.ExtraObjects).First(d => d.Id == id);
 }
 
 public sealed record ActionDef(string Id, string Name, int Pose, double Duration, string Kind, string? ObjectId = null);
@@ -90,7 +95,12 @@ public static class Actions
         new("createMusic", "随音乐创造", 4, 8, "create"),
         new("smile", "轻轻微笑", 1, 5, "interact"),
         new("retreat", "轻退一步", 0, 3, "interact"),
-        new("invite", "展示平板", 4, 6, "interact")
+        new("invite", "展示平板", 4, 6, "interact"),
+        new("ropeHold", "扶住秋千绳", 0, 2, "special", "swingSeat"),
+        new("swingLife", "树下轻荡秋千", 0, 34, "special", "swingSeat"),
+        new("windowWatch", "窗边看天气", 2, 18, "context", "window"),
+        new("deskTablet", "桌边使用平板", 4, 20, "context", "desk"),
+        new("roomRest", "屋内坐着休息", 7, 22, "context", "chair")
     };
     public static ActionDef Get(string id) => All.First(a => a.Id == id);
 }

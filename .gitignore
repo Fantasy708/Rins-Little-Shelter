@@ -18,6 +18,12 @@ docs/screenshots/*
 !docs/screenshots/opacity-before-after.png
 !docs/screenshots/seated-swing-preview.png
 !docs/screenshots/trot-preview.png
+!docs/screenshots/swing-animation.gif
+!docs/screenshots/scenes-meadow.png
+!docs/screenshots/scenes-indoor.png
+!docs/screenshots/swing-memory.png
+!docs/screenshots/indoor-memory.png
+!docs/screenshots/swing-runtime.png
 assets/reference/*
 !assets/reference/README.md
 *.user

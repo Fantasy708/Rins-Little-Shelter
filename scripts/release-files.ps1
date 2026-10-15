@@ -11,10 +11,13 @@ function Get-ShelterPublicFiles([string]$Root) {
         'README.md','design.md','AGENTS.md','global.json','.gitignore','.gitattributes',
         'CREDITS.md','THIRD-PARTY-NOTICES.md','assets/manifest.json','assets/catalog.json',
         'assets/reference/README.md','docs/开发说明.md','docs/素材制作.md',
-        'docs/验证记录.md','docs/发布状态.md',
+        'docs/验证记录.md','docs/发布状态.md','docs/多场景素材制作.md',
         'docs/screenshots/bench-seat-on-white.png','docs/screenshots/hop-animation.gif',
         'docs/screenshots/turn-animation.gif','docs/screenshots/opacity-before-after.png',
-        'docs/screenshots/seated-swing-preview.png','docs/screenshots/trot-preview.png'
+        'docs/screenshots/seated-swing-preview.png','docs/screenshots/trot-preview.png',
+        'docs/screenshots/swing-animation.gif','docs/screenshots/scenes-meadow.png',
+        'docs/screenshots/scenes-indoor.png','docs/screenshots/swing-memory.png','docs/screenshots/indoor-memory.png',
+        'docs/screenshots/swing-runtime.png'
     )) { Get-Item -LiteralPath (Join-Path $Root $relative) -ErrorAction Stop }
     if (Test-Path -LiteralPath (Join-Path $Root 'LICENSE')) {
         Get-Item -LiteralPath (Join-Path $Root 'LICENSE')

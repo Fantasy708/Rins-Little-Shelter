@@ -1,5 +1,5 @@
 param(
-    [string]$Version = 'v0.1.0-preview.1',
+    [string]$Version = 'v0.2.0-preview.1',
     [string]$ProgramDirectory = 'dist/RinsLittleShelter'
 )
 $ErrorActionPreference = 'Stop'
@@ -15,7 +15,9 @@ New-Item -ItemType Directory -Path $portableRoot,$releaseRoot -Force | Out-Null
 # 复用已检查的EXE和原始PNG，不重新编译或改变程序哈希。
 $runtimeFiles = @('RinsLittleShelter.exe','assets/manifest.json','assets/catalog.json',
     'assets/rin/poses.png','assets/rin/walk.png','assets/rin/trot-v2.png',
-    'assets/rin/hop.png','assets/rin/turn.png','assets/world/objects.png')
+    'assets/rin/hop.png','assets/rin/turn.png','assets/world/objects.png',
+    'assets/rin/swing-life.png','assets/rin/swing-loop.png','assets/rin/family-memory.png',
+    'assets/world/scenes.png','assets/world/swing-tree.png')
 foreach ($relative in $runtimeFiles) {
     $target = Join-Path $portableRoot $relative
     New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null
@@ -31,7 +33,7 @@ if (Test-Path -LiteralPath (Join-Path $projectRoot 'LICENSE')) {
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSES') -Destination $portableRoot -Recurse
 $publicDocs = Join-Path $portableRoot 'docs'
 New-Item -ItemType Directory -Path $publicDocs -Force | Out-Null
-foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验证记录.md','docs/发布状态.md')) {
+foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验证记录.md','docs/发布状态.md','docs/多场景素材制作.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $publicDocs
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/releases') -Destination $publicDocs -Recurse

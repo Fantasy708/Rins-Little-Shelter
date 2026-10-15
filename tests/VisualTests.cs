@@ -55,7 +55,7 @@ internal static class VisualTests
         CheckMotionClips(output);
         CheckMotionOpacity();
         CheckMotionTransitions();
-        Console.WriteLine("PASS: 29组动作、5种天空、3种天气、3种DPI渲染；角色像素命中，空白穿透。输出：" + output);
+        Console.WriteLine("PASS: 34组动作、5种天空、3种天气、3种DPI渲染；角色像素命中，空白穿透。输出：" + output);
     }
     private static void CheckSeatedSwing(string output)
     {

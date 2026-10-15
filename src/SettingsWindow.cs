@@ -105,19 +105,28 @@ public sealed class SettingsWindow : Window
         string dayKey = DateTime.Now.ToString("yyyy-MM-dd");
         status.Text = "已陪伴 " + save.Days + " 天 · 今天 " + (save.DailySeconds.GetValueOrDefault(dayKey) / 60).ToString("0") + " 分钟 / 15 分钟\n" + (pet.Paused ? "陪伴已暂停" : pet.Audio.Status) + (string.IsNullOrEmpty(pet.Audio.Track) ? "" : " · " + pet.Audio.Track);
         if (lastDays != save.Days || lastFree != save.Settings.FreeMode) { lastDays = save.Days; lastFree = save.Settings.FreeMode; UpdateCollection(); UpdateMotions(); }
-        string layout = string.Join(";", save.Layout.Select(p => p.Id + ":" + p.Hidden));
-        if (lastLayout != layout) { lastLayout = layout; UpdateCollection(); }
+        string layout = save.SceneId + string.Join(";", save.Layout.Select(p => p.Id + ":" + p.Hidden));
+        if (lastLayout != layout) { lastLayout = layout; UpdateCollection(); UpdateMotions(); }
     }
     private void UpdateCollection()
     {
         collection.Children.Clear();
+        collection.Children.Add(new TextBlock { Text="前往场景",FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,8) });
+        var destinations=new WrapPanel();
+        foreach (var scene in Scenes.All) { var b=Button(scene.Name+(scene.Id == pet.Save.SceneId ? " · 当前" : ""),()=>pet.SwitchScene(scene.Id)); b.IsEnabled=Scenes.Unlocked(pet.Save,scene.Id); b.ToolTip="累计陪伴 "+scene.Day+" 天开放"; destinations.Children.Add(b); } collection.Children.Add(destinations);
+        if (pet.Save.SceneId is "indoor" or "swingTree") {
+            var controls=new WrapPanel { Margin=new Thickness(0,12,0,8) };
+            var memory=Button("查看父女记忆",pet.ViewMemory); memory.IsEnabled=Scenes.MemoriesUnlocked(pet.Save); memory.ToolTip="秋千解锁后开放；仅主动播放，静音，可随时结束"; controls.Children.Add(memory);
+            controls.Children.Add(Button("结束记忆 / 停下",pet.EndMemory));
+            if (pet.Save.SceneId == "swingTree") controls.Children.Add(Button("轻轻荡秋千",pet.Swing)); collection.Children.Add(controls);
+        }
         collection.Children.Add(new TextBlock { Text = "一起长成的小世界", FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 7) });
         collection.Children.Add(new TextBlock { Text = "成长按累计陪伴日推进。自由模式拥有独立布局。", Foreground = muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
-        foreach (var d in ObjectDef.All)
+        foreach (var d in Scenes.Objects(pet.Save.SceneId))
         {
             bool available = World.Available(pet.Save).Contains(d);
             var row = new DockPanel { Margin = new Thickness(0, 4, 0, 5) };
-            var button = Button(available ? "创造 / 展示" : "未解锁", () => { pet.CreateObject(d.Id); UpdateCollection(); }); button.IsEnabled = available && d.Id != "platform";
+            var button = Button(available ? "创造 / 展示" : "未解锁", () => { pet.CreateObject(d.Id); UpdateCollection(); }); button.IsEnabled = available && !Scenes.Foundation(d.Id);
             DockPanel.SetDock(button, Dock.Right); row.Children.Add(button);
             var info = new StackPanel(); info.Children.Add(new TextBlock { Text = d.Name, FontWeight = FontWeights.SemiBold });
             bool shown = pet.Save.Layout.Any(p => p.Id == d.Id && !p.Hidden);
@@ -134,7 +143,7 @@ public sealed class SettingsWindow : Window
         motions.Children.Add(new TextBlock { Text = "选择一个动作，看看她现在想做什么。场景动作随景物解锁。", Foreground = muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
         foreach (var group in Actions.All.GroupBy(a => a.Kind))
         {
-            string label = group.Key switch { "idle" => "静静陪伴", "context" => "在小世界里", "move" => "轻轻走动", "create" => "创造的时刻", _ => "回应你" };
+            string label = group.Key switch { "idle" => "静静陪伴", "context" => "在小世界里", "move" => "轻轻走动", "create" => "创造的时刻", "special"=>"秋千日常", _ => "回应你" };
             motions.Children.Add(new TextBlock { Text = label, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 10) });
             var wrap = new WrapPanel();
             foreach (var a in group)
@@ -146,4 +155,3 @@ public sealed class SettingsWindow : Window
         }
     }
 }
-

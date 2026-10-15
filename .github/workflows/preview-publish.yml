@@ -1,13 +1,14 @@
-# DRAFT ONLY: reviewed by root before copying to .github/workflows on existing main.
-# No branch creation. Manual dispatch only. The preview stays a draft.
-# Dispatch inputs are filled after the final local EXE has been tested and tagged.
-name: Reproduce v0.3.1-preview.1 and stage draft attachments
+# One-time letter update staging on existing main; no branch creation.
+# Manual dispatch only. Only the frozen preview.2 tag may be built and staged.
+# Fill dispatch inputs after the final local EXE is tested and tagged.
+# Root verifies staged attachments before publishing and disables this workflow afterward.
+name: Reproduce v0.3.1-preview.2 letter update and stage draft attachments
 
 on:
   workflow_dispatch:
     inputs:
       expected_commit:
-        description: Exact peeled commit of the tested v0.3.1-preview.1 tag (40 hex)
+        description: Exact peeled commit of the tested v0.3.1-preview.2 tag (40 hex)
         required: true
         type: string
       expected_exe_sha256:
@@ -15,7 +16,7 @@ on:
         required: true
         type: string
       expected_draft_id:
-        description: ID of the existing v0.3.1-preview.1 draft, confirmed by root
+        description: ID of the existing v0.3.1-preview.2 draft, confirmed by root
         required: true
         type: string
 
@@ -23,7 +24,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: rin-v0.3.1-preview.1-draft-upload
+  group: rin-v0.3.1-preview.2-draft-upload
   cancel-in-progress: false
 
 jobs:
@@ -35,7 +36,7 @@ jobs:
       run:
         shell: pwsh
     env:
-      RELEASE_TAG: v0.3.1-preview.1
+      RELEASE_TAG: v0.3.1-preview.2
       EXPECTED_COMMIT: ${{ inputs.expected_commit }}
       EXPECTED_EXE_SHA256: ${{ inputs.expected_exe_sha256 }}
       EXPECTED_DRAFT_ID: ${{ inputs.expected_draft_id }}
@@ -54,7 +55,7 @@ jobs:
       - name: Checkout only the frozen preview tag
         uses: actions/checkout@v4
         with:
-          ref: refs/tags/v0.3.1-preview.1
+          ref: refs/tags/v0.3.1-preview.2
           fetch-depth: 0
           persist-credentials: false
 
@@ -63,10 +64,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $actualCommit = (& git rev-parse 'HEAD^{commit}').Trim()
           if ($LASTEXITCODE -ne 0 -or $actualCommit -ne $env:EXPECTED_COMMIT) { throw 'Frozen preview commit mismatch' }
-          $tagCommit = (& git rev-parse 'refs/tags/v0.3.1-preview.1^{commit}').Trim()
+          $tagCommit = (& git rev-parse 'refs/tags/v0.3.1-preview.2^{commit}').Trim()
           if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $actualCommit) { throw 'Preview tag changed' }
           [xml]$project = Get-Content -LiteralPath src/LittleShelter.csproj -Raw
-          if (@($project.Project.PropertyGroup.Version) -notcontains '0.3.1-preview.1') { throw 'Source is not the requested preview version' }
+          if (@($project.Project.PropertyGroup.Version) -notcontains '0.3.1-preview.2') { throw 'Source is not the requested preview version' }
           foreach ($file in Get-ChildItem -LiteralPath src -Recurse -File | Where-Object { $_.Extension -eq '.cs' -and $_.FullName -notmatch '\\(obj|bin)\\' }) {
             if ([System.IO.File]::ReadAllBytes($file.FullName) -contains 13) { throw ('Compiled source must use LF: ' + $file.Name) }
           }
@@ -98,7 +99,7 @@ jobs:
           & 'D:\Shelter桌宠\.tools\dotnet\dotnet.exe' publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true `
             -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false `
             -p:IncludeNativeLibrariesForSelfExtract=true `
-            "-p:BaseOutputPath=$projectRoot\output\build-script\" -o output/preview-publish
+            "-p:BaseOutputPath=$projectRoot\output\icon-final-build\" -o output/preview-publish
           if ($LASTEXITCODE -ne 0) { throw 'Preview build failed' }
           Copy-Item -LiteralPath assets/catalog.json -Destination output/preview-publish/assets/catalog.json
           foreach ($name in @('RinsLittleShelter.dll','RinsLittleShelter.deps.json','RinsLittleShelter.runtimeconfig.json','apphost.exe')) {
@@ -116,7 +117,7 @@ jobs:
           if ($actual -ne $env:EXPECTED_EXE_SHA256) { throw 'EXE differs from the tested local preview. No attachment write is allowed.' }
           if (Test-Path -LiteralPath output/preview-publish/RinsLittleShelter.pdb) { throw 'Unexpected PDB in reproducible preview output' }
           foreach ($relative in @('assets/manifest.json','assets/catalog.json') + @(
-              Get-ChildItem -LiteralPath assets/rin,assets/world -Recurse -File | ForEach-Object {
+              Get-ChildItem -LiteralPath assets/rin,assets/world,assets/app -Recurse -File | ForEach-Object {
                 [System.IO.Path]::GetRelativePath('D:\Shelter桌宠',$_.FullName)
               })) {
             $source = Join-Path 'D:\Shelter桌宠' $relative
@@ -130,12 +131,12 @@ jobs:
         working-directory: 'D:\Shelter桌宠'
         run: |
           $ErrorActionPreference = 'Stop'
-          & ./scripts/package-release.ps1 -Version v0.3.1-preview.1 -ProgramDirectory output/preview-publish -ReleaseDirectory dist/github/v0.3.1-preview.1
-          $releaseRoot = Join-Path 'D:\Shelter桌宠' 'dist/github/v0.3.1-preview.1'
-          $sourceZip = Join-Path $releaseRoot 'RinsLittleShelter-v0.3.1-preview.1-source.zip'
+          & ./scripts/package-release.ps1 -Version v0.3.1-preview.2 -ProgramDirectory output/preview-publish -ReleaseDirectory dist/github/v0.3.1-preview.2
+          $releaseRoot = Join-Path 'D:\Shelter桌宠' 'dist/github/v0.3.1-preview.2'
+          $sourceZip = Join-Path $releaseRoot 'RinsLittleShelter-v0.3.1-preview.2-source.zip'
           & git -C $env:GITHUB_WORKSPACE archive --format=zip --prefix=RinsLittleShelter-source/ -o $sourceZip $env:RELEASE_TAG
           if ($LASTEXITCODE -ne 0) { throw 'Frozen tagged source ZIP failed' }
-          $portableZip = Join-Path $releaseRoot 'RinsLittleShelter-v0.3.1-preview.1-win-x64.zip'
+          $portableZip = Join-Path $releaseRoot 'RinsLittleShelter-v0.3.1-preview.2-win-x64.zip'
           Add-Type -AssemblyName System.IO.Compression
           $zip = [System.IO.Compression.ZipFile]::OpenRead($portableZip)
           try {
@@ -161,13 +162,13 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $endpoint = 'repos/' + $env:GH_REPO + '/releases/' + $env:EXPECTED_DRAFT_ID
-          $releaseRoot = Join-Path 'D:\Shelter桌宠' 'dist/github/v0.3.1-preview.1'
+          $releaseRoot = Join-Path 'D:\Shelter桌宠' 'dist/github/v0.3.1-preview.2'
           function Read-ExpectedDraft {
             $draft = & gh api $endpoint | ConvertFrom-Json
             if ($LASTEXITCODE -ne 0 -or -not $draft.draft -or -not $draft.prerelease -or $draft.tag_name -ne $env:RELEASE_TAG -or [string]$draft.id -ne $env:EXPECTED_DRAFT_ID) { throw 'Preview draft identity/state changed: stop before attachment write' }
             return $draft
           }
-          foreach ($name in @('RinsLittleShelter-v0.3.1-preview.1-win-x64.zip','RinsLittleShelter-v0.3.1-preview.1-source.zip','SHA256.txt')) {
+          foreach ($name in @('RinsLittleShelter-v0.3.1-preview.2-win-x64.zip','RinsLittleShelter-v0.3.1-preview.2-source.zip','SHA256.txt')) {
             $draft = Read-ExpectedDraft
             $path = Join-Path $releaseRoot $name
             $digest = 'sha256:' + (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()

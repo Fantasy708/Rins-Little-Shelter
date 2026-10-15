@@ -4,7 +4,7 @@ function Get-ShelterPublicFiles([string]$Root) {
         Get-ChildItem -LiteralPath (Join-Path $Root $directory) -Recurse -File |
             Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
     }
-    foreach ($directory in @('assets/rin','assets/world','docs/releases')) {
+    foreach ($directory in @('assets/rin','assets/world','assets/app','docs/releases')) {
         Get-ChildItem -LiteralPath (Join-Path $Root $directory) -Recurse -File
     }
     foreach ($relative in @(

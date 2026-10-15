@@ -187,10 +187,16 @@ public static class FatherLetter
 {
     public const string Empty="No messages in 2593 days.";
     public const string Title="父亲留给Rin的信";
-    public const string Credit="原作来信内容摘要";
+    public const string Credit="来自：爸爸 · 中文译文";
     public static readonly string[] Pages={
-        "母亲去世后，Rin健康、有活力\n的样子，给了父亲继续向前的力量。",
-        "父亲遗憾无法与Rin同行。\n他希望她能在留下的世界里生活，\n也相信她能够面对未来。",
-        "他相信长大后的Rin，\n会读到并理解这封信；\n即使寂寞，也能继续走下去。"
+        "自从你出生以来，\n留给我们的时间实在太少了。",
+        "妈妈去世以后，\n爸爸究竟给了你多少爱呢……",
+        "可是，看着你充满活力的样子，\n爸爸也得到了勇气。(^_^)",
+        "其实，要是能和你一起走就好了，\n可是爸爸做不到。",
+        "爸爸曾希望你忘记这一切，\n继续向前走……\n因为爸爸相信，你一定没问题。",
+        "等你懂得了寂寞，\n也会想起这一切吧。",
+        "爸爸一直相信，\n变得坚强的你，会读到这封信。",
+        "要是能再多留下一些回忆就好了，\n对不起。",
+        "小时候的你也许还不太明白，\n但现在一定能懂了吧。\n再把那天的话，对你说一次。"
     };
 }

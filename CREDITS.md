@@ -5,6 +5,7 @@
 - Rin 来自 Porter Robinson、Madeon 与 A-1 Pictures 的《Shelter》，形象以 [官方设定](https://www.sheltertheanimation.com/)为参考。
 - 本项目是同人桌面作品，与原作官方无隶属或背书关系。
 - `assets/rin` 和 `assets/world` 的PNG图集由内置imagegen工具生成，并以已有素材保持角色一致。制作提示词见 [素材制作](docs/素材制作.md)。
+- `assets/app/rin-shelter.png`为以现有角色素材作为参考、由内置imagegen生成的应用图标原稿；同目录ICO仅做Windows标准尺寸的格式转换，用于EXE、窗口与托盘。提示词及转换方式同见[素材制作](docs/素材制作.md)。
 - 未附带原曲、原片音轨或官网角色原图。角色、名称及原作相关权利归相应权利人；代码许可证不授予这些权利，也不自动适用于角色和场景图片。
 
 父女记忆以[官方短片](https://www.youtube.com/watch?v=fzQ6gRAEoy0)约3:46的秋千及4:06的整理发饰为参考。父亲和幼年Rin均为本项目重新生成的插画，不附带原片画面或音轨。提示词与选帧记录见[多场景素材制作](docs/多场景素材制作.md)。

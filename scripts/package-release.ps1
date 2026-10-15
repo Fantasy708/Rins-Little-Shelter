@@ -1,5 +1,5 @@
 param(
-    [string]$Version = 'v0.3.1-preview.1',
+    [string]$Version = 'v0.3.1-preview.2',
     [string]$ProgramDirectory = 'dist/RinsLittleShelter',
     [string]$ReleaseDirectory = ''
 )
@@ -19,7 +19,8 @@ $runtimeFiles = @('RinsLittleShelter.exe','assets/manifest.json','assets/catalog
     'assets/rin/poses.png','assets/rin/walk.png','assets/rin/trot-v2.png',
     'assets/rin/hop.png','assets/rin/turn.png','assets/world/objects.png',
     'assets/rin/swing-life.png','assets/rin/swing-loop.png','assets/rin/family-memory.png','assets/rin/tablet-life.png','assets/rin/nurture-life.png','assets/world/nurture-grass.png',
-    'assets/world/scenes.png','assets/world/swing-tree.png','assets/world/bedroom.png')
+    'assets/world/scenes.png','assets/world/swing-tree.png','assets/world/bedroom.png',
+    'assets/app/rin-shelter.png','assets/app/rin-shelter.ico')
 foreach ($relative in $runtimeFiles) {
     $target = Join-Path $portableRoot $relative
     New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null

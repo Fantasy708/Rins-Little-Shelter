@@ -20,6 +20,7 @@ public sealed partial class PetWindow : Window
     private readonly DispatcherTimer heartbeat = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly Stopwatch watch = Stopwatch.StartNew();
     private readonly Forms.NotifyIcon tray;
+    private readonly System.Drawing.Icon trayIcon;
     private double lastFrame, runtime, lastOffer = -120, lastReminder, lastSave;
     private TimeSpan lastPresentation;
     private int seconds;
@@ -43,7 +44,7 @@ public sealed partial class PetWindow : Window
     {
         this.storage = storage; Save = save; this.diagnostics = diagnostics;
         World.Initialize(save); Scenes.PlaceActor(save,Behavior);
-        Title = "Rin’s Little Shelter"; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
+        Title = "Rin’s Little Shelter"; Icon = AppIcon.WindowImage; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = true; Background = Brushes.Transparent; ShowInTaskbar = false; ShowActivated = false; Topmost = true;
         Scene = new Scene(save, Behavior, Audio) { Width = 480, Height = 340 };
         InstallStartupPresentation();
@@ -68,7 +69,8 @@ public sealed partial class PetWindow : Window
         SystemEvents.SessionSwitch += SessionSwitch;
         SystemEvents.PowerModeChanged += PowerChanged;
         SystemEvents.DisplaySettingsChanged += DisplayChanged;
-        tray = new Forms.NotifyIcon { Icon = System.Drawing.SystemIcons.Information, Text = "Rin’s Little Shelter · 静静陪伴", Visible = true };
+        trayIcon = AppIcon.CreateTrayIcon();
+        tray = new Forms.NotifyIcon { Icon = trayIcon, Text = "Rin’s Little Shelter · 静静陪伴", Visible = true };
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(OpenSettings);
         var menu = new Forms.ContextMenuStrip();
         AddTray(menu, "打开设置与世界图鉴", OpenSettings);
@@ -376,7 +378,7 @@ public sealed partial class PetWindow : Window
     {
         if (closed) return; CancelTablet(); closed = true; Persist(); heartbeat.Stop();
         CompositionTarget.Rendering -= Render; SystemEvents.SessionSwitch -= SessionSwitch; SystemEvents.PowerModeChanged -= PowerChanged; SystemEvents.DisplaySettingsChanged -= DisplayChanged;
-        Native.UnregisterHotKey(new WindowInteropHelper(this).Handle, 1); tray.Visible = false; tray.Dispose(); Audio.Dispose(); settings?.Close();
+        Native.UnregisterHotKey(new WindowInteropHelper(this).Handle, 1); tray.Visible = false; tray.Dispose(); trayIcon.Dispose(); Audio.Dispose(); settings?.Close();
         Application.Current.Shutdown();
     }
 }

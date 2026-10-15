@@ -47,6 +47,11 @@ internal static class TabletWindowTests
         try
         {
             pet.Show(); Check(pet.IsVisible && !pet.ShowActivated,"窗口可见且保持不激活");
+            Check(pet.Icon is BitmapSource iconImage && iconImage.PixelWidth>=16,"生产窗口加载内嵌应用图标");
+            using (var icon = AppIcon.CreateTrayIcon()) Check(icon.Width==32 && icon.Height==32,"托盘从同一内嵌资源读取32像素图标");
+            var iconSettings = new SettingsWindow(pet);
+            Check(ReferenceEquals(iconSettings.Icon,pet.Icon),"设置与陪伴窗口共用应用图标");
+            iconSettings.Close();
             foreach(string phase in new[]{"opening","ready","tap"}) foreach(string stop in new[]{"pause","hidden","editing","scene","mode","memory","through","restore","hideObject"}) {
                 OpenAt(phase); var buttons=pet.Scene.TabletButtons.ToArray(); int events=0; void Count(string id) => events++; pet.Behavior.ObjectCreated+=Count;
                 if (stop=="pause") pet.TogglePause();

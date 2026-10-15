@@ -1,10 +1,16 @@
 # Rin’s Little Shelter
 
+<img src="assets/app/rin-shelter.png" width="88" height="88" alt="Rin、平板与小花的应用图标">
+
 一个安静的 Windows 桌面宠物。半Q版 Rin 会在桌面角落生活、回应鼠标，并用平板一点点创造小世界。
 
-**更新 `v0.3.1-preview.1`：增加安静的启动开场，呈现星光、草甸、Rin苏醒与一朵花的生成。** 首次约14.4秒，之后约3.1秒；可以随时跳过、关闭或重看。保留Nurture草甸与彩蛋、平板创造/消息、五场景和父女记忆。按用户最新要求使用预览版号，在现有main创建新标签并发布到公开GitHub仓库，旧版本保留；实际检查与待实测内容见 [发布状态](docs/发布状态.md) 和 [验证记录](docs/验证记录.md)。
+**首个公开内测版 `v0.3.1-preview.2`：完整九页中文来信与统一应用图标。** 来信显示“来自：爸爸 · 中文译文”，保留手动翻页与原有解锁、已读记录；应用图标以Rin、平板和小花为主题。安静的启动开场、Nurture草甸与彩蛋、平板创造、五场景和父女记忆继续保留。本次按用户最新授权在原main创建新Tag并发布到现有公开GitHub仓库，不新建分支、不覆盖旧版本；实际检查与待实测内容见 [发布状态](docs/发布状态.md) 和 [验证记录](docs/验证记录.md)。
+
+计划于2026-10-15 20:00起面向朋友圈邀请用户内测。“首个公开内测版”指本轮邀请测试的阶段；GitHub上已有的公开历史预览继续保留。
 
 设计取舍、反馈修复和各轮更新过程见[开发日志](docs/开发日志.md)。
+
+本轮译文依据用户2026-10-15提供的日文正文，没有重新逐帧核对原片。preview.2图标最终EXE完成434项平板/故事、1775项平板绘图、253项窗口接口和745项启动检查；使用独立旧存档单次运行61.0秒、2880个实际绘制帧，正常结束，进度、布局、故事、已读与备份保持。短运行不能代替一小时及原生桌面验收，详细边界见验证记录。图标原稿为`assets/app/rin-shelter.png`，程序使用同目录的`rin-shelter.ico`。
 
 ![Rin的小世界](docs/screenshots/bench-seat-on-white.png)
 
@@ -16,9 +22,9 @@
 
 ## 启动
 
-本地便携包为 `dist/RinsLittleShelter-win-x64.zip`；发行附件位于 `dist/github/v0.3.1-preview.1`，也可从[v0.3.1-preview.1 Release](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.1-preview.1)下载，完整解压后打开 `RinsLittleShelter.exe`。程序已包含 .NET 运行环境，支持 Windows 10（19041及以上）和 Windows 11 x64，无须安装开发工具。保留旁边的 `assets` 文件夹。
+本地便携包为 `dist/RinsLittleShelter-win-x64.zip`；发行附件位于 `dist/github/v0.3.1-preview.2`，也可从[v0.3.1-preview.2 Release](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.1-preview.2)下载，完整解压后打开 `RinsLittleShelter.exe`。程序已包含 .NET 运行环境，支持 Windows 10（19041及以上）和 Windows 11 x64，无须安装开发工具。保留旁边的 `assets` 文件夹。
 
-GitHub上已有的[v0.3.0-preview.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.2)、[v0.3.0-preview.1](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.1)与更早发行保持原样。新版提供便携包、完整源码素材包及SHA256；旧版不包含本轮启动开场。
+GitHub上已有的[v0.3.1-preview.1](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.1-preview.1)、[v0.3.0-preview.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.2)、[v0.3.0-preview.1](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.3.0-preview.1)与更早发行保持原样。新版提供便携包、完整源码素材包及SHA256；preview.1已包含开场，但仍是旧来信摘要。
 
 本工作区成品位于 `dist/RinsLittleShelter`，便携包为 `dist/RinsLittleShelter-win-x64.zip`。升级时先退出旧版，再运行新版；陪伴进度与布置保存在本机用户目录，默认继续读取原有存档。仓库当前公开，用户已确认沿用当前可见性发布。
 
@@ -92,7 +98,7 @@ Rin先拿起并展示手中的平板，屏幕连续展开到可操作尺寸。�
 
 成长模式消息页初始显示 **“No messages in 2593 days.”**。2593是固定故事数字，与实际陪伴日无关。第20个陪伴日开放父女记忆；完整观看屋内或树下任一片段，父女结束、现在的Rin淡入恢复后，开放同一封“父亲留给Rin的信”。提前结束不算，重复观看不会新增信。自由模式立即可读，与成长模式分别保存故事和已读状态。
 
-来信只在平板内有稳定的未读点，不自动打开、不弹窗、不发声音。主动点开正文并显示后才标记已读，之后可随时重读。中文正文标注“原作来信内容摘要”，共三页、手动翻页，不是父亲原话，不提供回复或发送。阅读不会改布置、成长进度或消耗创造次数。
+来信只在平板内有稳定的未读点，不自动打开、不弹窗、不发声音。主动点开正文并显示后才标记已读，之后可随时重读。正文显示“来自：爸爸 · 中文译文”，共九页、手动翻页，按用户提供的日文转写完整翻译，不提供回复或发送。阅读不会改布置、成长进度或消耗创造次数；旧存档的已读记录也保留。本轮没有重新逐帧核对原片，译文与依据见[平板消息界面设计](docs/平板消息界面设计.md)及[参考记录](docs/平板参考核对.md)。
 
 点击关闭或Rin可收起。拖动、整理、切场景/模式、记忆、隐藏、暂停、锁屏、全屏隐藏和完全穿透也会关闭平板；恢复后不自动打开。平板不抢键盘焦点，屏幕外透明空白继续允许操作下面的窗口。
 
@@ -102,7 +108,7 @@ Rin先拿起并展示手中的平板，屏幕连续展开到可操作尺寸。�
 | --- | --- |
 | ![平板创造](docs/screenshots/tablet-create.png) | ![平板消息列表](docs/screenshots/tablet-messages.png) |
 
-![手动分页的来信摘要](docs/screenshots/tablet-letter.png)
+![手动分页的来信中文译文](docs/screenshots/tablet-letter.png)
 
 以上为生产WPF绘图导出的白底预览，消息列表与正文示例来自自由模式；成长初始仍显示固定2593空状态。
 
@@ -176,7 +182,7 @@ pwsh -File scripts/build.ps1
 
 开发诊断参数与架构见 [开发说明](docs/开发说明.md)，素材提示词与来源见 [素材制作](docs/素材制作.md)，验收记录见 [验证记录](docs/验证记录.md)。
 
-本地版本附件由 `pwsh -File scripts/package-release.ps1 -Version v0.3.1-preview.1 -ReleaseDirectory dist/github/v0.3.1-preview.1` 从已构建EXE生成，包含便携包、完整源码素材包和SHA256；不重新编译EXE，也不上传或发布到GitHub。个人存档、本机工具链、原始测试日志和官方参考图不纳入交付源码。
+本地版本附件由 `pwsh -File scripts/package-release.ps1 -Version v0.3.1-preview.2 -ReleaseDirectory dist/github/v0.3.1-preview.2` 从已构建EXE生成，包含便携包、完整源码素材包和SHA256；不重新编译EXE，也不上传或发布到GitHub。个人存档、本机工具链、原始测试日志和官方参考图不纳入交付源码。
 
 问题反馈请使用仓库Issues模板，提供版本、Windows环境、动作与复现步骤。
 

@@ -15,7 +15,7 @@ public sealed class SettingsWindow : Window
     private readonly Brush muted = new SolidColorBrush(Color.FromRgb(117, 138, 151));
     public SettingsWindow(PetWindow pet)
     {
-        this.pet = pet;
+        this.pet = pet; Icon = AppIcon.WindowImage;
         Title = "Rin’s Little Shelter · 我们的小世界"; Width = 680; Height = 670; MinWidth = 590; MinHeight = 530;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Background = new SolidColorBrush(Color.FromRgb(245, 248, 248)); FontFamily = new FontFamily("Microsoft YaHei UI"); FontSize = 13; Foreground = ink;
@@ -26,7 +26,7 @@ public sealed class SettingsWindow : Window
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
         status.TextWrapping = TextWrapping.Wrap; status.FontSize = 11; status.Foreground = muted; footer.Children.Add(status);
-        footer.Children.Add(new TextBlock { Text = "v0.3.1-preview.1 · Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
+        footer.Children.Add(new TextBlock { Text = "v0.3.1-preview.2 · 首个公开内测版 · Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var tabs = new TabControl { Background = Brushes.Transparent, BorderBrush = new SolidColorBrush(Color.FromRgb(218, 230, 231)) };
         tabs.Items.Add(new TabItem { Header = "陪伴设置", Content = SettingsPanel() });

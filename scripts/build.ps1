@@ -41,6 +41,9 @@ try {
     & $dotnetPath publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true "-p:BaseOutputPath=$buildOutput" -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '发布失败。请先退出正在运行的发布版本。' }
     Copy-Item -LiteralPath assets/catalog.json -Destination (Join-Path $OutputDirectory 'assets/catalog.json')
+    foreach ($icon in @('assets/app/rin-shelter.png','assets/app/rin-shelter.ico')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $icon))) { throw "发布包缺少应用图标：$icon" }
+    }
     foreach ($asset in @('assets\manifest.json','assets\rin\poses.png','assets\rin\walk.png','assets\rin\trot-v2.png','assets\rin\hop.png','assets\rin\turn.png','assets\world\objects.png','assets\world\scenes.png','assets\world\swing-tree.png','assets\world\bedroom.png','assets\rin\swing-life.png','assets\rin\swing-loop.png','assets\rin\family-memory.png','assets\rin\tablet-life.png','assets\rin\nurture-life.png','assets\world\nurture-grass.png')) {
         if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $asset))) { throw "发布包缺少素材：$asset" }
     }

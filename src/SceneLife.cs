@@ -7,7 +7,7 @@ namespace LittleShelter;
 
 public sealed partial class Scene
 {
-    private Atlas environments=null!, swingPoses=null!, familyPoses=null!, matureTree=null!, swingLoop=null!;
+    private Atlas environments=null!, bedroom=null!, swingPoses=null!, familyPoses=null!, matureTree=null!, swingLoop=null!;
     private readonly List<(Rect Rect,Atlas.Sprite Sprite,Transform Transform,double Hinge,double LegShear)> lifeHits=new();
     private Rect doorRect=Rect.Empty, memoryControl=Rect.Empty, seatHit=Rect.Empty;
     private Transform? seatTransform;
@@ -18,6 +18,8 @@ public sealed partial class Scene
     private void LoadLifeAssets(string root)
     {
         environments=new Atlas(Path.Combine(root,manifest.ScenesAtlas),manifest.SceneRegions);
+        bedroom=new Atlas(Path.Combine(root,manifest.BedroomAtlas),manifest.BedroomRegions);
+        if (bedroom.Sprites.Length != 5) throw new InvalidDataException("卧室资源不完整");
         matureTree=new Atlas(Path.Combine(root,"world/swing-tree.png"),Atlas.Grid(1,1));
         swingPoses=new Atlas(Path.Combine(root,manifest.SwingAtlas),manifest.SwingRegions);
         familyPoses=new Atlas(Path.Combine(root,manifest.FamilyAtlas),manifest.FamilyRegions);
@@ -26,6 +28,11 @@ public sealed partial class Scene
             throw new InvalidDataException("秋千/父女记忆姿势与锚点不完整");
         if (swingLoop.Sprites.Length != 18 || manifest.LoopHips.Length != 18 || manifest.LoopHands.Length != 18) throw new InvalidDataException("细化摆荡帧不完整");
     }
+    private Atlas.Sprite ObjectSprite(ObjectDef d) => d.Id switch {
+        "bigTree"=>matureTree.Sprites[0], "roomBase"=>bedroom.Sprites[0], "chair"=>bedroom.Sprites[1],
+        "window"=>bedroom.Sprites[2], "desk"=>bedroom.Sprites[3], "cabinet"=>bedroom.Sprites[4],
+        _=>Scenes.ExtraObjects.Any(e=>e.Id == d.Id) ? environments.Sprites[d.Tile] : world.Sprites[d.Tile]
+    };
     public void ResetLifeVisuals()
     {
         lastDrawKey=null; lastDrawSprite=null; oldDrawSprite=null;

@@ -1,29 +1,33 @@
 {
-  "Version": 3,
+  "Version": 4,
   "Scenes": [
     {
-      "Id": "outdoor",
-      "Name": "屋外",
+      "Name": "云台",
+      "Id": "cloud",
       "Day": 0
     },
     {
+      "Name": "屋内",
+      "Id": "indoor",
+      "Day": 2
+    },
+    {
+      "Name": "屋外院子",
+      "Id": "outdoor",
+      "Day": 7
+    },
+    {
+      "Name": "室外草坡",
       "Id": "meadow",
-      "Name": "草坡",
       "Day": 10
     },
     {
-      "Id": "indoor",
-      "Name": "屋内",
-      "Day": 14
-    },
-    {
-      "Id": "swingTree",
       "Name": "树下秋千",
+      "Id": "swingTree",
       "Day": 20
     }
   ],
   "Swing": {
-    "LoopFrames": 18,
     "HipAnchors": [
       [
         188,
@@ -106,7 +110,7 @@
         155
       ]
     ],
-    "CycleSeconds": 4.6,
+    "LoopFrames": 18,
     "LoopKeys": 34,
     "Hands": [
       [
@@ -230,14 +234,15 @@
         166
       ]
     ],
-    "BoardingFrames": 20
+    "BoardingFrames": 20,
+    "CycleSeconds": 4.6
   },
   "Memory": {
-    "FadeSeconds": 1.5,
-    "StorySeconds": 25,
-    "TemporaryLayout": true,
     "Silent": true,
-    "UserTriggered": true
+    "FadeSeconds": 1.5,
+    "TemporaryLayout": true,
+    "UserTriggered": true,
+    "StorySeconds": 25
   },
   "Source": "src/Models.cs",
   "ClipSource": "src/MotionClips.cs",
@@ -972,7 +977,7 @@
     },
     {
       "Id": "roomRest",
-      "Name": "屋内坐着休息",
+      "Name": "床沿安静休息",
       "Pose": 7,
       "DurationSeconds": 22,
       "Kind": "context",
@@ -1188,8 +1193,8 @@
     },
     {
       "Id": "roomBase",
-      "Name": "房间",
-      "Day": 14,
+      "Name": "卧室",
+      "Day": 2,
       "Tile": 1,
       "MaxWidth": 420,
       "MaxHeight": 275,
@@ -1218,13 +1223,13 @@
     },
     {
       "Id": "desk",
-      "Name": "桌子",
-      "Day": 14,
+      "Name": "床边圆几",
+      "Day": 2,
       "Tile": 3,
-      "MaxWidth": 125,
-      "MaxHeight": 87,
-      "X": 160,
-      "FeetY": 261,
+      "MaxWidth": 54,
+      "MaxHeight": 60,
+      "X": 274,
+      "FeetY": 278,
       "Anchor": [
         0.5,
         1
@@ -1233,13 +1238,13 @@
     },
     {
       "Id": "window",
-      "Name": "窗户",
-      "Day": 14,
+      "Name": "高窗",
+      "Day": 2,
       "Tile": 4,
-      "MaxWidth": 116,
-      "MaxHeight": 118,
-      "X": 275,
-      "FeetY": 168,
+      "MaxWidth": 94,
+      "MaxHeight": 154,
+      "X": 106,
+      "FeetY": 190,
       "Anchor": [
         0.5,
         1
@@ -1248,13 +1253,28 @@
     },
     {
       "Id": "chair",
-      "Name": "木椅",
-      "Day": 14,
+      "Name": "粉色床铺",
+      "Day": 2,
       "Tile": 5,
-      "MaxWidth": 67,
-      "MaxHeight": 91,
-      "X": 313,
-      "FeetY": 266,
+      "MaxWidth": 181,
+      "MaxHeight": 123,
+      "X": 166,
+      "FeetY": 279,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "cabinet",
+      "Name": "柜子与小熊",
+      "Day": 2,
+      "Tile": 6,
+      "MaxWidth": 79,
+      "MaxHeight": 125,
+      "X": 358,
+      "FeetY": 273,
       "Anchor": [
         0.5,
         1

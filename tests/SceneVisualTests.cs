@@ -76,6 +76,19 @@ internal static class SceneVisualTests
         Check(actor.Life.BeginMemory(save),"memory while swinging"); Until("fadeOut"); Step(.7); Render("swing-recall-from-seated");
         Check(actor.Life.RecallPose>=100,"memory fade retains stopped loop pose"); actor.Life.Cancel(); Render("memory-cancel-restored");
         Scenes.Switch(save,"indoor"); scene.ResetLifeVisuals(); var chair=save.Layout.First(p=>p.Id == "chair"); actor.X=chair.X; actor.Y=chair.Y; actor.Start("roomRest"); Render(); Step(.5); Render("indoor-chair-rest");
+        var manifest=System.Text.Json.JsonSerializer.Deserialize<ResourceManifest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"assets/manifest.json")))!;
+        var bedroom=new Atlas(Path.Combine(AppContext.BaseDirectory,"assets",manifest.BedroomAtlas),manifest.BedroomRegions); var bed=bedroom.Sprites[1]; var bedDef=ObjectDef.Get("chair");
+        double bedScale=Math.Min(bedDef.Width/bed.Width,bedDef.Height/bed.Height);
+        double hipX=chair.X+bed.Width*bedScale*(manifest.BedSeatAnchor[0]-.5), hipY=chair.Y-bed.Height*bedScale*(1-manifest.BedSeatAnchor[1]);
+        foreach(bool mirror in new[]{false,true}) foreach(double dpi in new[]{1.0,1.5,2.0}) {
+            actor.Start("roomRest",chair.X+(mirror ? -1 : 1)); scene.ResetLifeVisuals(); Render(); Step(.4);
+            var frame=Render("bed-rest-"+mirror+"-"+dpi.ToString("0.0",System.Globalization.CultureInfo.InvariantCulture),dpi);
+            Check(scene.Hit(new Point(hipX,hipY-12)) == "rin","bed mattress hip registration and alpha hit");
+            byte[] pixel=new byte[4]; frame.CopyPixels(new Int32Rect((int)(hipX*dpi),(int)((hipY-12)*dpi),1,1),pixel,4,0); Check(pixel[3]>=240,"bed rest remains opaque at mattress contact");
+        }
+        Scenes.Switch(save,"cloud"); actor.Life.Cancel(); Scenes.PlaceActor(save,actor); actor.Start("stand"); scene.ResetLifeVisuals(); var cloudLayout=System.Text.Json.JsonSerializer.Serialize(save.Layout);
+        scene.IdealUntil=time+5; Render("cloud-ideal"); Check(System.Text.Json.JsonSerializer.Serialize(save.Layout) == cloudLayout,"cloud ideal never overwrites initial layout");
+        scene.IdealUntil=0; Render("cloud-restored"); Check(save.Layout.Single().Id == "platform","cloud ideal restores only its platform");
         Console.WriteLine("PASS: "+checks+" production scene render/rope/contact/cancel/DPI checks. "+output);
     }
 }

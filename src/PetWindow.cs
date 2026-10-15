@@ -208,7 +208,7 @@ public sealed class PetWindow : Window
         if (!World.Available(Save).Any(d=>d.Id == id)) return;
         Behavior.Create(id, Audio.Level > .12); Scene.ChoiceUntil = 0;
     }
-    public void ShowIdeal() { if (Behavior.Life.Active || Save.SceneId != "outdoor") return; Scene.IdealUntil = runtime + 45; Scene.ShelterUntil = runtime + 55; Behavior.Start("knees"); Scene.Bubble = "这里有我们的天空。"; Scene.BubbleUntil = runtime + 6; }
+    public void ShowIdeal() { if (Behavior.Life.Active || Save.SceneId is not "outdoor" and not "cloud") return; Scene.IdealUntil = runtime + 45; Scene.ShelterUntil = runtime + 55; Behavior.Start("knees"); Scene.Bubble = "这里有我们的天空。"; Scene.BubbleUntil = runtime + 6; }
     public void PreviewAction(string id)
     {
         if (id is "swingLife" or "ropeHold") { Swing(); return; }

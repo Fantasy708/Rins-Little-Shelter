@@ -23,4 +23,8 @@ m['LoopAtlas']='rin/swing-loop.png'
 m['LoopRegions']=[[loopcols[c]/1536,looprows[r]/1024,(loopcols[c+1]-loopcols[c])/1536,(looprows[r+1]-looprows[r])/1024] for r in range(1,4) for c in range(6)]
 m['LoopHips']=[[x-loopcols[c],y-looprows[r]] for r,y in enumerate([0,445,708,962]) if r>0 for c,x in enumerate([126,380,633,887,1142,1398])]
 m['LoopHands']=[[x-loopcols[c],y-looprows[r],x+98-loopcols[c],y-looprows[r]] for r,y in enumerate([0,369,637,885]) if r>0 for c,x in enumerate([76,329,583,837,1093,1347])]
+m['BedroomAtlas']='world/bedroom.png'
+m['BedroomRegions']=[[x/1536,y/1024,w/1536,h/1024] for x,y,w,h in [[0,0,666,512],[666,0,519,512],[1185,0,351,512],[0,512,575,512],[575,512,365,512]]]
+m['BedSeatAnchor']=[.48,.57]
+m['BedroomWindowPane']=[.24,.035,.48,.91]
 path.write_text(json.dumps(m,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')

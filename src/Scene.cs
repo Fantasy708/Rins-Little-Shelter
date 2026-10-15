@@ -97,6 +97,10 @@ public sealed class ResourceManifest
     public string SwingAtlas { get; set; } = "rin/swing-life.png";
     public string FamilyAtlas { get; set; } = "rin/family-memory.png";
     public double[][] SceneRegions { get; set; } = Atlas.Grid(3,2);
+    public string BedroomAtlas { get; set; } = "world/bedroom.png";
+    public double[][] BedroomRegions { get; set; } = Atlas.Grid(3,2);
+    public double[] BedSeatAnchor { get; set; } = new[]{.48,.57};
+    public double[] BedroomWindowPane { get; set; } = new[]{.24,.035,.48,.91};
     public double[][] SwingRegions { get; set; } = Array.Empty<double[]>();
     public double[][] FamilyRegions { get; set; } = Array.Empty<double[]>();
     public double[][] SwingHips { get; set; } = Array.Empty<double[]>();
@@ -200,13 +204,13 @@ public sealed partial class Scene : FrameworkElement
         actorHits.Clear(); lifeHits.Clear(); doorRect=Rect.Empty;
         string theme = World.Theme(save.Settings, DateTime.Now.Hour);
         bool night = theme is "夜晚" or "深夜";
-        bool ideal = save.SceneId == "outdoor" && Time < IdealUntil && !behavior.Life.Active;
+        bool ideal = save.SceneId is "outdoor" or "cloud" && Time < IdealUntil && !behavior.Life.Active;
         var layout = ideal ? ObjectDef.All.Select(World.Default).ToList() : save.Layout.Where(p => !p.Hidden).ToList();
         foreach (var p in layout.OrderBy(p => Scenes.Foundation(p.Id) ? -3 : p.Id is "grass" ? -2 : p.Id is "path" ? -1 : 0))
         {
             if (!ideal && !World.Available(save).Any(d => d.Id == p.Id)) continue;
             var d = ObjectDef.Get(p.Id); if (p.Id == "swingSeat") continue;
-            var sprite = p.Id == "bigTree" ? matureTree.Sprites[0] : Scenes.ExtraObjects.Any(e=>e.Id == p.Id) ? environments.Sprites[d.Tile] : world.Sprites[d.Tile];
+            var sprite = ObjectSprite(d);
             double ox = 0, oy = 0, angle = 0;
             if (p.Id == "cloud") ox = Math.Sin(Time * .13) * 8;
             if (p.Id == "bird") { ox = Math.Sin(Time * .65) * 14; oy = Math.Sin(Time * 1.2) * 3; }
@@ -221,13 +225,15 @@ public sealed partial class Scene : FrameworkElement
             if (p.Id is "platform" or "grass" or "path" or "meadowBase" or "roomBase" or "bigTree") { width = d.Width; height = d.Height; }
             var rect = new Rect(p.X - width / 2 + ox, p.Y - height + oy, width, height);
             double appear = births.TryGetValue(p.Id, out var born) ? Math.Clamp((Time - born) / 2.5, 0, 1) : 1;
-            double visibleOpacity=appear*(save.SceneId == "indoor" && !Scenes.Foundation(p.Id) ? 1-.9*behavior.Life.Atmosphere : 1);
+            double visibleOpacity=appear*(save.SceneId == "indoor" && !Scenes.Foundation(p.Id) ? 1-behavior.Life.Atmosphere : 1);
             dc.PushOpacity(visibleOpacity);
             dc.PushTransform(new ScaleTransform(.85 + .15 * appear, .85 + .15 * appear, p.X, p.Y));
             dc.PushTransform(new RotateTransform(angle, p.X, p.Y));
             if (p.Id == "stars") dc.PushOpacity(night || ideal || audio.IsShelter ? .95 : .28);
             else dc.PushOpacity(theme == "深夜" ? .7 : night ? .79 : 1);
-            dc.DrawImage(sprite.Image, rect); dc.Pop(); dc.Pop(); dc.Pop(); dc.Pop(); if (visibleOpacity > .5) hits[p.Id] = (rect, sprite);
+            dc.DrawImage(sprite.Image, rect);
+            if (p.Id == "roomBase" && behavior.Life.Atmosphere > 0) { dc.PushOpacity(behavior.Life.Atmosphere); dc.DrawImage(environments.Sprites[1].Image,rect); dc.Pop(); }
+            dc.Pop(); dc.Pop(); dc.Pop(); dc.Pop(); if (visibleOpacity > .5) hits[p.Id] = (rect, sprite);
             if (p.Id == "house" && save.SceneId == "outdoor") doorRect=new Rect(rect.X+rect.Width*.26,rect.Y+rect.Height*.52,rect.Width*.15,rect.Height*.39);
             if (p.Id is "lamp" or "house" && (night || theme == "傍晚" || FeedbackObject == p.Id && Time < FeedbackUntil))
             {
@@ -300,10 +306,11 @@ public sealed partial class Scene : FrameworkElement
             // wooden seat rather than aligning her sandals with the chair legs.
             if (action.Id is "benchSit" or "roomRest" && (Time < IdealUntil || save.Layout.Any(p=>p.Id == action.ObjectId && !p.Hidden) && World.Available(save).Any(d=>d.Id == action.ObjectId)))
             {
-                var bench=ObjectDef.Get(action.ObjectId!); var image=action.Id == "roomRest" ? environments.Sprites[bench.Tile] : world.Sprites[bench.Tile];
+                var bench=ObjectDef.Get(action.ObjectId!); var image=ObjectSprite(bench);
                 double k=Math.Min(bench.Width/image.Width,bench.Height/image.Height);
-                double seatX=behavior.X+image.Width*k*(manifest.BenchSeatAnchor[0]-.5);
-                double seatY=behavior.Y-image.Height*k*(1-(action.Id == "roomRest" ? .59 : manifest.BenchSeatAnchor[1]));
+                var seatAnchor=action.Id == "roomRest" ? manifest.BedSeatAnchor : manifest.BenchSeatAnchor;
+                double seatX=behavior.X+image.Width*k*(seatAnchor[0]-.5);
+                double seatY=behavior.Y-image.Height*k*(1-seatAnchor[1]);
                 rect=new Rect(seatX-rect.Width*manifest.SeatedContactAnchor[0],seatY-rect.Height*manifest.SeatedContactAnchor[1],rect.Width,rect.Height);
             }
         }
@@ -388,7 +395,8 @@ public sealed partial class Scene : FrameworkElement
         if (indoors) {
             if (!hits.TryGetValue("window",out var window)) return;
             var r=window.Rect;
-            dc.PushClip(new RectangleGeometry(new Rect(r.X+r.Width*.28,r.Y+r.Height*.26,r.Width*.44,r.Height*.51)));
+            var pane=manifest.BedroomWindowPane;
+            dc.PushClip(new RectangleGeometry(new Rect(r.X+r.Width*pane[0],r.Y+r.Height*pane[1],r.Width*pane[2],r.Height*pane[3])));
         }
         switch (save.Settings.Weather)
         {

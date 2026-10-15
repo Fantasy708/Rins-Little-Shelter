@@ -24,6 +24,7 @@ docs/screenshots/*
 !docs/screenshots/swing-memory.png
 !docs/screenshots/indoor-memory.png
 !docs/screenshots/swing-runtime.png
+!docs/screenshots/bedroom-runtime.png
 assets/reference/*
 !assets/reference/README.md
 *.user

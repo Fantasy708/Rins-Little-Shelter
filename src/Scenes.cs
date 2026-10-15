@@ -3,19 +3,20 @@ namespace LittleShelter;
 public sealed record SceneDef(string Id, string Name, int Day);
 public static class Scenes
 {
-    public static readonly SceneDef[] All = { new("outdoor","屋外",0), new("meadow","草坡",10), new("indoor","屋内",14), new("swingTree","树下秋千",20) };
+    public static readonly SceneDef[] All = { new("cloud","云台",0), new("indoor","屋内",2), new("outdoor","屋外院子",7), new("meadow","室外草坡",10), new("swingTree","树下秋千",20) };
     public static readonly ObjectDef[] ExtraObjects = {
-        new("meadowBase","草坡",10,0,420,125,240,305), new("roomBase","房间",14,1,420,275,240,306),
-        new("bigTree","树荫",20,2,420,278,240,304), new("desk","桌子",14,3,125,87,160,261),
-        new("window","窗户",14,4,116,118,275,168), new("chair","木椅",14,5,67,91,313,266),
+        new("meadowBase","草坡",10,0,420,125,240,305), new("roomBase","卧室",2,1,420,275,240,306),
+        new("bigTree","树荫",20,2,420,278,240,304), new("desk","床边圆几",2,3,54,60,274,278),
+        new("window","高窗",2,4,94,154,106,190), new("chair","粉色床铺",2,5,181,123,166,279),
+        new("cabinet","柜子与小熊",2,6,79,125,358,273),
         new("swingSeat","木座秋千",20,-1,65,8,300,260)
     };
-    public static bool Unlocked(SaveData s,string id) => All.Any(d=>d.Id == id && (s.Settings.FreeMode || s.Days >= d.Day));
+    public static bool Unlocked(SaveData s,string id) => All.Any(d=>d.Id == id && (s.Settings.FreeMode || s.Days >= d.Day || id == "outdoor" && s.Settings.LegacyOutdoorAccess));
     public static bool MemoriesUnlocked(SaveData s) => s.Settings.FreeMode || s.Days >= 20;
-    public static string Current(SaveData s) { var id=s.Settings.FreeMode ? s.Settings.FreeScene : s.Settings.GrowthScene; return Unlocked(s,id) ? id : "outdoor"; }
+    public static string Current(SaveData s) { var id=s.Settings.FreeMode ? s.Settings.FreeScene : s.Settings.GrowthScene; return Unlocked(s,id) ? id : "cloud"; }
     public static IEnumerable<ObjectDef> Objects(string id) => id switch {
-        "meadow" => Pick("meadowBase","flower","cloud","bird","stars"),
-        "indoor" => Pick("roomBase","desk","window","chair","lamp"),
+        "cloud" => Pick("platform"), "meadow" => Pick("meadowBase","flower","cloud","bird","stars"),
+        "indoor" => Pick("roomBase","desk","window","chair","cabinet"),
         "swingTree" => Pick("bigTree","swingSeat","flower","bird","stars"), _ => ObjectDef.All };
     private static IEnumerable<ObjectDef> Pick(params string[] ids) => ids.Select(ObjectDef.Get);
     public static bool Foundation(string id) => id is "platform" or "meadowBase" or "roomBase" or "bigTree" or "swingSeat";
@@ -43,10 +44,20 @@ public static class Scenes
     }).ToList();
     public static void Initialize(SaveData s) {
         s.GrowthSceneLayouts ??= new(); s.FreeSceneLayouts ??= new();
+        if (s.IndoorStyleVersion < 1) {
+            foreach(var map in new[]{s.GrowthSceneLayouts,s.FreeSceneLayouts}) if (map.TryGetValue("indoor",out var room)) {
+                foreach(var p in room) {
+                    var old=p.Id switch { "desk"=>(160,261), "window"=>(275,168), "chair"=>(313,266), _=>(-1,-1) };
+                    if (p.X == old.Item1 && p.Y == old.Item2) { var d=ObjectDef.Get(p.Id); p.X=d.X; p.Y=d.Y; }
+                }
+            }
+            s.IndoorStyleVersion=1;
+        }
         foreach (var d in All.Where(d=>d.Id != "outdoor")) {
             if (!s.FreeSceneLayouts.ContainsKey(d.Id)) s.FreeSceneLayouts[d.Id]=Defaults(d.Id);
             if (s.Days >= d.Day && !s.GrowthSceneLayouts.ContainsKey(d.Id)) s.GrowthSceneLayouts[d.Id]=Defaults(d.Id);
         }
+        foreach(var map in new[]{s.GrowthSceneLayouts,s.FreeSceneLayouts}) if (map.TryGetValue("indoor",out var room) && !room.Any(p=>p.Id == "cabinet")) room.Add(World.Default(ObjectDef.Get("cabinet")));
     }
     public static bool Switch(SaveData s,string id) {
         if (!Unlocked(s,id)) return false;

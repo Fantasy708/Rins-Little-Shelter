@@ -17,7 +17,7 @@ function Get-ShelterPublicFiles([string]$Root) {
         'docs/screenshots/seated-swing-preview.png','docs/screenshots/trot-preview.png',
         'docs/screenshots/swing-animation.gif','docs/screenshots/scenes-meadow.png',
         'docs/screenshots/scenes-indoor.png','docs/screenshots/swing-memory.png','docs/screenshots/indoor-memory.png',
-        'docs/screenshots/swing-runtime.png'
+        'docs/screenshots/swing-runtime.png','docs/screenshots/bedroom-runtime.png'
     )) { Get-Item -LiteralPath (Join-Path $Root $relative) -ErrorAction Stop }
     if (Test-Path -LiteralPath (Join-Path $Root 'LICENSE')) {
         Get-Item -LiteralPath (Join-Path $Root 'LICENSE')

@@ -24,6 +24,7 @@ Check(save.DailySeconds["2026-10-11"] == 1 && save.DailySeconds["2026-10-10"] ==
 foreach (int day in new[] { 2, 3, 5, 7, 10, 14, 20 })
 {
     var s = new SaveData { CompanionDates = Enumerable.Range(0, day).Select(i => start.AddDays(i).ToString("yyyy-MM-dd")).ToList() }; World.Initialize(s);
+    s.Settings.LegacyOutdoorAccess=true; Scenes.Switch(s,"outdoor"); // existing yard item schedule remains compatible
     Check(World.Available(s).All(d => d.Day <= day) && World.Available(s).Any(d => d.Day == day), "第" + day + "天的解锁边界");
 }
 save.Settings.FreeMode = true; World.Create(save, "house"); save.FreeLayout.First(p => p.Id == "house").X = 42;

@@ -10,7 +10,7 @@ foreach (var d in Scenes.All.Where(d=>d.Day > 0)) {
     Check(s.GrowthLayout.Count == 1 && s.Created.Count == 0,"解锁场景不覆盖屋外布局或强制创造");
 }
 var save=WithDays(20); var outdoor=save.GrowthLayout[0]; outdoor.X=154;
-foreach (var d in Scenes.All.Where(d=>d.Id != "outdoor")) {
+foreach (var d in Scenes.All.Where(d=>d.Id is not "outdoor" and not "cloud")) {
     Scenes.Switch(save,d.Id); var p=save.Layout.First(p=>!Scenes.Foundation(p.Id)); p.X=410; p.Hidden=true;
     save.Settings.FreeMode=true; Scenes.Switch(save,d.Id); Check(save.Layout.Any(p=>p.X != 410 && !p.Hidden),d.Name+"自由布局独立");
     save.Settings.FreeMode=false; Check(save.Layout.Any(p=>p.X == 410 && p.Hidden),d.Name+"成长布局原样恢复");
@@ -19,6 +19,16 @@ Scenes.Switch(save,"outdoor"); Check(save.Layout[0].X == 154,"切回屋外保留
 save.Settings.FreeMode=true; Scenes.Switch(save,"swingTree"); save.Settings.FreeMode=false; Check(save.SceneId == "outdoor","两模式当前场景独立保存");
 Check(!Scenes.MemoriesUnlocked(WithDays(19)) && Scenes.MemoriesUnlocked(WithDays(20)),"父女记忆在秋千节点同时解锁");
 var free=WithDays(0); free.Settings.FreeMode=true; foreach (var d in Scenes.All) Check(Scenes.Switch(free,d.Id),"自由模式开放"+d.Name);
+foreach(int days in new[]{0,1,2,6,7,9,10,19,20}) {
+    var fresh=WithDays(days);
+    var ids=Scenes.All.Where(d=>Scenes.Unlocked(fresh,d.Id)).Select(d=>d.Id).ToArray();
+    var expected=days>=20 ? new[]{"cloud","indoor","outdoor","meadow","swingTree"} : days>=10 ? new[]{"cloud","indoor","outdoor","meadow"} : days>=7 ? new[]{"cloud","indoor","outdoor"} : days>=2 ? new[]{"cloud","indoor"} : new[]{"cloud"};
+    Check(ids.SequenceEqual(expected),days+"日依次开放云台/屋内/院子/室外/秋千");
+    Check(fresh.SceneId == "cloud","解锁新场景不强制切换");
+}
+var early=WithDays(2); Check(Scenes.Switch(early,"indoor") && World.Available(early).Count() == 5,"第2日卧室家具全部可见");
+Scenes.Switch(early,"cloud"); Check(World.Available(early).Single().Id == "platform","云台阶段不混入院子景物");
+early.Layout[0].X=87; early.Settings.FreeMode=true; Scenes.Switch(early,"cloud"); Check(early.Layout[0].X == 240,"云台两模式布局独立"); early.Settings.FreeMode=false; Check(early.Layout[0].X == 87,"成长云台位置恢复");
 void Advance(Behavior b,double seconds,SaveData s) { for(double t=0;t<seconds;t+=.01) b.Tick(Math.Min(.01,seconds-t),s,false); }
 void Until(Behavior b,string phase,SaveData s) { for(int i=0;i<12000 && b.Life.Phase != phase;i++) b.Tick(.01,s,false); Check(b.Life.Phase == phase,"时间轴到达 "+phase); }
 Scenes.Switch(save,"swingTree"); var layout=JsonSerializer.Serialize(save.Layout);
@@ -55,6 +65,13 @@ try {
     string legacy="{\"Version\":1,\"Settings\":{},\"GrowthLayout\":[{\"Id\":\"platform\",\"X\":154,\"Y\":300}],\"FreeLayout\":[{\"Id\":\"house\",\"X\":77,\"Y\":240,\"Hidden\":true}],\"CompanionDates\":[\"2026-01-01\"]}";
     Directory.CreateDirectory(directory); File.WriteAllText(storage.FilePath,legacy); var migrated=storage.Load();
     Check(migrated.Days == 1 && migrated.GrowthLayout[0].X == 154 && migrated.FreeLayout[0].Hidden,"旧JSON完整保留成长与两布局");
+    Check(migrated.SceneId == "outdoor" && Scenes.Unlocked(migrated,"outdoor"),"旧版提前院子访问权保留");
+    var oldRoom=WithDays(2); oldRoom.GrowthSceneLayouts["indoor"]=new(){new(){Id="roomBase",X=240,Y=306},new(){Id="desk",X=411,Y=215,Hidden=true},new(){Id="window",X=275,Y=168},new(){Id="chair",X=313,Y=266},new(){Id="lamp",X=109,Y=248,Hidden=true}}; oldRoom.IndoorStyleVersion=0;
+    Scenes.Switch(oldRoom,"indoor"); storage.Write(oldRoom); var upgrade=storage.Load(); var table=upgrade.Layout.First(p=>p.Id == "desk");
+    Check(table.X == 411 && table.Y == 215 && table.Hidden,"重绘卧室保留自定义位置与隐藏状态");
+    Check(upgrade.Layout.Any(p=>p.Id == "chair" && p.X == 166 && p.Y == 279),"旧默认木椅位置迁移为床铺布局");
+    Check(upgrade.Layout.Any(p=>p.Id == "lamp" && p.Hidden) && !World.Available(upgrade).Any(d=>d.Id == "lamp"),"旧灯布置保留但不混入原片卧室");
+    var roomSnapshot=JsonSerializer.Serialize(upgrade.Layout); World.Initialize(upgrade); Check(JsonSerializer.Serialize(upgrade.Layout) == roomSnapshot,"卧室迁移仅执行一次");
     storage.Write(save); var reloaded=storage.Load(); Check(reloaded.SceneId == save.SceneId && JsonSerializer.Serialize(reloaded.Layout) == JsonSerializer.Serialize(save.Layout),"新多场景存档往返");
     storage.Write(save); File.WriteAllText(storage.FilePath,"{broken"); Check(storage.Load().SceneId == save.SceneId,"多场景备份恢复");
 } finally { Directory.Delete(directory,true); }

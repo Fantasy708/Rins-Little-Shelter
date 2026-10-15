@@ -20,6 +20,13 @@ public sealed class Storage
                 if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("Version", out _)) continue;
                 var save = document.RootElement.Deserialize<SaveData>(Options);
                 if (save == null || save.Version != 1 || save.Settings == null || save.DailySeconds == null || save.CompanionDates == null || save.ChoiceCounts == null || save.GrowthLayout == null || save.FreeLayout == null || save.Created == null || save.GrowthLayout.Any(p => p == null) || save.FreeLayout.Any(p => p == null)) continue;
+                if (document.RootElement.TryGetProperty("Settings",out var oldSettings)) {
+                    bool hasScene=oldSettings.TryGetProperty("GrowthScene",out _);
+                    if (save.Settings.GrowthScene == "outdoor" || !hasScene) {
+                        save.Settings.LegacyOutdoorAccess=true;
+                        if (!hasScene) save.Settings.GrowthScene="outdoor";
+                    }
+                }
                 Sanitize(save); World.Initialize(save); return save;
             }
             catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
@@ -52,7 +59,7 @@ public sealed class Storage
             {
                 if (!Scenes.All.Any(d=>d.Id == key && key != "outdoor") || map[key] == null) { map.Remove(key); continue; }
                 var list=map[key];
-                list.RemoveAll(p=>p == null || !Scenes.Objects(key).Any(d=>d.Id == p.Id) || !double.IsFinite(p.X) || !double.IsFinite(p.Y));
+                list.RemoveAll(p=>p == null || !(Scenes.Objects(key).Any(d=>d.Id == p.Id) || key == "indoor" && p.Id == "lamp") || !double.IsFinite(p.X) || !double.IsFinite(p.Y));
                 foreach (var p in list) { p.X=Math.Clamp(p.X,25,455); p.Y=Math.Clamp(p.Y,45,310); if (Scenes.Foundation(p.Id)) p.Hidden=false; }
                 foreach (var d in Scenes.Objects(key).Where(d=>Scenes.Foundation(d.Id))) if (!list.Any(p=>p.Id == d.Id)) list.Add(World.Default(d));
                 var distinct=list.DistinctBy(p=>p.Id).ToList(); list.Clear(); list.AddRange(distinct);
@@ -60,6 +67,6 @@ public sealed class Storage
         }
         CleanScenes(s.GrowthSceneLayouts); CleanScenes(s.FreeSceneLayouts);
         if (!Scenes.All.Any(d=>d.Id == s.Settings.FreeScene)) s.Settings.FreeScene="outdoor";
-        if (!Scenes.All.Any(d=>d.Id == s.Settings.GrowthScene && d.Day <= s.Days)) s.Settings.GrowthScene="outdoor";
+        if (!Scenes.Unlocked(s,s.Settings.GrowthScene)) s.Settings.GrowthScene="cloud";
     }
 }

@@ -135,6 +135,7 @@ internal static class VisualTests
         {
             var save=new SaveData(); save.Settings.FreeMode=free; save.Settings.Music=false; save.Settings.Theme="白天";
             save.CompanionDates.AddRange(Enumerable.Range(1,7).Select(d=>$"2026-09-{d:00}")); World.Initialize(save);
+            Scenes.Switch(save,"outdoor");
             save.Layout.Clear(); var bench=World.Default(ObjectDef.Get("bench")); save.Layout.Add(bench);
             // Deliberately move the chair away from its default location.
             bench.X=mirror ? 205 : 325; bench.Y=mirror ? 263 : 246;

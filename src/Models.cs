@@ -18,8 +18,9 @@ public sealed class Settings
     public double Left { get; set; } = double.NaN;
     public double Top { get; set; } = double.NaN;
     public double InteractionMinutes { get; set; } = 35;
-    public string GrowthScene { get; set; } = "outdoor";
+    public string GrowthScene { get; set; } = "cloud";
     public string FreeScene { get; set; } = "outdoor";
+    public bool LegacyOutdoorAccess { get; set; }
 }
 
 public sealed class Placement
@@ -45,6 +46,7 @@ public sealed class SaveData
     public HashSet<string> Created { get; set; } = new();
     public long Interactions { get; set; }
     public double MusicSeconds { get; set; }
+    public int IndoorStyleVersion { get; set; }
     [JsonIgnore] public int Days => CompanionDates.Count;
     [JsonIgnore] public string SceneId => Scenes.Current(this);
     [JsonIgnore] public List<Placement> Layout => Scenes.Layout(this);
@@ -100,7 +102,7 @@ public static class Actions
         new("swingLife", "树下轻荡秋千", 0, 34, "special", "swingSeat"),
         new("windowWatch", "窗边看天气", 2, 18, "context", "window"),
         new("deskTablet", "桌边使用平板", 4, 20, "context", "desk"),
-        new("roomRest", "屋内坐着休息", 7, 22, "context", "chair")
+        new("roomRest", "床沿安静休息", 7, 22, "context", "chair")
     };
     public static ActionDef Get(string id) => All.First(a => a.Id == id);
 }

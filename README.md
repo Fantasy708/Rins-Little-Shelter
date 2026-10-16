@@ -237,7 +237,7 @@ pwsh -File scripts/package-release.ps1 -Version v1.0.0 -ProgramDirectory dist/lo
 
 ## 发布状态与问题反馈
 
-v1.0.0 的内容见[正式版发行说明](docs/releases/v1.0.0.md)，实际检查与已知边界见[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。本次按用户要求暂停一小时稳定性测试后准备正式发行，未将中止的测试或旧预览EXE记录写作正式版一小时通过。原生 Windows 键鼠、真实系统缩放、多屏及真实播放器识别仍有待人工实测。
+v1.0.0 的内容见[正式版发行说明](docs/releases/v1.0.0.md)，实际检查与已知边界见[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。发行后对同一正式EXE完成62.13分钟稳定性观察，有效陪伴60.87分钟，无崩溃或异常日志，存档、备份与跨日计时正常。期间包含72.83秒系统待机及正常恢复，不作为全程无休眠连续绘制一小时的证明。原生 Windows 键鼠、真实系统缩放、多屏及真实播放器识别仍有待人工实测。
 
 遇到问题，请使用 [GitHub Issues](https://github.com/Fantasy708/Rins-Little-Shelter/issues) 中的反馈模板，提供版本、Windows 环境、触发动作与复现步骤；涉及显示问题时，也请说明缩放比例和显示器情况。
 

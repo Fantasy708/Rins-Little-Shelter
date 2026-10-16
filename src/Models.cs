@@ -11,6 +11,7 @@ public sealed class Settings
     public bool Sound { get; set; }
     public bool EnergySaving { get; set; }
     public bool ClickThrough { get; set; }
+    public bool AlwaysOnTop { get; set; }
     public bool AutoStart { get; set; }
     public bool FreeMode { get; set; }
     public string Weather { get; set; } = "晴";

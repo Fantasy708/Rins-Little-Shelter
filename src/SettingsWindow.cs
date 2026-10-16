@@ -52,6 +52,7 @@ public sealed class SettingsWindow : Window
             s.StartupAnimationEnabled=value!="直接进入桌面"; s.StartupAnimationPlayback=value=="每次完整播放" ? "always" : value=="直接进入桌面" ? "off" : "adaptive";
         });
         Check(stack, "节能模式（30 FPS；默认60 FPS）", s.EnergySaving, value => s.EnergySaving = value);
+        Check(stack, "始终置顶", s.AlwaysOnTop, value => s.AlwaysOnTop = value);
         Check(stack, "鼠标完全穿透（仍可通过托盘恢复）", s.ClickThrough, value => s.ClickThrough = value);
         stack.Children.Add(new TextBlock { Text = "安静陪伴", FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 15, 0, 8) });
         Check(stack, "音乐联动：让光点轻轻回应系统声音", s.Music, value => s.Music = value);

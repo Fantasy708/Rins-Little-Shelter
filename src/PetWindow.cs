@@ -45,7 +45,7 @@ public sealed partial class PetWindow : Window
         this.storage = storage; Save = save; this.diagnostics = diagnostics;
         World.Initialize(save); Scenes.PlaceActor(save,Behavior);
         Title = "Rin’s Little Shelter"; Icon = AppIcon.WindowImage; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
-        AllowsTransparency = true; Background = Brushes.Transparent; ShowInTaskbar = false; ShowActivated = false; Topmost = true;
+        AllowsTransparency = true; Background = Brushes.Transparent; ShowInTaskbar = false; ShowActivated = false; Topmost = save.Settings.AlwaysOnTop;
         Scene = new Scene(save, Behavior, Audio) { Width = 480, Height = 340 };
         InstallStartupPresentation();
         InstallRecallPresentation();
@@ -212,6 +212,7 @@ public sealed partial class PetWindow : Window
     }
     public void ApplySettings()
     {
+        Topmost = Save.Settings.AlwaysOnTop;
         if (!Save.Settings.StartupAnimationEnabled || Save.Settings.StartupAnimationPlayback=="off") SkipStartup();
         if (Save.Settings.ClickThrough) { Behavior.Journey.Cancel(Save); CancelTablet(); }
         ApplySize(); if (IsLoaded) { Native.KeepOnScreen(this); pointerThrough = Save.Settings.ClickThrough; Native.Configure(this, pointerThrough); }

@@ -38,13 +38,14 @@ public sealed class TabletSession
     public bool Open(SaveData s,bool invited=false,string page="create",string? preselect=null,DateTime? date=null)
     {
         if (Active || actor.Dragging || actor.Life.Active || actor.Current.Kind == "create") return false;
+        if (invited && actor.Journey.Active) return false;
         var key=(date ?? DateTime.Now).ToString("yyyy-MM-dd");
         if (invited && s.ChoiceCounts.GetValueOrDefault(key)>=3) return false;
         Candidates=World.Available(s).Where(d=>!Scenes.Foundation(d.Id)).OrderBy(d=>s.Layout.Any(p=>p.Id == d.Id && !p.Hidden)).Select(d=>d.Id).ToArray();
         if (preselect != null && !Candidates.Contains(preselect)) return false;
         if (invited && Candidates.Length == 0) return false;
         if (invited) Candidates=Candidates.Take(2).ToArray();
-        actor.Nurture.Cancel(s);
+        actor.Journey.Cancel(s); actor.Nurture.Cancel(s);
         scene=s.SceneId; free=s.Settings.FreeMode; automatic=invited; confirmed=null; emitted=false; closingFromExpansion=1; stowingFromVisibility=1;
         Generation++; Page=page == "messages" ? "messages" : "create"; Selected=preselect;
         CandidatePage=preselect == null ? 0 : Array.IndexOf(Candidates,preselect)/4;

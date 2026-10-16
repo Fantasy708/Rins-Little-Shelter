@@ -108,7 +108,10 @@ public static class Actions
         new("windowWatch", "窗边看天气", 2, 18, "context", "window"),
         new("deskTablet", "桌边使用平板", 4, 20, "context", "desk"),
         new("roomRest", "床沿安静休息", 7, 22, "context", "chair"),
-        new("nurtureHug", "Nurture·拥抱草地", 0, 9, "easteregg")
+        new("nurtureHug", "Nurture·拥抱草地", 0, 9, "easteregg"),
+        new("mountainClimb", "沿山径登顶", 0, 18, "journey", "mountainBase"),
+        new("auroraWatch", "仰望极光", 2, 14, "journey", "polarBase"),
+        new("snowTouch", "伸手接雪", 5, 9, "journey", "polarBase")
     };
     public static ActionDef Get(string id) => All.First(a => a.Id == id);
 }

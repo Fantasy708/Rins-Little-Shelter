@@ -59,7 +59,7 @@ public sealed class NurtureSequence
     public int Generation { get; private set; }
     public const double LowerSeconds=1.2,RestSeconds=4.5,RiseSeconds=1.2;
     public int PoseFrame => Phase switch { "lower"=>Math.Clamp((int)(Elapsed/LowerSeconds*10),0,9),"rest"=>9,"rise"=>10+Math.Clamp((int)(Elapsed/RiseSeconds*10),0,9),_=>0 };
-    public bool CanBegin(SaveData s) => !Active && !actor.Dragging && !actor.Life.Active && actor.Current.Kind != "create" && actor.Tablet.ConfirmedTarget == null && actor.Current.Id is not ("benchSit" or "roomRest" or "ropeHold" or "swingLife") && NurtureGround.TryFind(s,actor.X,out _);
+    public bool CanBegin(SaveData s) => !Active && !actor.Journey.Active && !actor.Dragging && !actor.Life.Active && actor.Current.Kind != "create" && actor.Tablet.ConfirmedTarget == null && actor.Current.Id is not ("benchSit" or "roomRest" or "ropeHold" or "swingLife") && NurtureGround.TryFind(s,actor.X,out _);
     private void Schedule(Action action) { InternalScheduling=true; try { action(); } finally { InternalScheduling=false; } }
     public bool Begin(SaveData s)
     {

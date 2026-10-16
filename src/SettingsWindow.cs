@@ -11,6 +11,7 @@ public sealed class SettingsWindow : Window
     private readonly StackPanel collection = new();
     private readonly StackPanel motions = new();
     private readonly TextBlock modeText = new();
+    private Button? recallButton;
     private readonly Brush ink = new SolidColorBrush(Color.FromRgb(63, 82, 100));
     private readonly Brush muted = new SolidColorBrush(Color.FromRgb(117, 138, 151));
     public SettingsWindow(PetWindow pet)
@@ -26,7 +27,7 @@ public sealed class SettingsWindow : Window
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
         status.TextWrapping = TextWrapping.Wrap; status.FontSize = 11; status.Foreground = muted; footer.Children.Add(status);
-        footer.Children.Add(new TextBlock { Text = "v0.3.1-preview.2 · 首个公开内测版 · Ctrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
+        footer.Children.Add(new TextBlock { Text = "v0.4.0-preview.2 · 公测预览版 · 持续开发\nCtrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var tabs = new TabControl { Background = Brushes.Transparent, BorderBrush = new SolidColorBrush(Color.FromRgb(218, 230, 231)) };
         tabs.Items.Add(new TabItem { Header = "陪伴设置", Content = SettingsPanel() });
@@ -69,6 +70,7 @@ public sealed class SettingsWindow : Window
         buttons.Children.Add(Button("查看平板消息",pet.OpenMessages));
         buttons.Children.Add(Button("重看开场",pet.ReplayStartup));
         buttons.Children.Add(Button("看看理想世界", pet.ShowIdeal));
+        recallButton=Button("Shelter · 创造回顾",()=> { if(pet.Recall.Active) pet.EndRecall(); else pet.ShowRecall(); }); recallButton.IsEnabled=pet.CanRecall; recallButton.ToolTip="第20个陪伴日开放；完整播放Shelter后回顾，也可在Rin空闲时手动观看。"; buttons.Children.Add(recallButton);
         buttons.Children.Add(Button("恢复位置", pet.Recover));
         buttons.Children.Add(Button("暂停 / 继续", pet.TogglePause)); stack.Children.Add(buttons);
         stack.Children.Add(new TextBlock { Text = "天气在本地选择。音乐只即时分析，不保存音频。全屏时自动隐藏。", TextWrapping = TextWrapping.Wrap, Foreground = muted, FontSize = 11, Margin = new Thickness(0, 9, 0, 0) });
@@ -103,9 +105,10 @@ public sealed class SettingsWindow : Window
         var button = new Button { Content = text, Padding = new Thickness(12, 6, 12, 6), Margin = new Thickness(0, 0, 8, 0), Background = new SolidColorBrush(Color.FromRgb(233, 241, 241)), BorderBrush = new SolidColorBrush(Color.FromRgb(200, 216, 219)), Foreground = ink };
         button.Click += (_, _) => action(); return button;
     }
-    private int lastDays = -1; private bool? lastFree,lastHug; private string lastLayout = "";
+    private int lastDays = -1; private bool? lastFree,lastHug,lastJourney,lastCanExplore; private string lastLayout = "";
     private void UpdateStatus()
     {
+        if(recallButton!=null) { recallButton.IsEnabled=pet.Recall.Active || pet.CanRecall; recallButton.Content=pet.Recall.Active ? "结束创造回顾" : "Shelter · 创造回顾"; }
         var save = pet.Save; modeText.Text = save.Settings.FreeMode ? "自由创造 · 全部开放" : "成长模式 · 已陪伴 " + save.Days + " 天";
         string dayKey = DateTime.Now.ToString("yyyy-MM-dd");
         status.Text = "已陪伴 " + save.Days + " 天 · 今天 " + (save.DailySeconds.GetValueOrDefault(dayKey) / 60).ToString("0") + " 分钟 / 15 分钟\n" + (pet.Paused ? "陪伴已暂停" : pet.Audio.Status) + (string.IsNullOrEmpty(pet.Audio.Track) ? "" : " · " + pet.Audio.Track);
@@ -113,6 +116,8 @@ public sealed class SettingsWindow : Window
         string layout = save.SceneId + string.Join(";", save.Layout.Select(p => p.Id + ":" + p.Hidden));
         if (lastLayout != layout) { lastLayout = layout; UpdateCollection(); UpdateMotions(); }
         if (lastHug != pet.CanHugGrass) { lastHug=pet.CanHugGrass; UpdateMotions(); }
+        bool canExplore=pet.CanExplore("mountainClimb") || pet.CanExplore("auroraWatch") || pet.CanExplore("snowTouch");
+        if (lastJourney != pet.Behavior.Journey.Active || lastCanExplore != canExplore) { lastJourney=pet.Behavior.Journey.Active; lastCanExplore=canExplore; UpdateCollection(); UpdateMotions(); }
     }
     private void UpdateCollection()
     {
@@ -125,6 +130,15 @@ public sealed class SettingsWindow : Window
             var memory=Button("查看父女记忆",pet.ViewMemory); memory.IsEnabled=Scenes.MemoriesUnlocked(pet.Save); memory.ToolTip="秋千解锁后开放；仅主动播放，静音，可随时结束"; controls.Children.Add(memory);
             controls.Children.Add(Button("结束记忆 / 停下",pet.EndMemory));
             if (pet.Save.SceneId == "swingTree") controls.Children.Add(Button("轻轻荡秋千",pet.Swing)); collection.Children.Add(controls);
+        }
+        if (pet.Save.SceneId is "mountain" or "polar") {
+            var exploration=new WrapPanel { Margin=new Thickness(0,12,0,8) };
+            foreach(string id in pet.Save.SceneId == "mountain" ? new[]{"mountainClimb"} : new[]{"auroraWatch","snowTouch"}) {
+                var entry=Button(Actions.Get(id).Name,()=>pet.Explore(id)); entry.IsEnabled=pet.CanExplore(id); exploration.Children.Add(entry);
+            }
+            if (pet.Behavior.Journey.Active) exploration.Children.Add(Button("结束观景",pet.EndExploration));
+            collection.Children.Add(exploration);
+            collection.Children.Add(new TextBlock { Text=pet.Save.SceneId == "mountain" ? "沿山路慢慢登高，在山顶看一会儿远方，再走回来。" : "在雪地安静看极光，或伸手接住一片雪。", Foreground=muted,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,0,0,12) });
         }
         collection.Children.Add(new TextBlock { Text = "一起长成的小世界", FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 7) });
         collection.Children.Add(new TextBlock { Text = "成长按累计陪伴日推进。自由模式拥有独立布局。", Foreground = muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
@@ -149,13 +163,16 @@ public sealed class SettingsWindow : Window
         motions.Children.Add(new TextBlock { Text = "选择一个动作，看看她现在想做什么。场景动作随景物解锁。", Foreground = muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
         foreach (var group in Actions.All.GroupBy(a => a.Kind))
         {
-            string label = group.Key switch { "idle" => "静静陪伴", "context" => "在小世界里", "move" => "轻轻走动", "create" => "创造的时刻", "special"=>"秋千日常", "easteregg"=>"安静的彩蛋", _ => "回应你" };
+            string label = group.Key switch { "idle" => "静静陪伴", "context" => "在小世界里", "move" => "轻轻走动", "create" => "创造的时刻", "special"=>"秋千日常", "journey"=>"走进风景", "easteregg"=>"安静的彩蛋", _ => "回应你" };
             motions.Children.Add(new TextBlock { Text = label, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 10) });
             var wrap = new WrapPanel();
             foreach (var a in group)
             {
                 var b = Button(a.Name, () => pet.PreviewAction(a.Id)); b.Margin = new Thickness(0, 0, 8, 8);
-                b.IsEnabled = Scenes.ActionAvailable(pet.Save,a) && (a.Id != "nurtureHug" || pet.CanHugGrass); if (a.Id == "nurtureHug") b.ToolTip="仅在可见且有足够空位的草地上开放；不挪动已保存景物"; wrap.Children.Add(b);
+                b.IsEnabled = Scenes.ActionAvailable(pet.Save,a) && (a.Id != "nurtureHug" || pet.CanHugGrass) && (a.Id is not ("mountainClimb" or "auroraWatch" or "snowTouch") || pet.CanExplore(a.Id));
+                if (a.Id == "nurtureHug") b.ToolTip="仅在可见且有足够空位的草地上开放；不挪动已保存景物";
+                if (a.Id is "mountainClimb" or "auroraWatch" or "snowTouch") b.ToolTip="仅在对应场景的有效落点开放；拖动、整理或创造可结束本次观景";
+                wrap.Children.Add(b);
             }
             motions.Children.Add(wrap);
         }

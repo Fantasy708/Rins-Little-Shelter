@@ -147,6 +147,18 @@ public sealed class ResourceManifest
     public double[][] NurtureAnchors { get; set; }=Array.Empty<double[]>();
     public double[] NurtureStandingHeights { get; set; }=Array.Empty<double>();
     public double[][][] NurtureContacts { get; set; }=Array.Empty<double[][]>();
+    public string MountainImage { get; set; }="world/mountain.png";
+    public string PolarImage { get; set; }="world/polar.png";
+    public string AuroraImage { get; set; }="world/polar-aurora.png";
+    public string ClimbAtlas { get; set; }="rin/mountain-life.png";
+    public double[][] ClimbRegions { get; set; }=Array.Empty<double[]>();
+    public double[][] ClimbAnchors { get; set; }=Array.Empty<double[]>();
+    public double[] ClimbHeights { get; set; }=Array.Empty<double>();
+    public double[][][] ClimbContacts { get; set; }=Array.Empty<double[][]>();
+    public string PolarPoseAtlas { get; set; }="rin/polar-life.png";
+    public double[][] PolarPoseRegions { get; set; }=Array.Empty<double[]>();
+    public double[][] PolarPoseAnchors { get; set; }=Array.Empty<double[]>();
+    public double[] PolarPoseHeights { get; set; }=Array.Empty<double>();
 }
 
 public sealed partial class Scene : FrameworkElement
@@ -199,6 +211,7 @@ public sealed partial class Scene : FrameworkElement
         LoadLifeAssets(root);
         LoadTabletAssets(root);
         LoadNurtureAssets(root);
+        LoadOutdoorAssets(root);
         RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.HighQuality);
     }
     private SolidColorBrush Brush(byte a, byte r, byte g, byte b)
@@ -209,7 +222,7 @@ public sealed partial class Scene : FrameworkElement
     }
     private SolidColorBrush White => Brush(245, 253, 252, 247);
     private SolidColorBrush Ink => Brush(255, 73, 91, 109);
-    public void Born(string id) => births[id] = Time;
+    public void Born(string id) { births[id] = Time; CommitCreationEffect(id); }
     public string? Hit(Point point)
     {
         if (StartupPresentation) return null;
@@ -241,6 +254,8 @@ public sealed partial class Scene : FrameworkElement
         actorHits.Clear(); lifeHits.Clear(); doorRect=Rect.Empty;
         string theme = World.Theme(save.Settings, DateTime.Now.Hour);
         bool night = theme is "夜晚" or "深夜";
+        RefreshCreationEffect();
+        DrawOutdoorBackdrop(dc,theme);
         bool ideal = save.SceneId is "outdoor" or "cloud" && Time < IdealUntil && !behavior.Life.Active;
         var layout = ideal ? ObjectDef.All.Select(World.Default).ToList() : save.Layout.Where(p => !p.Hidden).ToList();
         foreach (var p in layout.OrderBy(p => Scenes.Foundation(p.Id) ? -3 : p.Id is "grass" ? -2 : p.Id is "path" ? -1 : 0))
@@ -248,38 +263,33 @@ public sealed partial class Scene : FrameworkElement
             if (!ideal && !World.Available(save).Any(d => d.Id == p.Id)) continue;
             var d = ObjectDef.Get(p.Id); if (p.Id == "swingSeat") continue;
             var sprite = ObjectSprite(d);
-            double ox = 0, oy = 0, angle = 0;
+            double ox = 0, oy = 0;
             if (p.Id == "cloud") ox = Math.Sin(Time * .13) * 8;
             if (p.Id == "bird") { ox = Math.Sin(Time * .65) * 14; oy = Math.Sin(Time * 1.2) * 3; }
-            if (FeedbackObject == p.Id && Time < FeedbackUntil)
-            {
-                angle = Math.Sin(Time * 10) * 4;
-                if (p.Id == "cloud") ox += Math.Sin((FeedbackUntil - Time) * 1.5) * 24;
-                if (p.Id == "bird") { ox += Math.Sin(Time * 3) * 34; oy += Math.Cos(Time * 3) * 16; }
-            }
             double k = Math.Min(d.Width / sprite.Width, d.Height / sprite.Height);
             double width = sprite.Width * k, height = sprite.Height * k;
-            if (p.Id is "platform" or "grass" or "path" or "meadowBase" or "roomBase" or "bigTree") { width = d.Width; height = d.Height; }
+            if (p.Id is "platform" or "grass" or "path" or "meadowBase" or "roomBase" or "bigTree" or "mountainBase" or "polarBase") { width = d.Width; height = d.Height; }
             var rect = new Rect(p.X - width / 2 + ox, p.Y - height + oy, width, height);
-            double appear = births.TryGetValue(p.Id, out var born) ? Math.Clamp((Time - born) / 2.5, 0, 1) : 1;
+            if(p.Id=="mountainBase") rect.Y+=18; // Authored empty sky/ground padding keeps the summit at the route contact.
+            double appear = ObjectAppearance(p.Id);
             double visibleOpacity=appear*(save.SceneId == "indoor" && !Scenes.Foundation(p.Id) ? 1-behavior.Life.Atmosphere : 1);
             dc.PushOpacity(visibleOpacity);
-            dc.PushTransform(new ScaleTransform(.85 + .15 * appear, .85 + .15 * appear, p.X, p.Y));
-            dc.PushTransform(new RotateTransform(angle, p.X, p.Y));
+            double appearanceScale=creationRevealObjects.Contains(p.Id)?1:.85+.15*appear;
+            dc.PushTransform(new ScaleTransform(appearanceScale,appearanceScale,p.X,p.Y));
             if (p.Id == "stars") dc.PushOpacity(night || ideal || audio.IsShelter ? .95 : .28);
-            else dc.PushOpacity(save.SceneId == "indoor" ? 1 : theme == "深夜" ? .7 : night ? .79 : 1);
+            else dc.PushOpacity(save.SceneId is "indoor" or "mountain" or "polar" ? 1 : theme == "深夜" ? .7 : night ? .79 : 1);
             // The repainted glass has real alpha holes. Put the sky behind
             // the window so its antialiased ironwork stays visible.
             if (p.Id == "window" && save.SceneId == "indoor") DrawBedroomSky(dc,rect,theme);
             dc.DrawImage(sprite.Image, rect);
             if (p.Id == "roomBase" && behavior.Life.Atmosphere > 0) { dc.PushOpacity(behavior.Life.Atmosphere); dc.DrawImage(environments.Sprites[1].Image,rect); dc.Pop(); }
-            dc.Pop(); dc.Pop(); dc.Pop(); dc.Pop(); if (visibleOpacity > .5) hits[p.Id] = (rect, sprite);
-            if (p.Id == "house" && save.SceneId == "outdoor") doorRect=new Rect(rect.X+rect.Width*.26,rect.Y+rect.Height*.52,rect.Width*.15,rect.Height*.39);
+            dc.Pop(); dc.Pop(); dc.Pop(); if (visibleOpacity > .5) hits[p.Id] = (rect, sprite);
+            if (p.Id == "house" && save.SceneId == "outdoor" && visibleOpacity>.5) doorRect=new Rect(rect.X+rect.Width*.26,rect.Y+rect.Height*.52,rect.Width*.15,rect.Height*.39);
             if (p.Id is "lamp" or "house" && (night || theme == "傍晚" || FeedbackObject == p.Id && Time < FeedbackUntil))
             {
-                dc.DrawEllipse(Brush(32, 255, 226, 149), null, new Point(p.X, p.Y - d.Height * .48), 24, 22);
+                dc.PushOpacity(visibleOpacity);dc.DrawEllipse(Brush(32, 255, 226, 149), null, new Point(p.X, p.Y - d.Height * .48), 24, 22);dc.Pop();
             }
-            if (p.Id == "windmill") DrawRotor(dc, p.X, p.Y - height * .68, Time * 12);
+            if (p.Id == "windmill") {dc.PushOpacity(visibleOpacity);DrawRotor(dc, p.X, p.Y - height * .68, Time * 12);dc.Pop();}
             if (Editing)
             {
                 dc.DrawRoundedRectangle(null, new Pen(Brush(145, 126, 183, 198), 1), rect, 5, 5);
@@ -289,12 +299,14 @@ public sealed partial class Scene : FrameworkElement
         var ambient = theme switch { "清晨" => Brush(14, 255, 224, 179), "傍晚" => Brush(19, 244, 185, 207), "夜晚" => Brush(18, 150, 159, 237), "深夜" => Brush(28, 117, 127, 206), _ => Brush(7, 167, 229, 246) };
         dc.DrawEllipse(ambient, null, new Point(240, 228), 164, 56);
         DrawParticles(dc, theme, night, ideal);
+        DrawCreationParticles(dc);
         DrawWeather(dc);
         DrawLifeWorld(dc);
+        DrawOutdoorFootpath(dc);
         DrawPresentRin(dc);
+        DrawOutdoorContactEffects(dc);
         DrawNurtureGrass(dc);
         DrawHeldTablet(dc);
-        DrawCreation(dc);
         DrawMemoryControls(dc);
         DrawTablet(dc,theme);
         if (!behavior.Tablet.Active && Time < BubbleUntil) DrawBubble(dc, Bubble);
@@ -307,16 +319,20 @@ public sealed partial class Scene : FrameworkElement
         var clip=MotionClips.Find(action.Id);
         bool tabletPose=behavior.Tablet.DedicatedPose && behavior.Tablet.Matches(save);
         bool nurturePose=behavior.Nurture.DedicatedPose;
-        bool raw=clip != null || tabletPose || nurturePose;
+        bool climbingPose=behavior.Journey.DedicatedPose;
+        bool polarPose=behavior.Journey.Active && behavior.Journey.Phase=="snow";
+        bool raw=clip != null || tabletPose || nurturePose || climbingPose || polarPose;
         bool left=raw ? behavior.SequenceMirror : behavior.FacingLeft;
         if (tabletPose) left=false;
         if (nurturePose) left=false;
+        if (climbingPose) left=behavior.Journey.Direction<0;
+        if (polarPose) left=false;
         // The sky-watching pose was drawn looking left in its source frame.
         // Orient this pose toward the actual window instead of the walk facing.
         if (action.Id == "windowWatch" && save.SceneId == "indoor" && save.Layout.FirstOrDefault(p=>p.Id == "window" && !p.Hidden) is { } window) left=window.X>behavior.X;
         double breath=move || raw ? 0 : Math.Sin(Time*1.5)*.45;
         double seatOffset=action.Id == "swing" ? 45 : 0;
-        string key=(nurturePose ? "nurture:"+behavior.Nurture.Generation : tabletPose ? "tablet:"+behavior.Tablet.Generation : raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
+        string key=(polarPose ? "snow:"+behavior.Journey.Generation : climbingPose ? "climb:"+behavior.Journey.Generation+":"+behavior.Journey.Direction : nurturePose ? "nurture:"+behavior.Nurture.Generation : tabletPose ? "tablet:"+behavior.Tablet.Generation : raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
         // Capture the last displayed raster before a reusable pose/transition
         // buffer is updated, including interrupted and nested crossfades.
         if (key != lastDrawKey)
@@ -328,7 +344,17 @@ public sealed partial class Scene : FrameworkElement
         }
         Atlas.Sprite sprite;
         Rect rect;
-        if (nurturePose)
+        if (polarPose)
+        {
+            int frame=PolarSnowFrame; sprite=polarFrames.Sample(new ClipSample(frame,frame,0,0));
+            rect=new Rect(behavior.X+polarFrames.Bounds.X,behavior.Y+polarFrames.Bounds.Y,polarFrames.Bounds.Width,polarFrames.Bounds.Height);
+        }
+        else if (climbingPose)
+        {
+            int frame=behavior.Journey.PoseFrame; sprite=climbFrames.Sample(new ClipSample(frame,frame,0,0));
+            rect=new Rect(behavior.X+climbFrames.Bounds.X,behavior.Y+climbFrames.Bounds.Y,climbFrames.Bounds.Width,climbFrames.Bounds.Height);
+        }
+        else if (nurturePose)
         {
             int frame=behavior.Nurture.PoseFrame; sprite=nurtureFrames.Sample(new ClipSample(frame,frame,0,0));
             double breathHeight=behavior.Nurture.Phase == "rest" ? .0015*Math.Sin(behavior.Nurture.Elapsed*1.5) : 0;
@@ -375,6 +401,7 @@ public sealed partial class Scene : FrameworkElement
             }
         }
         bool seated=!move && !raw && action.Pose == 7;
+        SetOutdoorContacts(rect,left,climbingPose);
         actorHits.Clear();
         double fade=oldDrawSprite == null ? 1 : Math.Clamp((Time-poseChanged)/(raw || oldDrawSequence ? .08 : .25),0,1);
         void Draw(DrawingContext target, Atlas.Sprite image, Rect destination, bool sitting, bool mirror, bool unlayered, double anchor)
@@ -466,27 +493,6 @@ public sealed partial class Scene : FrameworkElement
                 break;
         }
     }
-    private void DrawCreation(DrawingContext dc)
-    {
-        if (behavior.Current.Kind != "create") return;
-        double p = behavior.Time / behavior.Current.Duration;
-        double a = Math.Sin(Math.Min(1, p) * Math.PI) * (1 + audio.Level * .25);
-        double x = behavior.X + 22, y = behavior.Y - 95;
-        var pen = new Pen(Brush((byte)(a * 175), 142, 215, 230), 1);
-        for (int i = 0; i < 5; i++)
-        {
-            double angle = Time * .35 + i * Math.PI * 2 / 5, radius = 16 + p * 20 + audio.Low * 8;
-            double cx = x + Math.Cos(angle) * radius, cy = y + Math.Sin(angle) * radius * .4;
-            dc.PushTransform(new RotateTransform(i * 36 + Time * 12, cx, cy));
-            double size = 4 + audio.High * 3;
-            dc.DrawRectangle(Brush((byte)(a * 44), 160, 224, 234), pen, new Rect(cx - size, cy - size, size * 2, size * 2)); dc.Pop();
-        }
-        dc.DrawEllipse(null, pen, new Point(x, behavior.Y - 3), 24 + p * 40, 5 + p * 8);
-        if (behavior.CreationTarget != null && p > .45 && p < .76)
-        {
-            var d = ObjectDef.Get(behavior.CreationTarget); dc.DrawEllipse(Brush((byte)(a * 45), 192, 237, 240), null, new Point(d.X, d.Y - 20), 45, 28);
-        }
-    }
     private void DrawRotor(DrawingContext dc, double x, double y, double angle)
     {
         dc.PushTransform(new RotateTransform(angle, x, y));
@@ -502,7 +508,3 @@ public sealed partial class Scene : FrameworkElement
     }
     private void Text(DrawingContext dc, string text, double x, double y, double size, Brush brush) => dc.DrawText(new FormattedText(text, CultureInfo.GetCultureInfo("zh-CN"), FlowDirection.LeftToRight, new Typeface("Microsoft YaHei UI"), size, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip), new Point(x, y));
 }
-
-
-
-

@@ -29,6 +29,7 @@ public sealed partial class Scene
         if (swingLoop.Sprites.Length != 18 || manifest.LoopHips.Length != 18 || manifest.LoopHands.Length != 18) throw new InvalidDataException("细化摆荡帧不完整");
     }
     private Atlas.Sprite ObjectSprite(ObjectDef d) => d.Id switch {
+        "mountainBase"=>mountainLandscape,"polarBase"=>polarLandscape,
         "meadowBase"=>meadowGrass,"grass"=>gardenGrass,
         "bigTree"=>matureTree.Sprites[0], "roomBase"=>bedroom.Sprites[0], "chair"=>bedroom.Sprites[1],
         "window"=>bedroom.Sprites[2], "desk"=>bedroom.Sprites[3], "cabinet"=>bedroom.Sprites[4],
@@ -38,6 +39,7 @@ public sealed partial class Scene
     {
         lastDrawKey=null; lastDrawSprite=null; oldDrawSprite=null;
         births.Clear(); actorHits.Clear(); lifeHits.Clear(); hits.Clear();
+        ClearCreationEffects();
         blurredPoses.Clear();
         doorRect=memoryControl=seatHit=Rect.Empty; IdealUntil=0; BubbleUntil=0; ClearTabletHits();
         InvalidateVisual();

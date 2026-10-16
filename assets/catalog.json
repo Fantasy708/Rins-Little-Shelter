@@ -1,8 +1,467 @@
 {
-  "Version": 5,
-  "Nurture": {
-    "ClipOrigin": "start of lowering; variable footsteps and tablet stow are outside clip",
+  "Version": 8,
+  "CreationParticles": {
+    "TabletOrbit": false,
+    "RevealSeconds": 0.7,
+    "ShapeHoldSeconds": 0.18,
+    "Persistent": false,
+    "ActualEvent": "PetWindow ObjectCreated -> World.Create -> Scene.Born",
+    "MaterializeSeconds": 1.15,
+    "GatherSeconds": 0.65,
+    "FixedPool": 384,
+    "HitTest": false,
+    "Source": "src/SceneCreation.cs",
+    "ShapeFirst": true
+  },
+  "Outdoor": {
     "Silent": true,
+    "PolarOrigins": [
+      [
+        183.3,
+        360
+      ],
+      [
+        183.95,
+        359
+      ],
+      [
+        181.4,
+        359
+      ],
+      [
+        181.61,
+        359
+      ],
+      [
+        180.29,
+        359
+      ],
+      [
+        180.43,
+        359
+      ],
+      [
+        184.28,
+        359
+      ],
+      [
+        184.27,
+        358
+      ],
+      [
+        182.86,
+        359
+      ],
+      [
+        181.15,
+        358
+      ],
+      [
+        179.18,
+        359
+      ],
+      [
+        179.6,
+        359
+      ]
+    ],
+    "PolarReferences": [
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360
+    ],
+    "PolarFrames": 12,
+    "PolarAtlas": "rin/polar-life.png",
+    "ClimbAtlas": "rin/mountain-life.png",
+    "AuroraImage": "world/polar-aurora.png",
+    "ClimbFrames": 24,
+    "MountainImage": "world/mountain.png",
+    "ClimbOrigins": [
+      [
+        141.68,
+        256.49
+      ],
+      [
+        142.86,
+        257.0
+      ],
+      [
+        147.35,
+        257.61
+      ],
+      [
+        145.37,
+        256.6
+      ],
+      [
+        139.03,
+        254.25
+      ],
+      [
+        144.28,
+        255.43
+      ],
+      [
+        149.25,
+        244.97
+      ],
+      [
+        153.49,
+        244.34
+      ],
+      [
+        149.28,
+        246.53
+      ],
+      [
+        145.59,
+        244.87
+      ],
+      [
+        147.65,
+        246.63
+      ],
+      [
+        143.0,
+        248.3
+      ],
+      [
+        120.62,
+        242.27
+      ],
+      [
+        122.53,
+        244.75
+      ],
+      [
+        116.33,
+        244.23
+      ],
+      [
+        113.69,
+        244.26
+      ],
+      [
+        113.84,
+        246.67
+      ],
+      [
+        117.79,
+        241.66
+      ],
+      [
+        143.99,
+        244.11
+      ],
+      [
+        149.68,
+        242.49
+      ],
+      [
+        145.55,
+        243.1
+      ],
+      [
+        148.86,
+        243.64
+      ],
+      [
+        151.94,
+        248.43
+      ],
+      [
+        141.97,
+        244.78
+      ]
+    ],
+    "ClimbReferences": [
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245
+    ],
+    "Renderer": "src/SceneOutdoor.cs",
+    "Source": "src/OutdoorJourney.cs",
+    "ClimbContacts": [
+      [
+        [
+          122.55,
+          257
+        ]
+      ],
+      [
+        [
+          117.14,
+          259
+        ],
+        [
+          170.31,
+          256
+        ]
+      ],
+      [
+        [
+          121.62,
+          260
+        ],
+        [
+          177.5,
+          241
+        ]
+      ],
+      [
+        [
+          122.33,
+          259
+        ],
+        [
+          185.98,
+          251
+        ]
+      ],
+      [
+        [
+          121.78,
+          257
+        ],
+        [
+          170.38,
+          239
+        ]
+      ],
+      [
+        [
+          163.86,
+          257
+        ]
+      ],
+      [
+        [
+          139.21,
+          245
+        ]
+      ],
+      [
+        [
+          126.43,
+          247
+        ],
+        [
+          179.34,
+          246
+        ]
+      ],
+      [
+        [
+          124.19,
+          249
+        ],
+        [
+          178.21,
+          237
+        ]
+      ],
+      [
+        [
+          130.02,
+          249
+        ],
+        [
+          174.2,
+          246
+        ]
+      ],
+      [
+        [
+          177.35,
+          248
+        ],
+        [
+          130.21,
+          243
+        ]
+      ],
+      [
+        [
+          123.37,
+          249
+        ],
+        [
+          165.05,
+          239
+        ]
+      ],
+      [
+        [
+          139.03,
+          241
+        ]
+      ],
+      [
+        [
+          112.6,
+          247
+        ],
+        [
+          175.67,
+          238
+        ]
+      ],
+      [
+        [
+          110.15,
+          247
+        ],
+        [
+          175.67,
+          242
+        ]
+      ],
+      [
+        [
+          108.31,
+          247
+        ]
+      ],
+      [
+        [
+          109.37,
+          248
+        ],
+        [
+          173.88,
+          243
+        ]
+      ],
+      [
+        [
+          128.57,
+          243
+        ]
+      ],
+      [
+        [
+          148.72,
+          245
+        ]
+      ],
+      [
+        [
+          163.47,
+          245
+        ]
+      ],
+      [
+        [
+          160.63,
+          245
+        ]
+      ],
+      [
+        [
+          133.08,
+          245
+        ],
+        [
+          181.26,
+          244
+        ]
+      ],
+      [
+        [
+          128.09,
+          246
+        ],
+        [
+          180.18,
+          236
+        ]
+      ],
+      [
+        [
+          128.58,
+          245
+        ],
+        [
+          172.82,
+          241
+        ]
+      ]
+    ],
+    "PolarImage": "world/polar.png",
+    "TemporalPolicy": "single Behavior clock, complete opaque frames; cancel on explicit interactions"
+  },
+  "Nurture": {
+    "StandingReferences": [
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      289,
+      288,
+      297
+    ],
+    "Silent": true,
+    "LowerSeconds": 1.2,
+    "GrassAtlas": "world/nurture-grass.png",
+    "RestSeconds": 4.5,
+    "RiseSeconds": 1.2,
+    "GrassRegions": [
+      [
+        0,
+        0,
+        1,
+        0.625
+      ],
+      [
+        0,
+        0.625,
+        1,
+        0.375
+      ]
+    ],
     "Contacts": [
       [
         [
@@ -229,47 +688,8 @@
         ]
       ]
     ],
-    "GrassAtlas": "world/nurture-grass.png",
-    "ManualOnly": true,
-    "StandingReferences": [
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      289,
-      288,
-      297
-    ],
-    "GrassRegions": [
-      [
-        0,
-        0,
-        1,
-        0.625
-      ],
-      [
-        0,
-        0.625,
-        1,
-        0.375
-      ]
-    ],
+    "ClipOrigin": "start of lowering; variable footsteps and tablet stow are outside clip",
     "Source": "src/Nurture.cs",
-    "LowerSeconds": 1.2,
-    "RestSeconds": 4.5,
     "FrameOrigins": [
       [
         114,
@@ -352,122 +772,48 @@
         297
       ]
     ],
-    "RiseSeconds": 1.2
+    "ManualOnly": true
   },
   "Scenes": [
     {
+      "Id": "cloud",
       "Name": "云台",
-      "Day": 0,
-      "Id": "cloud"
+      "Day": 0
     },
     {
+      "Id": "indoor",
       "Name": "屋内",
-      "Day": 2,
-      "Id": "indoor"
+      "Day": 2
     },
     {
+      "Id": "outdoor",
       "Name": "屋外院子",
-      "Day": 7,
-      "Id": "outdoor"
+      "Day": 7
     },
     {
+      "Id": "meadow",
       "Name": "室外草坡",
-      "Day": 10,
-      "Id": "meadow"
+      "Day": 10
     },
     {
+      "Id": "mountain",
+      "Name": "山脉",
+      "Day": 12
+    },
+    {
+      "Id": "polar",
+      "Name": "极地极光",
+      "Day": 16
+    },
+    {
+      "Id": "swingTree",
       "Name": "树下秋千",
-      "Day": 20,
-      "Id": "swingTree"
+      "Day": 20
     }
   ],
   "Swing": {
-    "BoardingFrames": 20,
-    "LoopKeys": 34,
-    "CycleSeconds": 4.6,
     "LoopFrames": 18,
-    "HipAnchors": [
-      [
-        188,
-        211
-      ],
-      [
-        128,
-        213
-      ],
-      [
-        115,
-        214
-      ],
-      [
-        115,
-        211
-      ],
-      [
-        180,
-        175
-      ],
-      [
-        127,
-        190
-      ],
-      [
-        114,
-        179
-      ],
-      [
-        128,
-        181
-      ],
-      [
-        178,
-        177
-      ],
-      [
-        126,
-        181
-      ],
-      [
-        119,
-        175
-      ],
-      [
-        127,
-        180
-      ],
-      [
-        179,
-        173
-      ],
-      [
-        127,
-        174
-      ],
-      [
-        119,
-        175
-      ],
-      [
-        122,
-        174
-      ],
-      [
-        180,
-        149
-      ],
-      [
-        125,
-        143
-      ],
-      [
-        118,
-        149
-      ],
-      [
-        131,
-        155
-      ]
-    ],
+    "BoardingFrames": 20,
     "Hands": [
       [
         141,
@@ -589,13 +935,97 @@
         173,
         166
       ]
-    ]
+    ],
+    "LoopKeys": 34,
+    "HipAnchors": [
+      [
+        188,
+        211
+      ],
+      [
+        128,
+        213
+      ],
+      [
+        115,
+        214
+      ],
+      [
+        115,
+        211
+      ],
+      [
+        180,
+        175
+      ],
+      [
+        127,
+        190
+      ],
+      [
+        114,
+        179
+      ],
+      [
+        128,
+        181
+      ],
+      [
+        178,
+        177
+      ],
+      [
+        126,
+        181
+      ],
+      [
+        119,
+        175
+      ],
+      [
+        127,
+        180
+      ],
+      [
+        179,
+        173
+      ],
+      [
+        127,
+        174
+      ],
+      [
+        119,
+        175
+      ],
+      [
+        122,
+        174
+      ],
+      [
+        180,
+        149
+      ],
+      [
+        125,
+        143
+      ],
+      [
+        118,
+        149
+      ],
+      [
+        131,
+        155
+      ]
+    ],
+    "CycleSeconds": 4.6
   },
   "Memory": {
-    "UserTriggered": true,
     "StorySeconds": 25,
-    "FadeSeconds": 1.5,
     "Silent": true,
+    "UserTriggered": true,
+    "FadeSeconds": 1.5,
     "TemporaryLayout": true
   },
   "Source": "src/Models.cs",
@@ -621,7 +1051,8 @@
   "SequenceCrossfadeSeconds": 0.08,
   "SequenceInterpolation": "single opaque registered pose frame; continuous root and lift; premultiplied RGBA action transitions",
   "CreationEventFraction": 0.58,
-  "CreationFadeSeconds": 2.5,
+  "CreationFadeSeconds": 0.7,
+  "LegacyCreationFadeSeconds": 2.5,
   "Animations": [
     {
       "Id": "stand",
@@ -1408,6 +1839,101 @@
         6.78
       ],
       "MotionAtlas": "rin/nurture-life.png"
+    },
+    {
+      "Id": "mountainClimb",
+      "Name": "沿山径登顶",
+      "Pose": 0,
+      "DurationSeconds": 18,
+      "Kind": "journey",
+      "Object": "mountainBase",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": "rin/mountain-life.png"
+    },
+    {
+      "Id": "auroraWatch",
+      "Name": "仰望极光",
+      "Pose": 2,
+      "DurationSeconds": 14,
+      "Kind": "journey",
+      "Object": "polarBase",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": null,
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": null
+    },
+    {
+      "Id": "snowTouch",
+      "Name": "伸手接雪",
+      "Pose": 5,
+      "DurationSeconds": 9,
+      "Kind": "journey",
+      "Object": "polarBase",
+      "FeetAnchor": [
+        0.5,
+        1
+      ],
+      "Hit": "visible alpha times opacity > 48",
+      "WalkFrames": null,
+      "JogFrames": null,
+      "PoseFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "ClipSeconds": null,
+      "FrameKeys": null,
+      "MotionAtlas": "rin/polar-life.png"
     }
   ],
   "Objects": [
@@ -1705,6 +2231,36 @@
       "MaxHeight": 8,
       "X": 300,
       "FeetY": 260,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "mountainBase",
+      "Name": "山脉与山径",
+      "Day": 12,
+      "Tile": -1,
+      "MaxWidth": 420,
+      "MaxHeight": 240,
+      "X": 240,
+      "FeetY": 310,
+      "Anchor": [
+        0.5,
+        1
+      ],
+      "Hit": "cropped sprite alpha > 48 within scaled rectangle"
+    },
+    {
+      "Id": "polarBase",
+      "Name": "极地冰原",
+      "Day": 16,
+      "Tile": -1,
+      "MaxWidth": 420,
+      "MaxHeight": 240,
+      "X": 240,
+      "FeetY": 310,
       "Anchor": [
         0.5,
         1

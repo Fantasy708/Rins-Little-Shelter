@@ -12,6 +12,8 @@
 
 Nurture草地与俯卧动作致敬[Porter Robinson官方商店的标准版正式封面](https://store.porterrobinson.com/products/nurture-2lp-standard-vinyl)，以自然草地和人物姿态为参考重新生成Rin插画。未附带摄影封面、歌曲或音轨；提示词和配准见[Nurture素材制作](docs/Nurture素材制作.md)。
 
+v0.4.0-preview.1山脉与极地参考用户提供的《Shelter》原片截图：赭红砂岩台地、蓝色雪景与冰柱、绿色至黄绿色极光。场景和专用登山/接雪姿势均由内置imagegen重新绘制，极光以独立透明贴图呈现；不分发用户截图、原片或音乐。参考边界、完整提示词和资源锚点见[户外探索素材制作](docs/户外探索素材制作.md)。
+
 ## 软件组件
 
 采用.NET 10、WPF、NAudio 3.1.0及System.Numerics.Tensors 9.0.0。依赖版本记录在 `src/packages.lock.json`；第三方许可原文见 `LICENSES`，说明见 [第三方组件](THIRD-PARTY-NOTICES.md)。

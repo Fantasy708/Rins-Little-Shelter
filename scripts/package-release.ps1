@@ -1,6 +1,6 @@
 param(
-    [string]$Version = 'v0.3.1-preview.2',
-    [string]$ProgramDirectory = 'dist/RinsLittleShelter',
+    [string]$Version = 'v0.4.0-preview.2',
+    [string]$ProgramDirectory = 'dist/local/v0.4.0-preview.2/RinsLittleShelter',
     [string]$ReleaseDirectory = ''
 )
 $ErrorActionPreference = 'Stop'
@@ -10,7 +10,7 @@ if ($Version -notmatch '^[A-Za-z0-9][A-Za-z0-9.\-]*$') { throw '版本号只能�
 $programRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $ProgramDirectory))
 $stage = Join-Path $projectRoot ('output/release-package-' + [Guid]::NewGuid().ToString('N'))
 $portableRoot = Join-Path $stage 'RinsLittleShelter'
-$releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $(if ($ReleaseDirectory.Length -gt 0) { $ReleaseDirectory } else { 'dist/github/' + $Version })))
+$releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $(if ($ReleaseDirectory.Length -gt 0) { $ReleaseDirectory } else { 'dist/local/' + $Version + '/release' })))
 if (-not $releaseRoot.StartsWith($projectRoot+[System.IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw '版本包输出必须在项目内。' }
 New-Item -ItemType Directory -Path $portableRoot,$releaseRoot -Force | Out-Null
 
@@ -20,6 +20,7 @@ $runtimeFiles = @('RinsLittleShelter.exe','assets/manifest.json','assets/catalog
     'assets/rin/hop.png','assets/rin/turn.png','assets/world/objects.png',
     'assets/rin/swing-life.png','assets/rin/swing-loop.png','assets/rin/family-memory.png','assets/rin/tablet-life.png','assets/rin/nurture-life.png','assets/world/nurture-grass.png',
     'assets/world/scenes.png','assets/world/swing-tree.png','assets/world/bedroom.png',
+    'assets/rin/mountain-life.png','assets/rin/polar-life.png','assets/world/mountain.png','assets/world/polar.png','assets/world/polar-aurora.png',
     'assets/app/rin-shelter.png','assets/app/rin-shelter.ico')
 foreach ($relative in $runtimeFiles) {
     $target = Join-Path $portableRoot $relative
@@ -43,6 +44,9 @@ foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验�
 if (Test-Path -LiteralPath (Join-Path $projectRoot 'docs/平板参考核对.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/平板参考核对.md') -Destination $publicDocs
 }
+Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/户外探索素材制作.md') -Destination $publicDocs
+Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/白色粒子创造设计.md') -Destination $publicDocs
+Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/Shelter创造回顾设计.md') -Destination $publicDocs
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/releases') -Destination $publicDocs -Recurse
 New-Item -ItemType Directory -Path (Join-Path $publicDocs 'screenshots') -Force | Out-Null
 Get-ShelterPublicFiles $projectRoot | Where-Object { $_.DirectoryName -eq (Join-Path $projectRoot 'docs/screenshots') } |

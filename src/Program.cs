@@ -21,7 +21,7 @@ internal static class Program
             if (Option(args,"--scene") is { } sceneId) Scenes.Switch(save,sceneId);
             string? capture = Option(args, "--capture-dir");
             var pet = new PetWindow(storage, save, capture != null); app.MainWindow = pet;
-            var opening=StartupAnimationController.Choose(save,args.Any(a=>a is "--action" or "--tablet" or "--memory" or "--settings" or "--soak-log" or "--capture-dir"),Option(args,"--startup"));
+            var opening=StartupAnimationController.Choose(save,args.Any(a=>a is "--action" or "--create" or "--tablet" or "--memory" or "--settings" or "--soak-log" or "--capture-dir"),Option(args,"--startup"));
             pet.Loaded+=(_,_)=>pet.BeginStartup(opening);
             if(args.Contains("--capture-startup-frames")) pet.EnableStartupCapture();
             if (args.Contains("--qa-window")) { pet.Tag = "qa"; pet.ShowInTaskbar = true; }
@@ -30,7 +30,12 @@ internal static class Program
             if (soak != null) pet.EnableSoak(soak, double.TryParse(Option(args,"--soak-minutes"), out var minutes) ? Math.Max(1,minutes) : 60);
             if (args.Contains("--settings")) pet.Loaded += (_, _) => pet.OpenSettings();
             string? action = Option(args, "--action"); if (action != null) pet.Loaded += (_, _) => pet.PreviewAction(action);
+            // Reproducible capture of the normal autonomous creation path;
+            // never run this diagnostic against the default user save.
+            if(dataOverride!=null && capture!=null && Option(args,"--create") is { } target)
+                pet.Loaded+=(_,_)=> { if(World.Available(save).Any(d=>d.Id==target && !Scenes.Foundation(d.Id)) && !save.Layout.Any(p=>p.Id==target && !p.Hidden)) pet.Behavior.Create(target); };
             if (args.Contains("--memory")) pet.Loaded+=(_,_)=>pet.ViewMemory();
+            if(dataOverride!=null && capture!=null && args.Contains("--recall")) pet.Loaded+=(_,_)=>pet.ShowRecall();
             if (Option(args,"--tablet") is { } tabletPage) pet.Loaded+=(_,_)=>pet.OpenTablet(tabletPage);
             app.Run(pet);
         }

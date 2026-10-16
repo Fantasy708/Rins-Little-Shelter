@@ -94,7 +94,7 @@ foreach (var clip in new[]{MotionClips.Hop,MotionClips.Turn})
     double early=clip.Sample(a+span*.1).Blend, middle=clip.Sample(a+span*.5).Blend, late=clip.Sample(a+span*.9).Blend;
     Check(Math.Abs((middle-early)-(late-middle))<.000001 && early>.09, "姿势衔接持续推进，不在每张关键图处重复缓停");
 }
-Check(Actions.All.Length == 35 && Actions.All.Select(a => a.Id).Distinct().Count() == 35, "35组动作具有唯一标识（保留原动作，新增独立手动草地彩蛋）");
+Check(Actions.All.Length == 38 && Actions.All.Select(a => a.Id).Distinct().Count() == 38, "38组动作具有唯一标识（保留原动作与草地彩蛋，新增山脉和极地专属动作）");
 Check(!WindowPolicy.IsFullscreen(0x01C40000, (0,0,1920,1080), (0,0,1920,1080)), "自动隐藏任务栏时普通最大化不隐藏桌宠");
 Check(!WindowPolicy.IsFullscreen(0x01040000, (0,0,1920,1080), (0,0,1920,1080)), "无标题栏的普通最大化仍保持陪伴");
 Check(WindowPolicy.IsFullscreen(0, (0,0,1920,1080), (0,0,1920,1080)), "无边框全屏隐藏桌宠");

@@ -41,3 +41,20 @@ assets/reference/*
 !assets/reference/README.md
 *.user
 *.log
+
+# Public v0.4.0 preview renders
+!docs/screenshots/shelter-recall.png
+!docs/screenshots/shelter-recall.gif
+!docs/screenshots/mountain-ascend-mid.png
+!docs/screenshots/mountain-summit.png
+!docs/screenshots/mountain-descend-mid.png
+!docs/screenshots/polar-aurora.png
+!docs/screenshots/polar-snow.png
+!docs/screenshots/mountain-journey.gif
+!docs/screenshots/mountain-runtime.png
+!docs/screenshots/polar-runtime.png
+!docs/screenshots/creation-gather.png
+!docs/screenshots/creation-born.png
+!docs/screenshots/creation-scatter.png
+!docs/screenshots/creation-transition.gif
+!docs/screenshots/creation-runtime.png

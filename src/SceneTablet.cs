@@ -64,7 +64,6 @@ public sealed partial class Scene
     {
         ClearTabletHits(); var session=behavior.Tablet;
         if (!session.Active || !session.Matches(save)) return;
-        if (session.Phase == "tap") DrawTabletCreation(dc);
         if (!session.ScreenVisible || TabletDeviceRect.IsEmpty) return;
         var expanded=new Rect(behavior.X>=240 ? 42 : 158,Math.Clamp(behavior.Y-174,14,118),280,200);
         double p=session.Expansion;
@@ -149,18 +148,6 @@ public sealed partial class Scene
         {
             var text=new FormattedText(label,CultureInfo.GetCultureInfo("zh-CN"),FlowDirection.LeftToRight,new Typeface("Microsoft YaHei UI"),size,ink,VisualTreeHelper.GetDpi(this).PixelsPerDip);
             dc.DrawText(text,new Point(rect.X+(rect.Width-text.Width)/2,rect.Y+(rect.Height-text.Height)/2));
-        }
-    }
-    private void DrawTabletCreation(DrawingContext dc)
-    {
-        double t=behavior.Tablet.Elapsed;
-        double amount=Math.Clamp(t/(1.4*.58),0,1);
-        var center=new Point(behavior.X,behavior.Y-80);
-        for(int i=0;i<6;i++) {
-            double a=Time*1.2+i*Math.PI/3, r=12+amount*25;
-            var p=new Point(center.X+Math.Cos(a)*r,center.Y+Math.Sin(a)*r*.6);
-            dc.PushTransform(new RotateTransform(45,p.X,p.Y));
-            dc.DrawRectangle(Brush((byte)(60+amount*95),166,229,238),new Pen(Brush(180,203,241,242),.7),new Rect(p.X-2,p.Y-2,4,4)); dc.Pop();
         }
     }
 }

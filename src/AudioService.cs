@@ -12,8 +12,7 @@ public sealed class AudioService : IDisposable
     private long packetTicks;
     private double rawLevel, rawLow, rawHigh;
     private GlobalSystemMediaTransportControlsSessionManager? sessions;
-    private string trackKey = "";
-    private double heard, duration;
+    private readonly ShelterPlaybackTracker playback = new();
     private DateTime lastMedia = DateTime.UtcNow;
     public double Level { get; private set; }
     public double Low { get; private set; }
@@ -22,14 +21,14 @@ public sealed class AudioService : IDisposable
     public string Track { get; private set; } = "";
     public string Status { get; private set; } = "等待音乐";
     public event Action? ShelterFinished;
-    private bool complete, busy;
+    private bool busy;
     private int generation;
     public async Task Poll(bool enabled)
     {
         if (busy) return; busy = true; int requestGeneration = generation;
         try
         {
-            if (!enabled) { Stop(); Status = "音乐联动已关闭"; return; }
+            if (!enabled) { Disable(); return; }
             using var device = devices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
             if (device.ID != endpoint || recorder == null)
             {
@@ -43,24 +42,21 @@ public sealed class AudioService : IDisposable
             sessions ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
             if (requestGeneration != generation) return;
             var current = sessions.GetCurrentSession();
-            if (current == null) { IsShelter = false; Track = ""; lastMedia = DateTime.UtcNow; return; }
+            if (current == null) { playback.Disconnect(); IsShelter = false; Track = ""; lastMedia = DateTime.UtcNow; return; }
             var info = await current.TryGetMediaPropertiesAsync();
             if (requestGeneration != generation) return;
             Track = string.IsNullOrWhiteSpace(info.Artist) ? info.Title : info.Artist + " · " + info.Title;
             string key = current.SourceAppUserModelId + "|" + info.Title + "|" + info.Artist;
             IsShelter = info.Title.Contains("shelter", StringComparison.OrdinalIgnoreCase) &&
                 (Track.Contains("Porter", StringComparison.OrdinalIgnoreCase) || Track.Contains("Madeon", StringComparison.OrdinalIgnoreCase));
-            var now = DateTime.UtcNow; double dt = Math.Min(3, (now - lastMedia).TotalSeconds); lastMedia = now;
+            var now = DateTime.UtcNow; double dt = Math.Max(0,(now - lastMedia).TotalSeconds); lastMedia = now;
             var timeline = current.GetTimelineProperties();
-            if (key != trackKey) { trackKey = key; heard = 0; complete = false; }
-            duration = (timeline.EndTime - timeline.StartTime).TotalSeconds;
+            double duration = (timeline.EndTime - timeline.StartTime).TotalSeconds;
             bool playing = current.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
-            if (IsShelter && playing) heard += dt;
-            if (IsShelter && !complete && duration > 30 && heard >= duration * .95 && timeline.Position.TotalSeconds >= duration - 4)
-            { complete = true; ShelterFinished?.Invoke(); }
+            if (playback.Observe(key,IsShelter,playing,(timeline.Position-timeline.StartTime).TotalSeconds,duration,dt)) ShelterFinished?.Invoke();
         }
         catch (Exception e) when (e is COMException or InvalidOperationException or UnauthorizedAccessException or NotSupportedException)
-        { Status = recorder == null ? "暂无可用声音设备，Rin 继续陪伴" : "音乐响应可用；播放器未提供曲目信息"; }
+        { playback.Disconnect(); Status = recorder == null ? "暂无可用声音设备，Rin 继续陪伴" : "音乐响应可用；播放器未提供曲目信息"; }
         finally { busy = false; }
     }
     private void OnAudio(ReadOnlySpan<byte> bytes)
@@ -98,11 +94,12 @@ public sealed class AudioService : IDisposable
         Low += ((silent ? 0 : Volatile.Read(ref rawLow)) - Low) * smoothing;
         High += ((silent ? 0 : Volatile.Read(ref rawHigh)) - High) * smoothing;
     }
-    public void Disable() { Stop(); Level = Low = High = 0; Status = "音乐联动已关闭"; }
+    public void Disable() { Stop(); playback.Reset(); Level = Low = High = 0; Status = "音乐联动已关闭"; }
     private void Stop()
     {
         var old = recorder; recorder = null; endpoint = null;
         generation++;
+        playback.Disconnect();
         if (old != null) { old.StopRecording(); old.Dispose(); }
         rawLevel = rawLow = rawHigh = 0; IsShelter = false; Track = "";
     }

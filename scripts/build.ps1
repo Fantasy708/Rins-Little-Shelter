@@ -1,4 +1,4 @@
-param([switch]$SkipTests, [string]$OutputDirectory = 'dist/RinsLittleShelter')
+param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v0.4.0-preview.2/RinsLittleShelter')
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Push-Location -LiteralPath $projectRoot
@@ -19,6 +19,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '核心检查失败。' }
         & $dotnetPath run --project tests/SceneTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '多场景和记忆检查失败。' }
+        & $dotnetPath run --project tests/OutdoorTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
+        if ($LASTEXITCODE -ne 0) { throw '山脉/极地成长和动作逻辑检查失败。' }
         & $dotnetPath run --project tests/TabletTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '平板/来信逻辑检查失败。' }
         & $dotnetPath run --project tests/NurtureTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
@@ -27,16 +29,24 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '画面检查失败。' }
         & $dotnetPath run --project tests/SceneVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/scene-qa
         if ($LASTEXITCODE -ne 0) { throw '多场景画面检查失败。' }
+        & $dotnetPath run --project tests/OutdoorVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/outdoor-visual-qa
+        if ($LASTEXITCODE -ne 0) { throw '山脉/极地绘图和落脚检查失败。' }
+        & $dotnetPath run --project tests/OutdoorWindowTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/outdoor-window-qa
+        if ($LASTEXITCODE -ne 0) { throw '户外动作窗口集成检查失败。' }
         & $dotnetPath run --project tests/TabletVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/tablet-visual-qa
         if ($LASTEXITCODE -ne 0) { throw '平板绘图/文字/命中检查失败。' }
         & $dotnetPath run --project tests/TabletWindowTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/tablet-window-qa
         if ($LASTEXITCODE -ne 0) { throw '平板生产窗口集成检查失败。' }
+        & $dotnetPath run --project tests/CreationVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/creation-visual-qa
+        if ($LASTEXITCODE -ne 0) { throw '白色粒子创造/节点/中断/命中检查失败。' }
         & $dotnetPath run --project tests/NurtureVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/nurture-visual-qa
         if ($LASTEXITCODE -ne 0) { throw 'Nurture草地/动作绘图检查失败。' }
         & $dotnetPath run --project tests/StartupTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/startup-qa
         if ($LASTEXITCODE -ne 0) { throw '开场时序/存档/中断/绘图检查失败。' }
         & $dotnetPath run --project tests/AudioTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '声音启停检查失败。' }
+        & $dotnetPath run --project tests/RecallTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/recall-qa
+        if ($LASTEXITCODE -ne 0) { throw 'Shelter创造回顾检查失败。' }
     }
     & $dotnetPath publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true "-p:BaseOutputPath=$buildOutput" -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '发布失败。请先退出正在运行的发布版本。' }
@@ -48,6 +58,9 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $asset))) { throw "发布包缺少素材：$asset" }
     }
     Copy-Item -LiteralPath README.md -Destination (Join-Path $OutputDirectory '使用说明.md')
+    foreach($asset in @('assets/rin/mountain-life.png','assets/rin/polar-life.png','assets/world/mountain.png','assets/world/polar.png','assets/world/polar-aurora.png')) {
+        if(-not(Test-Path -LiteralPath (Join-Path $OutputDirectory $asset))) { throw "发布包缺少户外探索素材：$asset" }
+    }
     foreach ($document in @('design.md','AGENTS.md','CREDITS.md','THIRD-PARTY-NOTICES.md')) { Copy-Item -LiteralPath $document -Destination $OutputDirectory }
     if (Test-Path -LiteralPath LICENSE) { Copy-Item -LiteralPath LICENSE -Destination $OutputDirectory }
     Copy-Item -LiteralPath LICENSES -Destination $OutputDirectory -Recurse -Force
@@ -57,6 +70,9 @@ try {
         Copy-Item -LiteralPath (Join-Path 'docs' $document) -Destination $docsDirectory
     }
     if (Test-Path -LiteralPath 'docs/平板参考核对.md') { Copy-Item -LiteralPath 'docs/平板参考核对.md' -Destination $docsDirectory }
+    Copy-Item -LiteralPath 'docs/户外探索素材制作.md' -Destination $docsDirectory
+    Copy-Item -LiteralPath 'docs/白色粒子创造设计.md' -Destination $docsDirectory
+    Copy-Item -LiteralPath 'docs/Shelter创造回顾设计.md' -Destination $docsDirectory
     Compress-Archive -LiteralPath $OutputDirectory -DestinationPath "$OutputDirectory-win-x64.zip" -Force
     Write-Output "完成：$OutputDirectory/RinsLittleShelter.exe"
 } finally { Pop-Location }

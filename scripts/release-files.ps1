@@ -13,6 +13,10 @@ function Get-ShelterPublicFiles([string]$Root) {
         'assets/reference/README.md','docs/开发说明.md','docs/开发日志.md','docs/素材制作.md',
         'docs/验证记录.md','docs/发布状态.md','docs/多场景素材制作.md','docs/Nurture素材制作.md','docs/开场动画设计.md',
         'docs/平板创造交互设计.md','docs/平板消息界面设计.md',
+        'docs/户外探索素材制作.md',
+        'docs/白色粒子创造设计.md',
+        'docs/Shelter创造回顾设计.md',
+        'docs/screenshots/shelter-recall.png','docs/screenshots/shelter-recall.gif',
         'docs/screenshots/bench-seat-on-white.png','docs/screenshots/hop-animation.gif',
         'docs/screenshots/turn-animation.gif','docs/screenshots/opacity-before-after.png',
         'docs/screenshots/seated-swing-preview.png','docs/screenshots/trot-preview.png',
@@ -21,7 +25,11 @@ function Get-ShelterPublicFiles([string]$Root) {
         'docs/screenshots/swing-runtime.png','docs/screenshots/bedroom-runtime.png','docs/screenshots/bedroom-night.png',
         'docs/screenshots/tablet-create.png','docs/screenshots/tablet-messages.png','docs/screenshots/tablet-letter.png','docs/screenshots/tablet-runtime.png',
         'docs/screenshots/nurture-grass.png','docs/screenshots/nurture-rest.png','docs/screenshots/nurture-animation.gif','docs/screenshots/nurture-runtime.png',
-        'docs/screenshots/startup-animation.gif','docs/screenshots/startup-title.png','docs/screenshots/startup-runtime.png'
+        'docs/screenshots/startup-animation.gif','docs/screenshots/startup-title.png','docs/screenshots/startup-runtime.png',
+        'docs/screenshots/mountain-ascend-mid.png','docs/screenshots/mountain-summit.png','docs/screenshots/mountain-descend-mid.png',
+        'docs/screenshots/polar-aurora.png','docs/screenshots/polar-snow.png','docs/screenshots/mountain-journey.gif',
+        'docs/screenshots/mountain-runtime.png','docs/screenshots/polar-runtime.png',
+        'docs/screenshots/creation-gather.png','docs/screenshots/creation-born.png','docs/screenshots/creation-scatter.png','docs/screenshots/creation-transition.gif','docs/screenshots/creation-runtime.png'
     )) { Get-Item -LiteralPath (Join-Path $Root $relative) -ErrorAction Stop }
     if (Test-Path -LiteralPath (Join-Path $Root 'docs/平板参考核对.md')) {
         Get-Item -LiteralPath (Join-Path $Root 'docs/平板参考核对.md')

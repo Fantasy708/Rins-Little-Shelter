@@ -19,11 +19,11 @@ Scenes.Switch(save,"outdoor"); Check(save.Layout[0].X == 154,"切回屋外保留
 save.Settings.FreeMode=true; Scenes.Switch(save,"swingTree"); save.Settings.FreeMode=false; Check(save.SceneId == "outdoor","两模式当前场景独立保存");
 Check(!Scenes.MemoriesUnlocked(WithDays(19)) && Scenes.MemoriesUnlocked(WithDays(20)),"父女记忆在秋千节点同时解锁");
 var free=WithDays(0); free.Settings.FreeMode=true; foreach (var d in Scenes.All) Check(Scenes.Switch(free,d.Id),"自由模式开放"+d.Name);
-foreach(int days in new[]{0,1,2,6,7,9,10,19,20}) {
+foreach(int days in new[]{0,1,2,6,7,9,10,11,12,15,16,19,20}) {
     var fresh=WithDays(days);
     var ids=Scenes.All.Where(d=>Scenes.Unlocked(fresh,d.Id)).Select(d=>d.Id).ToArray();
-    var expected=days>=20 ? new[]{"cloud","indoor","outdoor","meadow","swingTree"} : days>=10 ? new[]{"cloud","indoor","outdoor","meadow"} : days>=7 ? new[]{"cloud","indoor","outdoor"} : days>=2 ? new[]{"cloud","indoor"} : new[]{"cloud"};
-    Check(ids.SequenceEqual(expected),days+"日依次开放云台/屋内/院子/室外/秋千");
+    var expected=days>=20 ? new[]{"cloud","indoor","outdoor","meadow","mountain","polar","swingTree"} : days>=16 ? new[]{"cloud","indoor","outdoor","meadow","mountain","polar"} : days>=12 ? new[]{"cloud","indoor","outdoor","meadow","mountain"} : days>=10 ? new[]{"cloud","indoor","outdoor","meadow"} : days>=7 ? new[]{"cloud","indoor","outdoor"} : days>=2 ? new[]{"cloud","indoor"} : new[]{"cloud"};
+    Check(ids.SequenceEqual(expected),days+"日依次开放云台/屋内/院子/草坡/山脉/极地/秋千");
     Check(fresh.SceneId == "cloud","解锁新场景不强制切换");
 }
 var early=WithDays(2); Check(Scenes.Switch(early,"indoor") && World.Available(early).Count() == 5,"第2日卧室家具全部可见");

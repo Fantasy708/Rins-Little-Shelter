@@ -3,30 +3,37 @@ namespace LittleShelter;
 public sealed record SceneDef(string Id, string Name, int Day);
 public static class Scenes
 {
-    public static readonly SceneDef[] All = { new("cloud","云台",0), new("indoor","屋内",2), new("outdoor","屋外院子",7), new("meadow","室外草坡",10), new("swingTree","树下秋千",20) };
+    public static readonly SceneDef[] All = { new("cloud","云台",0), new("indoor","屋内",2), new("outdoor","屋外院子",7), new("meadow","室外草坡",10), new("mountain","山脉",12), new("polar","极地极光",16), new("swingTree","树下秋千",20) };
     public static readonly ObjectDef[] ExtraObjects = {
         new("meadowBase","草坡",10,0,420,125,240,305), new("roomBase","卧室",2,1,420,275,240,306),
         new("bigTree","树荫",20,2,420,278,240,304), new("desk","床边圆几",2,3,54,60,274,278),
         new("window","高窗",2,4,94,154,106,190), new("chair","粉色床铺",2,5,181,123,166,279),
         new("cabinet","柜子与小熊",2,6,79,125,358,273),
-        new("swingSeat","木座秋千",20,-1,65,8,300,260)
+        new("swingSeat","木座秋千",20,-1,65,8,300,260),
+        new("mountainBase","山脉与山径",12,-1,420,240,240,310),
+        new("polarBase","极地冰原",16,-1,420,240,240,310)
     };
     public static bool Unlocked(SaveData s,string id) => All.Any(d=>d.Id == id && (s.Settings.FreeMode || s.Days >= d.Day || id == "outdoor" && s.Settings.LegacyOutdoorAccess));
     public static bool MemoriesUnlocked(SaveData s) => s.Settings.FreeMode || s.Days >= 20;
     public static string Current(SaveData s) { var id=s.Settings.FreeMode ? s.Settings.FreeScene : s.Settings.GrowthScene; return Unlocked(s,id) ? id : "cloud"; }
     public static IEnumerable<ObjectDef> Objects(string id) => id switch {
         "cloud" => Pick("platform"), "meadow" => Pick("meadowBase","flower","cloud","bird","stars"),
+        "mountain" => Pick("mountainBase","cloud","bird","stars"),
+        "polar" => Pick("polarBase","cloud","stars"),
         "indoor" => Pick("roomBase","desk","window","chair","cabinet"),
         "swingTree" => Pick("bigTree","swingSeat","flower","bird","stars"), _ => ObjectDef.All };
     private static IEnumerable<ObjectDef> Pick(params string[] ids) => ids.Select(ObjectDef.Get);
-    public static bool Foundation(string id) => id is "platform" or "meadowBase" or "roomBase" or "bigTree" or "swingSeat";
+    public static bool Foundation(string id) => id is "platform" or "meadowBase" or "roomBase" or "bigTree" or "swingSeat" or "mountainBase" or "polarBase";
     public static bool ActionAvailable(SaveData s,ActionDef action) {
+        if (action.Id is "mountainClimb" or "auroraWatch" or "snowTouch") return OutdoorGround.Available(s,action.Id);
         if (action.Id == "nurtureHug") return NurtureGround.TryFind(s,Home(s).X,out _);
+        if (s.SceneId is "mountain" or "polar" && action.Id is not ("stand" or "gaze" or "sky" or "dress" or "tablet" or "walk" or "turn" or "visit" or "createTap" or "createSwipe" or "createRaise" or "createPlace" or "createMusic" or "smile" or "retreat" or "invite" or "watchBird" or "touchLight")) return false;
         if (s.SceneId == "indoor" && action.Id is not ("stand" or "gaze" or "dress" or "tablet" or "walk" or "turn" or "visit" or "createTap" or "createPlace" or "createMusic" or "smile" or "retreat" or "invite" or "windowWatch" or "deskTablet" or "roomRest")) return false;
         return action.ObjectId == null || World.Available(s).Any(d=>d.Id == action.ObjectId) && s.Layout.Any(p=>p.Id == action.ObjectId && !p.Hidden);
     }
     public static (double X,double Y) VisitTarget(SaveData s,ActionDef action,Placement p) {
         var home=Home(s);
+        if (s.SceneId is "mountain" or "polar") return home;
         if (action.Id is "benchSit" or "roomRest") return (p.X,p.Y);
         if (s.SceneId == "indoor") {
             var room=s.Layout.First(p=>p.Id == "roomBase");
@@ -40,6 +47,8 @@ public static class Scenes
             "meadow" => (240,Math.Clamp(Bottom("meadowBase",305)-28,130,315)),
             "indoor" => (s.Layout.FirstOrDefault(p=>p.Id == "roomBase")?.X ?? 240,Math.Clamp(Bottom("roomBase",306)-12,130,315)),
             "swingTree" => (230,Math.Clamp(Bottom("swingSeat",260)+44,130,315)),
+            "mountain" => (Math.Clamp((s.Layout.FirstOrDefault(p=>p.Id == "mountainBase")?.X ?? 240)-120,55,425),Math.Clamp(Bottom("mountainBase",310)-24,165,315)),
+            "polar" => (Math.Clamp(s.Layout.FirstOrDefault(p=>p.Id == "polarBase")?.X ?? 240,55,425),Math.Clamp(Bottom("polarBase",310)-30,165,315)),
             _ => (240,252)
         };
     }
@@ -54,6 +63,11 @@ public static class Scenes
         if (id == "meadow" && d.Id == "flower") { p.X=342; p.Y=272; }
         if (id == "indoor" && d.Id == "lamp") { p.X=109; p.Y=248; }
         if (id == "swingTree" && d.Id == "flower") { p.X=375; p.Y=282; }
+        if (id == "mountain" && d.Id == "bird") { p.X=397; p.Y=97; }
+        if (id == "mountain" && d.Id == "cloud") { p.X=115; p.Y=89; }
+        if (id == "polar" && d.Id == "cloud") { p.X=102; p.Y=105; }
+        if (id is "mountain" or "polar" && d.Id=="stars") p.Hidden=true;
+        if (id=="polar" && d.Id=="cloud") p.Hidden=true;
         return p;
     }).ToList();
     public static void Initialize(SaveData s) {
@@ -121,7 +135,7 @@ public sealed class LifeSequence
     }
     private void Begin(SaveData s,bool memory) {
         if (actor.Dragging || (!memory && s.SceneId != "swingTree")) return;
-        actor.Nurture.Cancel(s); actor.Tablet.Cancel(s); Cancel(); actor.RiseFromBed(s); scene=s.SceneId; memoryFree=s.Settings.FreeMode; originalX=actor.X; originalY=actor.Y;
+        actor.Journey.Cancel(s); actor.Nurture.Cancel(s); actor.Tablet.Cancel(s); Cancel(); actor.RiseFromBed(s); scene=s.SceneId; memoryFree=s.Settings.FreeMode; originalX=actor.X; originalY=actor.Y;
         MemoryRequested=memory; IsMemory=false; RecallTime=0; swingClock=0; Angle=0;
         var seat=s.Layout.FirstOrDefault(p=>p.Id == "swingSeat"); SeatX=seat?.X ?? 300; SeatY=seat?.Y ?? 260;
         Phase="approach"; Elapsed=0; actor.Visit("ropeHold",scene == "indoor" ? 260 : SeatX,HomeY(s));

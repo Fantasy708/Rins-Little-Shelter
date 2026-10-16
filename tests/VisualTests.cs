@@ -55,7 +55,7 @@ internal static class VisualTests
         CheckMotionClips(output);
         CheckMotionOpacity();
         CheckMotionTransitions();
-        Console.WriteLine("PASS: 35个动作目录项、5种天空、3种天气、3种DPI渲染；角色像素命中，空白穿透。彩蛋完整时间轴另由NurtureVisualTests检查。输出：" + output);
+        Console.WriteLine("PASS: "+Actions.All.Length+"个动作目录项、5种天空、3种天气、3种DPI渲染；角色像素命中，空白穿透。专属时间轴另由对应VisualTests检查。输出：" + output);
     }
     private static void CheckSeatedSwing(string output)
     {

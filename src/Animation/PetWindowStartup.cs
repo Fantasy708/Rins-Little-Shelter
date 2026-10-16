@@ -27,7 +27,7 @@ public sealed partial class PetWindow
         pointerThrough=false; Native.Configure(this,false); return true;
     }
     public void ReplayStartup() => BeginStartup(StartupPlayback.Full);
-    public void SkipStartup() => Opening.Stop();
+    public void SkipStartup() { Opening.Stop(); EndRecall(); }
     private void FinishStartup()
     {
         OpeningCanvas.Visibility=Visibility.Collapsed; Scene.SetStartupPresentation(false); OpeningCanvas.Reset();

@@ -65,6 +65,7 @@ public sealed class Behavior
     public LifeSequence Life { get; }
     public TabletSession Tablet { get; }
     public NurtureSequence Nurture { get; }
+    public OutdoorJourney Journey { get; }
     public ActionDef Current { get; private set; } = Actions.Get("stand");
     public double Time { get; private set; }
     public double X { get; set; } = 240;
@@ -87,12 +88,14 @@ public sealed class Behavior
     private bool created;
     private string? arrivalAction, afterSettle;
     public event Action<string>? ObjectCreated;
-    public Behavior(int? seed = null) { random = seed.HasValue ? new(seed.Value) : new(); Life = new LifeSequence(this); Tablet = new TabletSession(this); Nurture=new NurtureSequence(this); }
+    public Behavior(int? seed = null) { random = seed.HasValue ? new(seed.Value) : new(); Life = new LifeSequence(this); Tablet = new TabletSession(this); Nurture=new NurtureSequence(this); Journey=new OutdoorJourney(this); }
     internal void EmitObjectCreated(string id) => ObjectCreated?.Invoke(id);
     public void Welcome() { FacingLeft=false; Start("smile"); }
     public void Start(string id, double? x = null, double? y = null, string? target = null)
     {
         if (Dragging) return;
+        bool journeyTransition=Journey.Phase is "approach" or "returning" && id is "stand" or "mountainClimb" or "auroraWatch" or "snowTouch";
+        if (Journey.Active && !Journey.InternalScheduling && !journeyTransition) Journey.Cancel();
         bool nurtureTransition=(Nurture.Phase is "approach" or "returning" && id is "stand" or "nurtureHug") || (Nurture.Phase is "waitingTablet" or "stowing" && id is "stand" or "invite");
         if (Nurture.Active && !Nurture.InternalScheduling && !nurtureTransition) Nurture.Cancel();
         Current = Actions.Get(id); Time = 0; startX = X; startY = Y; ActionRevision++;
@@ -120,6 +123,7 @@ public sealed class Behavior
     public void RiseFromBed(SaveData save) { if (save.SceneId == "indoor" && Current.Id == "roomRest" && !Dragging) { Y=Scenes.Home(save).Y; Start("stand"); } }
     public void Click(SaveData? save=null)
     {
+        if (Journey.Active) { Journey.Cancel(save); return; }
         if (Nurture.Active) { Nurture.Cancel(save); if (save != null) Tablet.Close(save); return; }
         if (Tablet.Active && save != null) { Tablet.Close(save); return; }
         if (Life.Active) { Life.RequestStop(); return; }
@@ -145,13 +149,14 @@ public sealed class Behavior
     }
     public void Tick(double dt, SaveData save, bool night)
     {
-        if (Dragging) { if (Tablet.Active) Tablet.Cancel(save); Nurture.Cancel(save); return; }
+        if (Dragging) { if (Tablet.Active) Tablet.Cancel(save); Nurture.Cancel(save); Journey.Cancel(save); return; }
+        if (Journey.Active && Journey.Tick(dt,save)) return;
         double step = Math.Clamp(dt,0,.15);
         if (Nurture.Active && Tablet.Active) Nurture.EnsureValid(save);
         if (Tablet.Active && Tablet.Tick(step,save)) return;
         if (Nurture.Active && Nurture.Tick(dt,save)) return;
-        if (save.SceneId == "indoor" && !Life.Active && !Scenes.ActionAvailable(save,Current)) { Y=Scenes.Home(save).Y; Start("stand"); return; }
-        if (save.SceneId == "indoor" && !Life.Active && ((afterSettle != null && !Scenes.ActionAvailable(save,Actions.Get(afterSettle))) || (arrivalAction != null && !Scenes.ActionAvailable(save,Actions.Get(arrivalAction))))) { Y=Scenes.Home(save).Y; Start("stand"); return; }
+        if (save.SceneId is "indoor" or "mountain" or "polar" && !Life.Active && !Scenes.ActionAvailable(save,Current)) { Y=Scenes.Home(save).Y; Start("stand"); return; }
+        if (save.SceneId is "indoor" or "mountain" or "polar" && !Life.Active && ((afterSettle != null && !Scenes.ActionAvailable(save,Actions.Get(afterSettle))) || (arrivalAction != null && !Scenes.ActionAvailable(save,Actions.Get(arrivalAction))))) { Y=Scenes.Home(save).Y; Start("stand"); return; }
         Time += step;
         if (Life.Active && Life.Tick(step, save)) return;
         if (Current.Id == "turn")
@@ -174,6 +179,7 @@ public sealed class Behavior
         if (Current.Kind == "create" && Time >= Current.Duration * .58 && !created && CreationTarget != null)
         { created = true; ObjectCreated?.Invoke(CreationTarget); }
         if (Time < ActiveDuration) return;
+        if (Journey.Active && Journey.CompleteTurn(save)) return;
         if (Nurture.Active && Nurture.CompleteTurn(save)) return;
         if (afterSettle != null) { string id=afterSettle; Start(id); return; }
         if (arrivalAction != null)
@@ -187,6 +193,8 @@ public sealed class Behavior
         var pending = World.Pending(save);
         if (pending != null && random.NextDouble() < .6) { Create(pending.Id); return; }
         if (Current.Kind == "create" || Current.Kind == "interact" || Current.Kind == "move") { Start("stand"); return; }
+        if (save.SceneId == "mountain" && random.NextDouble() < .18 && Journey.Begin(save,"mountainClimb")) return;
+        if (save.SceneId == "polar" && random.NextDouble() < .24 && Journey.Begin(save,random.NextDouble() < .7 ? "auroraWatch" : "snowTouch")) return;
         var contextual = Actions.All.Where(a => a.Kind == "context" && Scenes.ActionAvailable(save,a)).ToArray();
         if (contextual.Length > 0 && random.NextDouble() < (save.SceneId == "indoor" && night ? .35 : .22))
         {
@@ -195,11 +203,12 @@ public sealed class Behavior
         }
         if (!night && random.NextDouble() < .14)
         {
-            var moves=save.SceneId == "indoor" ? new[]{"walk","turn"} : new[]{"walk","trot","hop","turn","visit"};
+            var moves=save.SceneId is "indoor" or "mountain" or "polar" ? new[]{"walk","turn"} : new[]{"walk","trot","hop","turn","visit"};
             string id=moves[random.Next(moves.Length)];
-            Start(id, save.SceneId == "indoor" ? home.X+random.Next(-90,76) : random.Next(180,310),home.Y); return;
+            double destination=save.SceneId == "mountain" ? home.X+random.Next(-22,23) : save.SceneId is "indoor" or "polar" ? home.X+random.Next(-70,71) : random.Next(180,310);
+            Start(id,Math.Clamp(destination,55,425),home.Y); return;
         }
-        var ids = save.SceneId == "indoor" ? new[] { "stand", "gaze", "tablet", "dress" } : night ? new[] { "knees", "lie", "nap", "sky", "tablet" } : new[] { "stand", "knees", "swing", "gaze", "sky", "dress", "tablet", "catch" };
+        var ids = save.SceneId == "indoor" ? new[] { "stand", "gaze", "tablet", "dress" } : save.SceneId is "mountain" or "polar" ? new[]{"stand","gaze","sky","tablet","dress"} : night ? new[] { "knees", "lie", "nap", "sky", "tablet" } : new[] { "stand", "knees", "swing", "gaze", "sky", "dress", "tablet", "catch" };
         Start(ids[random.Next(ids.Length)]);
     }
 }

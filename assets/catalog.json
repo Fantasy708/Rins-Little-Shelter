@@ -1,90 +1,19 @@
 {
   "Version": 8,
   "CreationParticles": {
-    "TabletOrbit": false,
-    "RevealSeconds": 0.7,
-    "ShapeHoldSeconds": 0.18,
-    "Persistent": false,
-    "ActualEvent": "PetWindow ObjectCreated -> World.Create -> Scene.Born",
-    "MaterializeSeconds": 1.15,
-    "GatherSeconds": 0.65,
-    "FixedPool": 384,
-    "HitTest": false,
     "Source": "src/SceneCreation.cs",
-    "ShapeFirst": true
+    "HitTest": false,
+    "MaterializeSeconds": 1.15,
+    "TabletOrbit": false,
+    "GatherSeconds": 0.65,
+    "Persistent": false,
+    "FixedPool": 384,
+    "ShapeHoldSeconds": 0.18,
+    "ShapeFirst": true,
+    "RevealSeconds": 0.7,
+    "ActualEvent": "PetWindow ObjectCreated -> World.Create -> Scene.Born"
   },
   "Outdoor": {
-    "Silent": true,
-    "PolarOrigins": [
-      [
-        183.3,
-        360
-      ],
-      [
-        183.95,
-        359
-      ],
-      [
-        181.4,
-        359
-      ],
-      [
-        181.61,
-        359
-      ],
-      [
-        180.29,
-        359
-      ],
-      [
-        180.43,
-        359
-      ],
-      [
-        184.28,
-        359
-      ],
-      [
-        184.27,
-        358
-      ],
-      [
-        182.86,
-        359
-      ],
-      [
-        181.15,
-        358
-      ],
-      [
-        179.18,
-        359
-      ],
-      [
-        179.6,
-        359
-      ]
-    ],
-    "PolarReferences": [
-      360,
-      360,
-      360,
-      360,
-      360,
-      360,
-      360,
-      360,
-      360,
-      360,
-      360,
-      360
-    ],
-    "PolarFrames": 12,
-    "PolarAtlas": "rin/polar-life.png",
-    "ClimbAtlas": "rin/mountain-life.png",
-    "AuroraImage": "world/polar-aurora.png",
-    "ClimbFrames": 24,
-    "MountainImage": "world/mountain.png",
     "ClimbOrigins": [
       [
         141.68,
@@ -183,34 +112,11 @@
         244.78
       ]
     ],
-    "ClimbReferences": [
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245,
-      245
-    ],
-    "Renderer": "src/SceneOutdoor.cs",
     "Source": "src/OutdoorJourney.cs",
+    "Renderer": "src/SceneOutdoor.cs",
+    "ClimbFrames": 24,
+    "TemporalPolicy": "single Behavior clock, complete opaque frames; cancel on explicit interactions",
+    "PolarAtlas": "rin/polar-life.png",
     "ClimbContacts": [
       [
         [
@@ -417,8 +323,102 @@
         ]
       ]
     ],
-    "PolarImage": "world/polar.png",
-    "TemporalPolicy": "single Behavior clock, complete opaque frames; cancel on explicit interactions"
+    "ClimbReferences": [
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245,
+      245
+    ],
+    "Silent": true,
+    "PolarOrigins": [
+      [
+        183.3,
+        360
+      ],
+      [
+        183.95,
+        359
+      ],
+      [
+        181.4,
+        359
+      ],
+      [
+        181.61,
+        359
+      ],
+      [
+        180.29,
+        359
+      ],
+      [
+        180.43,
+        359
+      ],
+      [
+        184.28,
+        359
+      ],
+      [
+        184.27,
+        358
+      ],
+      [
+        182.86,
+        359
+      ],
+      [
+        181.15,
+        358
+      ],
+      [
+        179.18,
+        359
+      ],
+      [
+        179.6,
+        359
+      ]
+    ],
+    "AuroraImage": "world/polar-aurora.png",
+    "PolarReferences": [
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360,
+      360
+    ],
+    "PolarFrames": 12,
+    "MountainImage": "world/mountain.png",
+    "ClimbAtlas": "rin/mountain-life.png",
+    "PolarImage": "world/polar.png"
   },
   "Nurture": {
     "StandingReferences": [
@@ -443,11 +443,8 @@
       288,
       297
     ],
-    "Silent": true,
-    "LowerSeconds": 1.2,
     "GrassAtlas": "world/nurture-grass.png",
-    "RestSeconds": 4.5,
-    "RiseSeconds": 1.2,
+    "Source": "src/Nurture.cs",
     "GrassRegions": [
       [
         0,
@@ -688,8 +685,12 @@
         ]
       ]
     ],
+    "Silent": true,
+    "RiseSeconds": 1.2,
+    "RestSeconds": 4.5,
+    "LowerSeconds": 1.2,
     "ClipOrigin": "start of lowering; variable footsteps and tablet stow are outside clip",
-    "Source": "src/Nurture.cs",
+    "ManualOnly": true,
     "FrameOrigins": [
       [
         114,
@@ -771,8 +772,7 @@
         104,
         297
       ]
-    ],
-    "ManualOnly": true
+    ]
   },
   "Scenes": [
     {
@@ -812,8 +812,6 @@
     }
   ],
   "Swing": {
-    "LoopFrames": 18,
-    "BoardingFrames": 20,
     "Hands": [
       [
         141,
@@ -936,6 +934,9 @@
         166
       ]
     ],
+    "LoopFrames": 18,
+    "CycleSeconds": 4.6,
+    "BoardingFrames": 20,
     "LoopKeys": 34,
     "HipAnchors": [
       [
@@ -1018,14 +1019,13 @@
         131,
         155
       ]
-    ],
-    "CycleSeconds": 4.6
+    ]
   },
   "Memory": {
+    "FadeSeconds": 1.5,
     "StorySeconds": 25,
     "Silent": true,
     "UserTriggered": true,
-    "FadeSeconds": 1.5,
     "TemporaryLayout": true
   },
   "Source": "src/Models.cs",

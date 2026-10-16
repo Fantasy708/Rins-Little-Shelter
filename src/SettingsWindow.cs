@@ -27,7 +27,7 @@ public sealed class SettingsWindow : Window
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
         status.TextWrapping = TextWrapping.Wrap; status.FontSize = 11; status.Foreground = muted; footer.Children.Add(status);
-        footer.Children.Add(new TextBlock { Text = "v0.4.0-preview.2 · 公测预览版 · 持续开发\nCtrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
+        footer.Children.Add(new TextBlock { Text = "v1.0.0 · 首个正式版 · 持续更新\nCtrl + Shift + R 显示或隐藏 · 双击托盘打开设置", FontSize = 11, Foreground = muted, Margin = new Thickness(0, 7, 0, 0) });
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         var tabs = new TabControl { Background = Brushes.Transparent, BorderBrush = new SolidColorBrush(Color.FromRgb(218, 230, 231)) };
         tabs.Items.Add(new TabItem { Header = "陪伴设置", Content = SettingsPanel() });
@@ -52,6 +52,7 @@ public sealed class SettingsWindow : Window
             s.StartupAnimationEnabled=value!="直接进入桌面"; s.StartupAnimationPlayback=value=="每次完整播放" ? "always" : value=="直接进入桌面" ? "off" : "adaptive";
         });
         Check(stack, "节能模式（30 FPS；默认60 FPS）", s.EnergySaving, value => s.EnergySaving = value);
+        Check(stack, "始终置顶", s.AlwaysOnTop, value => s.AlwaysOnTop = value);
         Check(stack, "鼠标完全穿透（仍可通过托盘恢复）", s.ClickThrough, value => s.ClickThrough = value);
         stack.Children.Add(new TextBlock { Text = "安静陪伴", FontSize = 15, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 15, 0, 8) });
         Check(stack, "音乐联动：让光点轻轻回应系统声音", s.Music, value => s.Music = value);

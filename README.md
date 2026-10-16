@@ -13,7 +13,7 @@
 
 </div>
 
-> 首发安排：v1.0.0 计划于 **2026 年 10 月 18 日 12:00（北京时间）**正式发布。截至 2026 年 10 月 16 日，已公开的最新版本为 [v0.4.0-preview.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.4.0-preview.2)。本页以正式首发为主题整理；正式版程序与附件以发行页实际公开内容为准。
+> **v1.0.0 首个正式版**已按维护者安排提前公开：[下载正式版](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.0)。原定首发时间为2026年10月18日12:00（北京时间），本次实际发行日期为10月16日；10月18日的《Shelter》十周年纪念主题保留。后续仍会持续更新。
 
 ![Rin 的小世界](docs/screenshots/bench-seat-on-white.png)
 
@@ -23,7 +23,7 @@
 
 项目的设计基准是：**“凛不是宠物，而是创造世界的伙伴。”** 她会观察、休息，走向山顶，或在极光下伸手接雪。你忙碌时，可以让她留在那里；想看看她的小世界时，再靠近一些。
 
-2026 年 10 月 18 日，《Shelter》迎来十周年。Rin's Little Shelter 选择在这一天迎接 v1.0.0 首个正式版，将这份对原作的喜爱做成可以日常相伴的同人桌面作品。感谢 Porter Robinson、Madeon、A-1 Pictures，也感谢愿意让这个小世界住进桌面的你。
+2026 年 10 月 18 日，《Shelter》迎来十周年。Rin's Little Shelter 以 v1.0.0 首个正式版纪念这一天，将这份对原作的喜爱做成可以日常相伴的同人桌面作品。感谢 Porter Robinson、Madeon、A-1 Pictures，也感谢愿意让这个小世界住进桌面的你。
 
 ## 在这个小世界里
 
@@ -46,11 +46,11 @@
 
 支持 **Windows 10（19041 及以上）与 Windows 11 x64**。便携程序自带 .NET 运行环境，无须安装开发工具。
 
-1. 打开 [GitHub Releases](https://github.com/Fantasy708/Rins-Little-Shelter/releases)，选择需要的版本。正式版发布前，可下载 [v0.4.0-preview.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v0.4.0-preview.2)。
+1. 打开 [v1.0.0 正式发行页](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.0)，下载正式版；[历史发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases)继续保留。
 2. 下载该版本的 Windows x64 便携 ZIP，并使用同一发行中的 `SHA256.txt` 核对文件。`source.zip` 是完整源码素材包，供开发和研究使用。
 3. 完整解压 ZIP，打开 `RinsLittleShelter.exe`。请让 EXE 与旁边的 `assets` 文件夹保持在一起。
 
-当前预览版便携包名为 `RinsLittleShelter-v0.4.0-preview.2-win-x64.zip`；正式版附件名称与校验值以正式发行页为准。历史版本仍可从发行列表获取。
+正式版便携包名为 `RinsLittleShelter-v1.0.0-win-x64.zip`，完整源码素材包为 `RinsLittleShelter-v1.0.0-source.zip`；校验值见同一发行的 `SHA256.txt`。历史版本仍可从发行列表获取。
 
 升级前先退出旧版，再解压并运行新版。当前版本兼容既有存档，继续读取陪伴进度、来信状态和两种模式的场景布置；升级前也可按下文方法备份。
 
@@ -84,7 +84,7 @@
 
 ### 与其他应用一起使用
 
-当前程序以置顶窗口显示，普通应用打开后，小世界仍可能覆盖在它上方。所在显示器进入全屏时，程序自动隐藏，退出全屏后恢复；窗口不抢键盘焦点。
+默认关闭“始终置顶”，激活浏览器、文件管理器等普通窗口后，它们可以覆盖 Rin。在“设置 → 显示与环境”中可开启或关闭“始终置顶”，立即生效并在重启后保持；旧存档默认关闭。无论是否置顶，所在显示器进入真正全屏时，程序仍自动隐藏，退出后恢复；窗口不抢键盘焦点。
 
 透明空白、光点和天气特效允许鼠标操作下层窗口。打开“鼠标完全穿透”后，Rin 和景物也不接收点击。需要暂时让开时，可使用快捷键或托盘隐藏；需要重新操作时，使用托盘中的“恢复位置和鼠标交互”。完全穿透只改变鼠标交互，不会隐藏画面。
 
@@ -219,16 +219,16 @@ pwsh -File scripts/bootstrap.ps1
 
 脚本从微软下载指定 SDK，核对 SHA512 后解压到项目的 `.tools`，不更改系统 SDK。也可以安装[微软 .NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)。首次下载 SDK 与恢复 NuGet 依赖需要联网。
 
-以下保留当前仓库已使用的预览版构建路径；更换输出目录不会修改程序版本号：
+正式版构建到独立目录，保留旧版程序；程序版本由项目文件定义：
 
 ```powershell
-pwsh -File scripts/build.ps1 -OutputDirectory dist/local/v0.4.0-preview.2/RinsLittleShelter
+pwsh -File scripts/build.ps1 -OutputDirectory dist/local/v1.0.0/RinsLittleShelter
 ```
 
 构建前请退出正在运行的发布版本。脚本执行核心与画面等检查，再生成自包含程序和压缩包。若需整理成发行附件，使用：
 
 ```powershell
-pwsh -File scripts/package-release.ps1 -Version v0.4.0-preview.2 -ProgramDirectory dist/local/v0.4.0-preview.2/RinsLittleShelter -ReleaseDirectory dist/local/v0.4.0-preview.2/release
+pwsh -File scripts/package-release.ps1 -Version v1.0.0 -ProgramDirectory dist/local/v1.0.0/RinsLittleShelter -ReleaseDirectory dist/local/v1.0.0/release
 ```
 
 打包脚本复用已构建的 EXE，生成便携 ZIP、完整源码素材 ZIP 与 SHA256 清单，不重新编译，也不上传 GitHub。正式版必须另外确认程序版本、对应发行说明和最终验证记录，不能仅修改包名。
@@ -237,7 +237,7 @@ pwsh -File scripts/package-release.ps1 -Version v0.4.0-preview.2 -ProgramDirecto
 
 ## 发布状态与问题反馈
 
-v1.0.0 的发布计划见[正式版发布计划](docs/releases/v1.0.0.md)，各版本的实际结果见[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。目前记录了预览版的自动检查与短时运行，一小时稳定性、原生 Windows 键鼠、真实系统缩放、多屏以及真实播放器识别仍有待实测；这些记录不能替代正式版最终验收。
+v1.0.0 的内容见[正式版发行说明](docs/releases/v1.0.0.md)，实际检查与已知边界见[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。本次按用户要求暂停一小时稳定性测试后准备正式发行，未将中止的测试或旧预览EXE记录写作正式版一小时通过。原生 Windows 键鼠、真实系统缩放、多屏及真实播放器识别仍有待人工实测。
 
 遇到问题，请使用 [GitHub Issues](https://github.com/Fantasy708/Rins-Little-Shelter/issues) 中的反馈模板，提供版本、Windows 环境、触发动作与复现步骤；涉及显示问题时，也请说明缩放比例和显示器情况。
 

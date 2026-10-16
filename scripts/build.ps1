@@ -1,4 +1,4 @@
-param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v0.4.0-preview.2/RinsLittleShelter')
+param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.0.0/RinsLittleShelter')
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Push-Location -LiteralPath $projectRoot
@@ -47,6 +47,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '声音启停检查失败。' }
         & $dotnetPath run --project tests/RecallTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/recall-qa
         if ($LASTEXITCODE -ne 0) { throw 'Shelter创造回顾检查失败。' }
+        & $dotnetPath run --project tests/WindowSettingsTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/window-settings-qa
+        if ($LASTEXITCODE -ne 0) { throw '窗口置顶设置检查失败。' }
     }
     & $dotnetPath publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true "-p:BaseOutputPath=$buildOutput" -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '发布失败。请先退出正在运行的发布版本。' }

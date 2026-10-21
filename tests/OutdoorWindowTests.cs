@@ -96,7 +96,7 @@ internal static class OutdoorWindowTests
                 foreach(var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>()) if(HasText(child,text)) return true;
                 return false;
             }
-            Check(HasText(settings,"v1.0.1") && HasText(settings,"正式维护版") && HasText(settings,"持续更新") && !HasText(settings,"公测预览版"),"设置页使用正式维护版与持续更新说明"); settings.Close();
+            Check(HasText(settings,"v1.0.2") && HasText(settings,"正式维护版") && HasText(settings,"持续更新") && !HasText(settings,"公测预览版"),"设置页使用正式维护版与持续更新说明"); settings.Close();
             Check(save.Days==20 && save.Version==1 && !save.GrowthStory.FatherLetterUnlocked,"场景入口与中断不改变成长、存档版本或故事门槛");
             Console.WriteLine("All "+checks+" production outdoor window checks passed. No native mouse, DPI, or hour-long stability result is implied. Isolated save: "+data);
         }

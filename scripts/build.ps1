@@ -1,4 +1,4 @@
-param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.0.1/RinsLittleShelter')
+param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.0.2/RinsLittleShelter')
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Push-Location -LiteralPath $projectRoot
@@ -39,6 +39,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '平板生产窗口集成检查失败。' }
         & $dotnetPath run --project tests/CreationVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/creation-visual-qa
         if ($LASTEXITCODE -ne 0) { throw '白色粒子创造/节点/中断/命中检查失败。' }
+        & $dotnetPath run --project tests/CreationMaterialTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/creation-material-qa
+        if ($LASTEXITCODE -ne 0) { throw '白色形体/局部显色/透明边缘/缓存检查失败。' }
         & $dotnetPath run --project tests/NurtureVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/nurture-visual-qa
         if ($LASTEXITCODE -ne 0) { throw 'Nurture草地/动作绘图检查失败。' }
         & $dotnetPath run --project tests/StartupTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/startup-qa

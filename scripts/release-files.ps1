@@ -29,7 +29,8 @@ function Get-ShelterPublicFiles([string]$Root) {
         'docs/screenshots/mountain-ascend-mid.png','docs/screenshots/mountain-summit.png','docs/screenshots/mountain-descend-mid.png',
         'docs/screenshots/polar-aurora.png','docs/screenshots/polar-snow.png','docs/screenshots/mountain-journey.gif',
         'docs/screenshots/mountain-runtime.png','docs/screenshots/polar-runtime.png',
-        'docs/screenshots/creation-gather.png','docs/screenshots/creation-born.png','docs/screenshots/creation-scatter.png','docs/screenshots/creation-transition.gif','docs/screenshots/creation-runtime.png'
+        'docs/screenshots/creation-gather.png','docs/screenshots/creation-born.png','docs/screenshots/creation-scatter.png','docs/screenshots/creation-transition.gif','docs/screenshots/creation-runtime.png',
+        'docs/screenshots/creation-material-transition.gif'
     )) { Get-Item -LiteralPath (Join-Path $Root $relative) -ErrorAction Stop }
     if (Test-Path -LiteralPath (Join-Path $Root 'docs/平板参考核对.md')) {
         Get-Item -LiteralPath (Join-Path $Root 'docs/平板参考核对.md')

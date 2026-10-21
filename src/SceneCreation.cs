@@ -8,8 +8,9 @@ public sealed partial class Scene
 {
     public const int CreationParticleLimit=384;
     public const double CreationGatherSeconds=.65,CreationMaterializeSeconds=1.15,CreationShapeHoldSeconds=.18,CreationRevealSeconds=.70;
-    private readonly record struct CreationGrain(Point Target,Vector Start,double Curve,double Width,double Height,bool Blue,bool Round);
+    private readonly record struct CreationGrain(Point Target,Vector Start,double Curve,double Width,double Height,bool Blue,bool Round,double Delay);
     private readonly CreationGrain[] creationGrains=new CreationGrain[CreationParticleLimit];
+    private readonly CreationMaterialRaster creationMaterial=new();
     private string? creationObject,creationScene;
     private bool creationFree,creationManual,creationCommitted;
     private int creationRevision,creationGeneration,suppressedCreationRevision=-1,suppressedCreationGeneration=-1;
@@ -24,6 +25,11 @@ public sealed partial class Scene
     public Rect CreationParticleBounds=>creationRect;
     public int CreationShapeParticleCount=>creationObject==null?0:creationGrainSlots;
     public double CreationEntityReveal=>creationCommitted?CreationReveal(creationAge):0;
+    public long CreationMaterialCacheBytes=>creationMaterial.Bytes;
+    public long CreationMaterialPreparations=>creationMaterial.Preparations;
+    public long CreationMaterialUpdates=>creationMaterial.Updates;
+    public int CreationMaterialPixelWidth=>creationMaterial.PixelWidth;
+    public int CreationMaterialPixelHeight=>creationMaterial.PixelHeight;
     private static double CreationReveal(double age)=>MotionClip.Ease((age-CreationShapeHoldSeconds)/CreationRevealSeconds);
     private double ObjectAppearance(string id)=>births.TryGetValue(id,out var born) ? creationRevealObjects.Contains(id)?CreationReveal(Time-born):Math.Clamp((Time-born)/2.5,0,1):1;
 
@@ -39,6 +45,7 @@ public sealed partial class Scene
     {
         creationObject=creationScene=null; creationCommitted=false;
         CreationParticleCount=0; creationRect=Rect.Empty; creationClip=null;
+        creationMaterial.Reset();
     }
     private bool CreationCandidate(out string id,out double untilEvent,out bool manual)
     {
@@ -70,6 +77,7 @@ public sealed partial class Scene
         if(id=="bird") creationRect.Offset(Math.Sin(Time*.65)*14,Math.Sin(Time*1.2)*3);
         var clip=creationRect;clip.Inflate(24,24);clip.Intersect(new Rect(0,0,480,340));
         creationClip=new RectangleGeometry(clip);creationClip.Freeze();
+        creationMaterial.Prepare(sprite,width,height);
         // Stratified alpha sampling covers the whole authored shape, including
         // thin trunks and stems; sparse random points cannot describe it.
         static double Noise(int seed) {uint n=(uint)seed*747796405u+2891336453u;n=((n>>((int)(n>>28)+4))^n)*277803737u;return ((n>>22)^n)/(double)uint.MaxValue;}
@@ -83,11 +91,19 @@ public sealed partial class Scene
                 if(sprite.Solid(x,y)) {u=x;v=y;found=true;break;}
             }
             if(!found)continue;
-            int i=creationGrainSlots++;double angle=Noise(i*19+7)*Math.PI*2,reach=10+Noise(i*23+9)*14;
+            int i=creationGrainSlots++;double angle=Noise(i*19+7)*Math.PI*2,reach=8+Noise(i*23+9)*13;
             creationGrains[i]=new(new Point(creationRect.X+u*width,creationRect.Y+v*height),
                 new Vector(Math.Cos(angle)*reach,Math.Sin(angle)*reach),
-                (Noise(i*17+2)-.5)*8,Math.Clamp(width/columns*(.60+Noise(i*11+3)*.3),1.1,6),Math.Clamp(height/rows*(.60+Noise(i*13+2)*.3),1.1,6),i%16==0,i%3==0);
+                (Noise(i*17+2)-.5)*6,.65+Noise(i*11+3)*1.45,.65+Noise(i*13+2)*1.65,i%16==0,i%3==0,Noise(i*31+8)*.23);
         }
+    }
+    private bool HasCreationMaterial(string id)=>creationObject==id && (!creationCommitted || creationAge<CreationShapeHoldSeconds+CreationRevealSeconds);
+    private bool DrawCreationMaterial(DrawingContext dc,string id,Atlas.Sprite sprite,Rect rect)
+    {
+        if(!HasCreationMaterial(id))return false;
+        double gather=creationCommitted?1:Math.Clamp(1+creationAge/CreationGatherSeconds,0,1);
+        dc.DrawImage(creationMaterial.Sample(gather,creationCommitted?CreationReveal(creationAge):0),rect);
+        return true;
     }
     private void CommitCreationEffect(string id)
     {
@@ -116,23 +132,42 @@ public sealed partial class Scene
         if(!same) SetCreationTarget(id,manual);
         creationAge=-until;
     }
-    private void DrawCreationParticles(DrawingContext dc)
+    // The isolated overlay entry remains useful for previews and diagnostics.
+    // Real Scene drawing places the white body in the normal object layer,
+    // under the same ambient light and occluders as the materialized sprite.
+    private void DrawCreationParticles(DrawingContext dc)=>DrawCreationOverlay(dc,true);
+    private void DrawCreationGrains(DrawingContext dc)=>DrawCreationOverlay(dc,false);
+    private void DrawCreationOverlay(DrawingContext dc,bool includeMaterial)
     {
         CreationParticleCount=0;
         if(creationObject==null || creationClip==null)return;
         double gather=Math.Clamp(1+creationAge/CreationGatherSeconds,0,1);
-        double envelope=creationCommitted ? 1-CreationReveal(creationAge) : MotionClip.Ease(gather);
+        double envelope=creationCommitted ? .28*(1-CreationReveal(creationAge)) : MotionClip.Ease(gather)*(1-.72*MotionClip.Ease((gather-.55)/.42));
         var drift=new Vector();
         if(creationObject=="cloud")drift.X=(Math.Sin(Time*.13)-Math.Sin(creationRegisteredTime*.13))*8;
         if(creationObject=="bird") {drift.X=(Math.Sin(Time*.65)-Math.Sin(creationRegisteredTime*.65))*14;drift.Y=(Math.Sin(Time*1.2)-Math.Sin(creationRegisteredTime*1.2))*3;}
         dc.PushClip(creationClip);
+        if(includeMaterial && !creationCommitted) {
+            var materialRect=creationRect;materialRect.Offset(drift);
+            // The same authored-object lighting applies on both sides of the
+            // real event. Fine light grains retain their independent glow.
+            string theme=World.Theme(save.Settings,DateTime.Now.Hour);
+            bool night=theme is "夜晚" or "深夜";
+            bool ideal=save.SceneId is "outdoor" or "cloud" && Time<IdealUntil && !behavior.Life.Active;
+            double lighting=creationObject=="stars" ? night || ideal || audio.IsShelter ? .95 : .28 :
+                save.SceneId is "indoor" or "mountain" or "polar" ? 1 : theme=="深夜" ? .7 : night ? .79 : 1;
+            dc.PushOpacity(lighting);
+            dc.DrawImage(creationMaterial.Sample(gather,0),materialRect);
+            dc.Pop();
+        }
         for(int i=0;i<creationGrainSlots;i++) {
             ref readonly var grain=ref creationGrains[i];
-            double entry=Math.Clamp((gather-(i%6)*.075)/.55,0,1);
+            double entry=MotionClip.Ease((gather-grain.Delay)/.24);
             if(!creationCommitted && entry<=0)continue;
-            double progress=creationCommitted ? 1 : MotionClip.Ease(gather/.86);
+            double progress=creationCommitted ? 1 : MotionClip.Ease((gather-grain.Delay)/(.72-grain.Delay*.2));
             var point=grain.Target+grain.Start*(1-progress)+drift;
             point.X+=Math.Sin(progress*Math.PI)*grain.Curve;
+            point.Y+=Math.Sin(progress*Math.PI*2)*grain.Curve*.32;
             double amount=envelope*(creationCommitted?1:entry)*(.82+.18*(i%4)/3.0);
             byte alpha=(byte)(Math.Clamp((int)(amount*224)/8*8,0,224));
             if(alpha==0)continue;

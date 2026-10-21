@@ -257,7 +257,12 @@ public sealed partial class Scene : FrameworkElement
         RefreshCreationEffect();
         DrawOutdoorBackdrop(dc,theme);
         bool ideal = save.SceneId is "outdoor" or "cloud" && Time < IdealUntil && !behavior.Life.Active;
-        var layout = ideal ? ObjectDef.All.Select(World.Default).ToList() : save.Layout.Where(p => !p.Hidden).ToList();
+        string? formingObject=creationObject!=null && !creationCommitted ? creationObject : null;
+        var layout = ideal ? ObjectDef.All.Select(World.Default).ToList() : save.Layout.Where(p => !p.Hidden || p.Id==formingObject).ToList();
+        // A forming body is a draw-only placement. Preserve a hidden object's
+        // original depth order; missing objects use the same default that the
+        // real creation event will later append, without changing the save.
+        if(!ideal && formingObject!=null && layout.All(p=>p.Id!=formingObject))layout.Add(World.Default(ObjectDef.Get(formingObject)));
         foreach (var p in layout.OrderBy(p => Scenes.Foundation(p.Id) ? -3 : p.Id is "grass" ? -2 : p.Id is "path" ? -1 : 0))
         {
             if (!ideal && !World.Available(save).Any(d => d.Id == p.Id)) continue;
@@ -271,17 +276,22 @@ public sealed partial class Scene : FrameworkElement
             if (p.Id is "platform" or "grass" or "path" or "meadowBase" or "roomBase" or "bigTree" or "mountainBase" or "polarBase") { width = d.Width; height = d.Height; }
             var rect = new Rect(p.X - width / 2 + ox, p.Y - height + oy, width, height);
             if(p.Id=="mountainBase") rect.Y+=18; // Authored empty sky/ground padding keeps the summit at the route contact.
-            double appear = ObjectAppearance(p.Id);
+            bool material=HasCreationMaterial(p.Id);
+            double appear = material && !creationCommitted ? 0 : ObjectAppearance(p.Id);
             double visibleOpacity=appear*(save.SceneId == "indoor" && !Scenes.Foundation(p.Id) ? 1-behavior.Life.Atmosphere : 1);
-            dc.PushOpacity(visibleOpacity);
-            double appearanceScale=creationRevealObjects.Contains(p.Id)?1:.85+.15*appear;
+            dc.PushOpacity(material ? save.SceneId == "indoor" && !Scenes.Foundation(p.Id) ? 1-behavior.Life.Atmosphere : 1 : visibleOpacity);
+            double appearanceScale=material || creationRevealObjects.Contains(p.Id)?1:.85+.15*appear;
             dc.PushTransform(new ScaleTransform(appearanceScale,appearanceScale,p.X,p.Y));
             if (p.Id == "stars") dc.PushOpacity(night || ideal || audio.IsShelter ? .95 : .28);
             else dc.PushOpacity(save.SceneId is "indoor" or "mountain" or "polar" ? 1 : theme == "深夜" ? .7 : night ? .79 : 1);
             // The repainted glass has real alpha holes. Put the sky behind
             // the window so its antialiased ironwork stays visible.
-            if (p.Id == "window" && save.SceneId == "indoor") DrawBedroomSky(dc,rect,theme);
-            dc.DrawImage(sprite.Image, rect);
+            if (p.Id == "window" && save.SceneId == "indoor") {
+                if(material)dc.PushOpacity(appear);
+                DrawBedroomSky(dc,rect,theme);
+                if(material)dc.Pop();
+            }
+            if(!DrawCreationMaterial(dc,p.Id,sprite,rect))dc.DrawImage(sprite.Image, rect);
             if (p.Id == "roomBase" && behavior.Life.Atmosphere > 0) { dc.PushOpacity(behavior.Life.Atmosphere); dc.DrawImage(environments.Sprites[1].Image,rect); dc.Pop(); }
             dc.Pop(); dc.Pop(); dc.Pop(); if (visibleOpacity > .5) hits[p.Id] = (rect, sprite);
             if (p.Id == "house" && save.SceneId == "outdoor" && visibleOpacity>.5) doorRect=new Rect(rect.X+rect.Width*.26,rect.Y+rect.Height*.52,rect.Width*.15,rect.Height*.39);
@@ -299,7 +309,7 @@ public sealed partial class Scene : FrameworkElement
         var ambient = theme switch { "清晨" => Brush(14, 255, 224, 179), "傍晚" => Brush(19, 244, 185, 207), "夜晚" => Brush(18, 150, 159, 237), "深夜" => Brush(28, 117, 127, 206), _ => Brush(7, 167, 229, 246) };
         dc.DrawEllipse(ambient, null, new Point(240, 228), 164, 56);
         DrawParticles(dc, theme, night, ideal);
-        DrawCreationParticles(dc);
+        DrawCreationGrains(dc);
         DrawWeather(dc);
         DrawLifeWorld(dc);
         DrawOutdoorFootpath(dc);

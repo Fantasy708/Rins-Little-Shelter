@@ -31,6 +31,7 @@ Scenes.Switch(early,"cloud"); Check(World.Available(early).Single().Id == "platf
 early.Layout[0].X=87; early.Settings.FreeMode=true; Scenes.Switch(early,"cloud"); Check(early.Layout[0].X == 240,"云台两模式布局独立"); early.Settings.FreeMode=false; Check(early.Layout[0].X == 87,"成长云台位置恢复");
 void Advance(Behavior b,double seconds,SaveData s) { for(double t=0;t<seconds;t+=.01) b.Tick(Math.Min(.01,seconds-t),s,false); }
 void Until(Behavior b,string phase,SaveData s) { for(int i=0;i<12000 && b.Life.Phase != phase;i++) b.Tick(.01,s,false); Check(b.Life.Phase == phase,"时间轴到达 "+phase); }
+string SaveFingerprint(SaveData s) => JsonSerializer.Serialize(s,new JsonSerializerOptions { NumberHandling=System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals });
 Scenes.Switch(save,"swingTree"); var layout=JsonSerializer.Serialize(save.Layout);
 var actor=new Behavior(1); actor.Life.BeginSwing(save);
 Check(actor.Current.Id == "visit" && actor.IsLocomotion,"秋千开始实际步行");
@@ -40,6 +41,57 @@ double initialAngle=actor.Life.Angle; actor.Life.RequestStop(); Check(actor.Life
 Advance(actor,1,save); Check(Math.Abs(actor.Life.Angle)<Math.Abs(initialAngle),"停稳幅度逐渐减少");
 Until(actor,"dismount",save); Advance(actor,1.2,save); Check(!actor.Life.Active && actor.IsLocomotion,"起身后实际走离");
 Check(JsonSerializer.Serialize(save.Layout) == layout,"秋千整条动作链不改布局");
+// Equal wall-clock duration must produce the same swing and memory progress at
+// the normal and energy-saving frame rates. Start from an identical hold pose,
+// excluding the ordinary walking scheduler from this animation-clock check.
+(Behavior Actor,SaveData Save) SampleLife(bool memory,int hz,double seconds) {
+    var fixture=WithDays(20); Scenes.Switch(fixture,"swingTree");
+    var b=new Behavior(71); Scenes.PlaceActor(fixture,b);
+    if (memory) Check(b.Life.BeginMemory(fixture),"时间步检查可进入记忆"); else b.Life.BeginSwing(fixture);
+    Until(b,"hold",fixture);
+    int whole=(int)Math.Floor(seconds*hz);
+    for(int i=0;i<whole;i++) b.Tick(1.0/hz,fixture,false);
+    double remaining=seconds-whole/(double)hz; if (remaining>1e-10) b.Tick(remaining,fixture,false);
+    return (b,fixture);
+}
+foreach(bool memory in new[]{false,true}) foreach(double seconds in memory ? new[]{.7,1.7,3.7,7.3,19.5,20.7,22.7,24.2} : new[]{.7,1.7,2.9,4.7,9.3,18.1,22.9,24.8}) {
+    var slow=SampleLife(memory,30,seconds); var fast=SampleLife(memory,60,seconds);
+    Check(slow.Actor.Life.Phase == fast.Actor.Life.Phase,"30/60Hz同真实时间到达相同阶段 "+memory+"/"+seconds);
+    Check(Math.Abs(slow.Actor.Life.Elapsed-fast.Actor.Life.Elapsed)<.051,"30/60Hz阶段时钟误差不累计超过一帧半 "+memory+"/"+seconds+" ("+slow.Actor.Life.Elapsed.ToString("F6")+" / "+fast.Actor.Life.Elapsed.ToString("F6")+")");
+    Check(Math.Abs(slow.Actor.Life.Angle-fast.Actor.Life.Angle)<.45,"30/60Hz摆角与减幅随真实时间一致 "+memory+"/"+seconds);
+    Check(Math.Abs(slow.Actor.Life.PresentOpacity-fast.Actor.Life.PresentOpacity)<.06 && Math.Abs(slow.Actor.Life.MemoryOpacity-fast.Actor.Life.MemoryOpacity)<.06,"30/60Hz虚化淡入时序一致 "+memory+"/"+seconds);
+    Check(slow.Save.GrowthStory.CompletedMemories.SetEquals(fast.Save.GrowthStory.CompletedMemories),"30/60Hz正常完成记忆的故事状态一致 "+memory+"/"+seconds);
+}
+// The attachment fixes must remain transient: cancellation in every phase must
+// not persist half a seated pose or unlock a letter before Rin has returned.
+foreach(bool freeMode in new[]{false,true}) foreach(string phase in new[]{"hold","mount","swing","settle","dismount"}) {
+    var fixture=WithDays(20); fixture.Settings.FreeMode=freeMode; Scenes.Switch(fixture,"swingTree");
+    fixture.Layout.First(p=>p.Id == "flower").X=411;
+    string persistent=SaveFingerprint(fixture);
+    var b=new Behavior(97); Scenes.PlaceActor(fixture,b); b.Life.BeginSwing(fixture); Until(b,phase,fixture);
+    Advance(b,.19,fixture); b.Life.Cancel();
+    Check(!b.Life.Active && b.Current.Id == "stand" && b.Life.Angle == 0,"秋千各阶段中断恢复站立与零摆角 "+freeMode+"/"+phase);
+    Check(SaveFingerprint(fixture) == persistent,"秋千各阶段中断保留两模式布局/故事/成长 "+freeMode+"/"+phase);
+}
+foreach(bool freeMode in new[]{false,true}) {
+    foreach(string phase in new[]{"hold","fadeOut","memory","empty","fadeIn"}) {
+        var fixture=WithDays(20); fixture.Settings.FreeMode=freeMode; Scenes.Switch(fixture,"swingTree");
+        var b=new Behavior(98); Scenes.PlaceActor(fixture,b); double x=b.X,y=b.Y;
+        string persistent=SaveFingerprint(fixture); int completed=0; b.Life.MemoryCompleted+=()=>completed++;
+        b.Life.BeginMemory(fixture); Until(b,phase,fixture); Advance(b,.2,fixture); b.Life.RequestStop();
+        Check(!b.Life.Active && b.X == x && b.Y == y && b.Life.PresentOpacity == 1,"父女秋千提前结束恢复原角色落点 "+freeMode+"/"+phase);
+        Check(completed == 0 && SaveFingerprint(fixture) == persistent,"提前结束父女记忆不提交来信或临时陈设 "+freeMode+"/"+phase);
+    }
+    var complete=WithDays(20); complete.Settings.FreeMode=freeMode; Scenes.Switch(complete,"swingTree");
+    string layouts=JsonSerializer.Serialize(new[]{complete.GrowthLayout,complete.FreeLayout});
+    string growthScenes=JsonSerializer.Serialize(complete.GrowthSceneLayouts), freeScenes=JsonSerializer.Serialize(complete.FreeSceneLayouts);
+    var done=new Behavior(99); Scenes.PlaceActor(complete,done); int events=0; done.Life.MemoryCompleted+=()=>events++;
+    done.Life.BeginMemory(complete); Until(done,"watch",complete);
+    Check(events == 1 && Story.Current(complete).CompletedMemories.SetEquals(new[]{"swingTree"}) && Story.Current(complete).FatherLetterUnlocked,"父女记忆在现在Rin恢复后只提交一次完成 "+freeMode);
+    Advance(done,3.1,complete); Check(events == 1 && !done.Life.Active,"退出观察不重复提交记忆 "+freeMode);
+    Check(!(freeMode ? complete.GrowthStory : complete.FreeStory).FatherLetterUnlocked,"记忆完成不污染另一模式故事 "+freeMode);
+    Check(JsonSerializer.Serialize(new[]{complete.GrowthLayout,complete.FreeLayout}) == layouts && JsonSerializer.Serialize(complete.GrowthSceneLayouts) == growthScenes && JsonSerializer.Serialize(complete.FreeSceneLayouts) == freeScenes,"父女秋千完整播放保留全部场景布局 "+freeMode);
+}
 foreach (var scene in new[]{"swingTree","indoor"}) {
     Scenes.Switch(save,scene); var before=JsonSerializer.Serialize(save.Layout); var b=new Behavior(4) { X=220,Y=252 };
     Check(b.Life.BeginMemory(save),scene+"可主动打开记忆"); Until(b,"fadeOut",save);
@@ -58,6 +110,19 @@ foreach (var scene in new[]{"swingTree","indoor"}) {
 }
 Scenes.Switch(save,"swingTree"); var active=new Behavior(1); active.Life.BeginSwing(save); Until(active,"swing",save); Advance(active,3,save);
 Check(active.Life.BeginMemory(save) && active.Life.Phase == "settle","荡秋千时先停稳再回忆"); Until(active,"fadeOut",save); Check(active.Life.Angle == 0,"回忆进入前秋千已停稳");
+foreach(bool freeMode in new[]{false,true}) {
+    var fixture=WithDays(20); fixture.Settings.FreeMode=freeMode; Scenes.Switch(fixture,"swingTree");
+    string before=JsonSerializer.Serialize(fixture.Layout); var b=new Behavior(101); Scenes.PlaceActor(fixture,b);
+    double homeX=b.X,homeY=b.Y; int completed=0; b.Life.MemoryCompleted+=()=>completed++;
+    b.Life.BeginSwing(fixture); Until(b,"dismount",fixture); Advance(b,.2,fixture);
+    Check(b.Life.BeginMemory(fixture),"起身离座期间可以主动请求记忆 "+freeMode);
+    Until(b,"fadeOut",fixture);
+    Check(b.Life.IsMemory && !b.Life.RecallSeated && b.Life.Angle == 0,"离座请求等待站稳再淡出，不把未坐角色移回座板 "+freeMode);
+    Check(completed == 0 && !Story.Current(fixture).FatherLetterUnlocked,"离座请求本身不提前提交记忆完成 "+freeMode);
+    Until(b,"watch",fixture); Advance(b,3.1,fixture);
+    Check(!b.Life.Active && !b.Life.MemoryRequested && completed == 1,"离座请求完整进入并结束记忆，不遗留请求或重复完成 "+freeMode);
+    Check(b.X == homeX && b.Y == homeY && JsonSerializer.Serialize(fixture.Layout) == before,"离座后记忆恢复原来落点和布置 "+freeMode);
+}
 var directory=Path.Combine(Path.GetTempPath(),"ShelterScenes-"+Guid.NewGuid());
 try {
     var storage=new Storage(directory);

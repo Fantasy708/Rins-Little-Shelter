@@ -937,7 +937,6 @@
     "LoopFrames": 18,
     "CycleSeconds": 4.6,
     "BoardingFrames": 20,
-    "LoopKeys": 34,
     "HipAnchors": [
       [
         188,
@@ -1019,7 +1018,14 @@
         131,
         155
       ]
-    ]
+    ],
+    "LoopPose": 0,
+    "Playback": "continuous articulation of one opaque registered swing pose",
+    "LegacyLoopKeys": 34,
+    "BodyScale": "uniform 150/305; local arm registration only",
+    "MemoryChildPose": 8,
+    "BoardingSeconds": 0.65,
+    "MemoryFatherPose": 1
   },
   "Memory": {
     "FadeSeconds": 1.5,

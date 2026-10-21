@@ -26,6 +26,30 @@ internal static class SceneVisualTests
             if (name != null) { using var f=File.Create(Path.Combine(output,name+".png")); var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); encoder.Save(f); }
             return bitmap;
         }
+        double HeadCrownWidth(BitmapSource image,Rect body,double dpi) {
+            // Measure the opaque crown in the actual raster, in un-swung
+            // coordinates. Compare this only within the same authored pose:
+            // raised hands, loose hair and bows legitimately change its shape.
+            int width=image.PixelWidth,height=image.PixelHeight; var pixels=new byte[width*height*4]; image.CopyPixels(pixels,width*4,0);
+            int left=width,right=-1;
+            var plank=save.Layout.First(p=>p.Id == "swingSeat");
+            double dx=scene.SwingContact.X-plank.X,dy=scene.SwingContact.Y-plank.Y;
+            double slope=(scene.SwingContact.X-scene.SwingPivot.X)/(scene.SwingContact.Y-scene.SwingPivot.Y);
+            for(int y=Math.Max(0,(int)((body.Top-2)*dpi));y<Math.Min(height,(int)((body.Top+18)*dpi));y++)
+                for(int x=Math.Max(0,(int)(Math.Max(body.Left-24,plank.X-32)*dpi));x<Math.Min(width,(int)(Math.Min(body.Right+24,plank.X+32)*dpi));x++) {
+                    // Undo the scene pendulum before measuring a crown: a fixed
+                    // horizontal screen strip otherwise samples a different part
+                    // of the head as the seat rises and the ropes lean.
+                    double localY=(y+.5)/dpi;
+                    int px=(int)Math.Floor(x+.5+(dx+slope*(localY-plank.Y))*dpi),py=(int)Math.Floor(y+.5+dy*dpi);
+                    if(px<0 || px>=width || py<0 || py>=height) continue;
+                    int p=(py*width+px)*4; int blue=pixels[p],green=pixels[p+1],red=pixels[p+2];
+                    if(pixels[p+3]<230 || red-green<20 || red-blue<12) continue;
+                    left=Math.Min(left,x); right=Math.Max(right,x);
+                }
+            Check(right>left,"actual opaque head is present in the crown measurement");
+            return (right-left+1)/dpi;
+        }
         void Step(double seconds) { for(double t=0;t<seconds;t+=.02) { actor.Tick(Math.Min(.02,seconds-t),save,false); time+=Math.Min(.02,seconds-t); } }
         void Until(string phase) { for(int i=0;i<10000 && actor.Life.Phase != phase;i++) Step(.02); Check(actor.Life.Phase == phase,"missing phase "+phase); }
         foreach(var id in Scenes.All.Select(d=>d.Id)) {
@@ -64,6 +88,104 @@ internal static class SceneVisualTests
         }
         using(var f=File.Create(Path.Combine(output,"swing.gif"))) gif.Save(f);
         actor.Life.RequestStop(); Until("dismount"); Step(.5); Render("swing-rise");
+        // Sample the actual production drawing at 60 Hz, rather than exporting
+        // only one key image every 100 ms. A sparse atlas hard-cut produces a
+        // single large pixel jump; continuous interpolation distributes it over
+        // several real frames. Keep the measurements alongside the previews.
+        var continuity=new List<object>();
+        void CheckContinuity(bool memory) {
+            actor.Life.Cancel(); Scenes.Switch(save,"swingTree"); scene.ResetLifeVisuals(); Scenes.PlaceActor(save,actor); actor.Start("stand");
+            if (memory) { Check(actor.Life.BeginMemory(save),"dense memory begins"); Until("memory"); Step(2); }
+            else { actor.Life.BeginSwing(save); Until("swing"); Step(3); }
+            var visibility=save.Layout.Select(p=>p.Hidden).ToArray();
+            foreach(var p in save.Layout) if (p.Id != "swingSeat") p.Hidden=true;
+            const int hz=60, total=276; var delta=new List<double>(); var memoryFatherDelta=new List<double>(); var legPartial=new List<double>(); var headWidths=new List<double>(); var drawingMs=new List<double>(); double worstLegPartial=0; BitmapSource? worstLegImage=null;
+            byte[] previous=new byte[480*340*4]; Render().CopyPixels(previous,480*4,0);
+            var denseGif=new GifBitmapEncoder();
+            double Difference(byte[] a,byte[] b,int left,int top,int right,int bottom) {
+                long sum=0; for(int y=top;y<bottom;y++) for(int x=left;x<right;x++) for(int c=0;c<4;c++) {
+                    int p=(y*480+x)*4+c; sum+=Math.Abs(a[p]-b[p]);
+                }
+                return sum/(double)((right-left)*(bottom-top)*4);
+            }
+            for(int i=0;i<total;i++) {
+                long started=System.Diagnostics.Stopwatch.GetTimestamp();
+                actor.Tick(1.0/hz,save,false); time+=1.0/hz;
+                var image=Render(); drawingMs.Add(System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+                byte[] current=new byte[previous.Length]; image.CopyPixels(current,480*4,0);
+                delta.Add(Difference(previous,current,245,130,365,307));
+                if (memory) memoryFatherDelta.Add(Difference(previous,current,140,120,250,307));
+                headWidths.Add(HeadCrownWidth(image,memory ? scene.MemoryChildBounds : scene.SwingActorBounds,1));
+                var contact=scene.SwingContact; int solidLegPixels=0, partialLegPixels=0;
+                for(int y=Math.Max(0,(int)contact.Y+8);y<Math.Min(307,(int)contact.Y+40);y++) for(int x=Math.Max(0,(int)contact.X-36);x<Math.Min(480,(int)contact.X+36);x++) {
+                    int alpha=current[(y*480+x)*4+3]; if(alpha<90) continue;
+                    solidLegPixels++; if(alpha<230) partialLegPixels++;
+                }
+                double ratio=solidLegPixels>20 ? partialLegPixels/(double)solidLegPixels : 0; legPartial.Add(ratio);
+                if(ratio>worstLegPartial) { worstLegPartial=ratio; worstLegImage=image; }
+                // A 20 fps view is enough for the human preview; all 276 actual
+                // frames above are measured, without writing a PNG per frame.
+                if (i%3 == 0) { var meta=new BitmapMetadata("gif"); meta.SetQuery("/grctlext/Delay",(ushort)5); denseGif.Frames.Add(BitmapFrame.Create(image,null,meta,null)); }
+                previous=current;
+            }
+            if(worstLegImage != null) {
+                using var f=File.Create(Path.Combine(output,memory ? "memory-swing-leg-coverage.png" : "daily-swing-leg-coverage.png"));
+                var png=new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(worstLegImage)); png.Save(f);
+            }
+            var drawingOrdered=drawingMs.OrderBy(v=>v).ToArray(); double drawingP95=drawingOrdered[(int)(drawingOrdered.Length*.95)];
+            var diagnostics=new{Memory=memory,DrawingMeanMs=drawingMs.Average(),DrawingP95Ms=drawingP95,DrawingMaxMs=drawingMs.Max(),DrawingMs=drawingMs,HeadMin=headWidths.Min(),HeadMax=headWidths.Max(),HeadWidths=headWidths,LegPartialMean=legPartial.Average(),LegPartialMax=legPartial.Max(),LegPartialFractions=legPartial};
+            File.WriteAllText(Path.Combine(output,memory ? "memory-swing-diagnostics.json" : "daily-swing-diagnostics.json"),System.Text.Json.JsonSerializer.Serialize(diagnostics,new System.Text.Json.JsonSerializerOptions { WriteIndented=true }));
+            Check(headWidths.Max()-headWidths.Min()<5,"the actual swing head does not grow or shrink between frames: "+memory+" min="+headWidths.Min()+" max="+headWidths.Max());
+            Check(legPartial.Average()<.35 && legPartial.Max()<.7,"normal swing legs keep opaque coverage instead of separated half-transparent duplicates: "+memory+" mean="+legPartial.Average().ToString("F3")+" max="+legPartial.Max().ToString("F3"));
+            foreach(var series in memory ? new[]{delta,memoryFatherDelta} : new[]{delta}) {
+                var ordered=series.OrderBy(v=>v).ToArray(); double median=ordered[ordered.Length/2], maximum=ordered[^1], p90=ordered[(int)(ordered.Length*.9)];
+                Check(median>.002,"60Hz actual swing drawing changes between atlas keys");
+                Check(maximum<Math.Max(1.2,median*8),"60Hz swing poses have no isolated hard-cut jump: "+memory+" median="+median.ToString("F4")+" max="+maximum.ToString("F4"));
+                continuity.Add(new{Memory=memory,Part=series == memoryFatherDelta ? "father" : "Rin",Hz=hz,Frames=total,Median=median,P90=p90,Max=maximum,Samples=series,LegPartialFractions=series == delta ? legPartial : null,HeadWidths=series == delta ? headWidths : null,DrawingMeanMs=drawingMs.Average(),DrawingP95Ms=drawingP95,DrawingMaxMs=drawingMs.Max()});
+            }
+            using(var f=File.Create(Path.Combine(output,memory ? "memory-swing-continuous.gif" : "daily-swing-continuous.gif"))) denseGif.Save(f);
+            for(int i=0;i<visibility.Length;i++) save.Layout[i].Hidden=visibility[i]; actor.Life.Cancel();
+        }
+        CheckContinuity(false); CheckContinuity(true);
+        File.WriteAllText(Path.Combine(output,"swing-continuity.json"),System.Text.Json.JsonSerializer.Serialize(continuity,new System.Text.Json.JsonSerializerOptions { WriteIndented=true }));
+        var mounting=new List<object>();
+        foreach(double dpi in new[]{1.0,1.5,2.0}) {
+            actor.Life.Cancel(); scene.ResetLifeVisuals(); Scenes.PlaceActor(save,actor); actor.Start("stand"); actor.Life.BeginSwing(save); Until("hold");
+            var visibility=save.Layout.Select(p=>p.Hidden).ToArray(); foreach(var p in save.Layout) if(p.Id != "swingSeat") p.Hidden=true;
+            var previousFrame=Render(null,dpi); var previous=scene.SwingActorBounds; var initialSample=scene.SwingPoseSample; int previousPose=initialSample.Blend<.5 ? initialSample.From : initialSample.To; long cache=scene.SwingRasterCacheBytes;
+            Check(cache>0 && cache<96L*1024*1024,"registered swing/memory raster cache is bounded");
+            Check(Math.Abs(scene.SwingBodyScale-150.0/305)<1e-9,"swing does not scale the entire actor to the hand spacing");
+            double? previousHead=null;
+            for(int i=0;i<168;i++) {
+                actor.Tick(1.0/60,save,false); time+=1.0/60;
+                string? capture=i is 87 or 91 or 153 or 157 ? "mount-boundary-"+dpi.ToString("0.0",System.Globalization.CultureInfo.InvariantCulture)+"-"+i : null;
+                var actual=Render(capture,dpi); var visible=scene.SwingActorBounds; var sample=scene.SwingPoseSample;
+                double head=HeadCrownWidth(actual,visible,dpi); int chosen=sample.Blend<.5 ? sample.From : sample.To; bool samePose=chosen == previousPose;
+                mounting.Add(new{Dpi=dpi,Time=(i+1)/60.0,Phase=actor.Life.Phase,Bounds=new[]{visible.X,visible.Y,visible.Width,visible.Height},HeadWidth=head,sample.From,sample.To,sample.Blend,CacheBytes=scene.SwingRasterCacheBytes});
+                if(samePose && ((previousHead != null && Math.Abs(head-previousHead.Value)>=5) || Math.Abs(visible.Width-previous.Width)>=5 || Math.Abs(visible.Height-previous.Height)>=5 || Math.Abs(visible.X-previous.X)>=5 || Math.Abs(visible.Y-previous.Y)>=5)) {
+                    foreach(var pair in new[]{("before",previousFrame),("after",actual)}) {
+                        using var f=File.Create(Path.Combine(output,"mount-discontinuity-"+dpi+"-"+pair.Item1+".png")); var png=new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(pair.Item2)); png.Save(f);
+                    }
+                    File.WriteAllText(Path.Combine(output,"swing-mounting.json"),System.Text.Json.JsonSerializer.Serialize(mounting,new System.Text.Json.JsonSerializerOptions { WriteIndented=true }));
+                }
+                if(previousHead != null && samePose) Check(Math.Abs(head-previousHead.Value)<5,"fixed-pose opaque head size does not suddenly change: "+dpi+"/"+i+" "+actor.Life.Phase+" crown="+previousHead+"→"+head);
+                previousHead=head;
+                Check(!visible.IsEmpty && double.IsFinite(visible.Width) && double.IsFinite(visible.Height) && visible.Width>20 && visible.Height>65,"mount uses a finite, visible complete actor");
+                if(samePose) {
+                    Check(Math.Abs(visible.Width-previous.Width)<5 && Math.Abs(visible.Height-previous.Height)<5,"fixed-pose actor dimensions do not change with runtime deformation: "+dpi+"/"+i+" "+actor.Life.Phase+" size="+previous.Size+"→"+visible.Size);
+                    Check(Math.Abs(visible.X-previous.X)<5 && Math.Abs(visible.Y-previous.Y)<5,"fixed-pose body registration moves continuously: "+dpi+"/"+i+" "+actor.Life.Phase+" origin="+previous.Location+"→"+visible.Location);
+                }
+                Check(scene.SwingRasterCacheBytes == cache,"mounting does not allocate another cached atlas every frame");
+                if(i%21 == 0) {
+                    long updates=scene.SwingRasterUpdates; Render(null,dpi);
+                    Check(scene.SwingRasterUpdates == updates,"repainting the same animation instant reuses the raster");
+                }
+                previous=visible; previousFrame=actual; previousPose=chosen;
+            }
+            for(int i=0;i<visibility.Length;i++) save.Layout[i].Hidden=visibility[i];
+            actor.Life.Cancel();
+        }
+        File.WriteAllText(Path.Combine(output,"swing-mounting.json"),System.Text.Json.JsonSerializer.Serialize(mounting,new System.Text.Json.JsonSerializerOptions { WriteIndented=true }));
         foreach(var id in new[]{"swingTree","indoor"}) {
             actor.Life.Cancel(); Scenes.Switch(save,id); scene.ResetLifeVisuals(); Scenes.PlaceActor(save,actor); var home=Scenes.Home(save);
             Check(actor.Life.BeginMemory(save),"memory begin"); Until("fadeOut"); Step(.7); Render(id+"-fade-out");

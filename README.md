@@ -6,14 +6,14 @@
 
 这里有一个正在成长的小世界。
 
-**v1.0.0 · First Official Release**  
+**v1.0.1 · Swing Animation Update**<br>
 《Shelter》十周年纪念 · 2026.10.18
 
 [下载与发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases) · [快速开始](#快速开始) · [使用指南](#日常操作) · [问题反馈](https://github.com/Fantasy708/Rins-Little-Shelter/issues)
 
 </div>
 
-> **v1.0.0 首个正式版**已按维护者安排提前公开：[下载正式版](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.0)。原定首发时间为2026年10月18日12:00（北京时间），本次实际发行日期为10月16日；10月18日的《Shelter》十周年纪念主题保留。后续仍会持续更新。
+> **v1.0.1 正式维护版**：[下载秋千动画修正版](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.1)。修正日常与父女记忆中的秋千动画及起坐比例，保留原存档。首个正式版v1.0.0已于10月16日提前提供，10月18日的《Shelter》十周年纪念主题继续保留；项目仍会持续更新。
 
 ![Rin 的小世界](docs/screenshots/bench-seat-on-white.png)
 
@@ -27,6 +27,8 @@
 
 ## 在这个小世界里
 
+v1.0.1（2026-10-21）：修正日常及记忆中的秋千姿势跳换、上秋千时人物被横向拉伸的问题。摆荡改为连续关节运动，起坐保持等比，并修正记忆进出与停稳衔接。旧版本与附件保留，实际检查见[验证记录](docs/验证记录.md)。
+
 | 内容 | 你可以体验到什么 |
 | --- | --- |
 | 安静的日常 | 半 Q 版 Rin 回应鼠标、散步、观察和休息；默认静音，休息提醒与开机启动默认关闭 |
@@ -38,7 +40,7 @@
 
 日常使用无需联网。程序不附带《Shelter》原曲或原片音轨，也不会自动播放歌曲。
 
-本页图片与 GIF 为现有版本的 WPF 生产绘图或程序窗口导出，不包含私人桌面背景；它们展示已有内容，不代表 v1.0.0 最终程序已完成验收。
+本页图片与 GIF 为现有版本的 WPF 生产绘图或程序窗口导出，不包含私人桌面背景；实际验收范围以[验证记录](docs/验证记录.md)为准。
 
 ## 快速开始
 
@@ -46,11 +48,11 @@
 
 支持 **Windows 10（19041 及以上）与 Windows 11 x64**。便携程序自带 .NET 运行环境，无须安装开发工具。
 
-1. 打开 [v1.0.0 正式发行页](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.0)，下载正式版；[历史发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases)继续保留。
+1. 打开 [v1.0.1 正式发行页](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.1)，下载正式版；[历史发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases)继续保留。
 2. 下载该版本的 Windows x64 便携 ZIP，并使用同一发行中的 `SHA256.txt` 核对文件。`source.zip` 是完整源码素材包，供开发和研究使用。
 3. 完整解压 ZIP，打开 `RinsLittleShelter.exe`。请让 EXE 与旁边的 `assets` 文件夹保持在一起。
 
-正式版便携包名为 `RinsLittleShelter-v1.0.0-win-x64.zip`，完整源码素材包为 `RinsLittleShelter-v1.0.0-source.zip`；校验值见同一发行的 `SHA256.txt`。历史版本仍可从发行列表获取。
+正式版便携包名为 `RinsLittleShelter-v1.0.1-win-x64.zip`，完整源码素材包为 `RinsLittleShelter-v1.0.1-source.zip`；校验值见同一发行的 `SHA256.txt`。历史版本仍可从发行列表获取。
 
 升级前先退出旧版，再解压并运行新版。当前版本兼容既有存档，继续读取陪伴进度、来信状态和两种模式的场景布置；升级前也可按下文方法备份。
 
@@ -222,13 +224,13 @@ pwsh -File scripts/bootstrap.ps1
 正式版构建到独立目录，保留旧版程序；程序版本由项目文件定义：
 
 ```powershell
-pwsh -File scripts/build.ps1 -OutputDirectory dist/local/v1.0.0/RinsLittleShelter
+pwsh -File scripts/build.ps1 -OutputDirectory dist/local/v1.0.1/RinsLittleShelter
 ```
 
 构建前请退出正在运行的发布版本。脚本执行核心与画面等检查，再生成自包含程序和压缩包。若需整理成发行附件，使用：
 
 ```powershell
-pwsh -File scripts/package-release.ps1 -Version v1.0.0 -ProgramDirectory dist/local/v1.0.0/RinsLittleShelter -ReleaseDirectory dist/local/v1.0.0/release
+pwsh -File scripts/package-release.ps1 -Version v1.0.1 -ProgramDirectory dist/local/v1.0.1/RinsLittleShelter -ReleaseDirectory dist/local/v1.0.1/release
 ```
 
 打包脚本复用已构建的 EXE，生成便携 ZIP、完整源码素材 ZIP 与 SHA256 清单，不重新编译，也不上传 GitHub。正式版必须另外确认程序版本、对应发行说明和最终验证记录，不能仅修改包名。
@@ -237,7 +239,7 @@ pwsh -File scripts/package-release.ps1 -Version v1.0.0 -ProgramDirectory dist/lo
 
 ## 发布状态与问题反馈
 
-v1.0.0 的内容见[正式版发行说明](docs/releases/v1.0.0.md)，实际检查与已知边界见[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。发行后对同一正式EXE完成62.13分钟稳定性观察，有效陪伴60.87分钟，无崩溃或异常日志，存档、备份与跨日计时正常。期间包含72.83秒系统待机及正常恢复，不作为全程无休眠连续绘制一小时的证明。原生 Windows 键鼠、真实系统缩放、多屏及真实播放器识别仍有待人工实测。
+v1.0.1 的内容见[维护版发行说明](docs/releases/v1.0.1.md)，实际检查与已知边界见[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。本版修正秋千动作与比例，程序重新构建后独立核验；尚未重新执行一小时稳定性测试。v1.0.0的62.13分钟观察属于旧EXE，保留为历史。原生 Windows 键鼠、真实系统缩放、多屏及真实播放器识别仍有待人工实测。
 
 遇到问题，请使用 [GitHub Issues](https://github.com/Fantasy708/Rins-Little-Shelter/issues) 中的反馈模板，提供版本、Windows 环境、触发动作与复现步骤；涉及显示问题时，也请说明缩放比例和显示器情况。
 

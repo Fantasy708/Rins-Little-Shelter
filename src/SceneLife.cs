@@ -15,6 +15,17 @@ public sealed partial class Scene
     public Point SwingPivot { get; private set; }
     public Point SwingContact { get; private set; }
     public Point[] SwingGrips { get; private set; }=Array.Empty<Point>();
+    private LifePoseFrames swingFrames=null!,childFrames=null!,fatherFrames=null!;
+    public Rect SwingActorBounds { get; private set; }
+    public double SwingBodyScale => 150.0/305;
+    public ClipSample SwingPoseSample => behavior.Life.SwingSample;
+    public Rect MemoryFatherBounds { get; private set; }
+    public Rect MemoryChildBounds { get; private set; }
+    public long SwingRasterUpdates => swingFrames.Updates+childFrames.Updates+fatherFrames.Updates;
+    public long SwingRasterCacheBytes => swingFrames.Bytes+childFrames.Bytes+fatherFrames.Bytes;
+    private Atlas.Sprite? recallSprite;
+    private Rect recallRect;
+    private bool wasFadingOut;
     private void LoadLifeAssets(string root)
     {
         environments=new Atlas(Path.Combine(root,manifest.ScenesAtlas),manifest.SceneRegions);
@@ -27,6 +38,10 @@ public sealed partial class Scene
         if (swingPoses.Sprites.Length != 20 || familyPoses.Sprites.Length != 16 || manifest.SwingHips.Length != 20 || manifest.SwingHands.Length != 20)
             throw new InvalidDataException("秋千/父女记忆姿势与锚点不完整");
         if (swingLoop.Sprites.Length != 18 || manifest.LoopHips.Length != 18 || manifest.LoopHands.Length != 18) throw new InvalidDataException("细化摆荡帧不完整");
+        swingFrames=new LifePoseFrames(swingPoses.Sprites.Concat(swingLoop.Sprites).ToArray(),manifest.SwingHips.Concat(manifest.LoopHips).ToArray(),manifest.SwingHands.Concat(manifest.LoopHands).ToArray(),SwingBodyScale);
+        childFrames=new LifePoseFrames(familyPoses.Sprites.Skip(8).Take(4).ToArray(),manifest.ChildHips,manifest.ChildHands,.37);
+        var fathers=familyPoses.Sprites.Take(4).ToArray();
+        fatherFrames=new LifePoseFrames(fathers,fathers.Select(s=>new[]{s.CellWidth*.5,(double)s.RegistrationGround}).ToArray(),null,156.0/fathers[0].Height);
     }
     private Atlas.Sprite ObjectSprite(ObjectDef d) => d.Id switch {
         "mountainBase"=>mountainLandscape,"polarBase"=>polarLandscape,
@@ -41,6 +56,7 @@ public sealed partial class Scene
         births.Clear(); actorHits.Clear(); lifeHits.Clear(); hits.Clear();
         ClearCreationEffects();
         blurredPoses.Clear();
+        recallSprite=null; wasFadingOut=false; swingFrames.ResetTransition(); childFrames.ResetTransition(); fatherFrames.ResetTransition();
         doorRect=memoryControl=seatHit=Rect.Empty; IdealUntil=0; BubbleUntil=0; ClearTabletHits();
         InvalidateVisual();
     }
@@ -89,7 +105,6 @@ public sealed partial class Scene
         {
             var (pivot,seat)=SwingGeometry(); SwingPivot=pivot;
             double angle=life.Angle;
-            if (life.Phase == "memory") angle=7*Math.Sin(life.Elapsed*2*Math.PI/4.6);
             // The branch endpoints stay fixed. Two parallel ropes and the plank
             // use one pendulum rotation; character attachment uses that same one.
             var transform=Pendulum(pivot,seat,angle);
@@ -122,66 +137,55 @@ public sealed partial class Scene
     }
     private void DrawSwingFamily(DrawingContext dc,Point pivot,Point seat,double angle,double opacity)
     {
-        int childFrame=8+((int)(behavior.Life.Elapsed/1.15)%4);
         dc.PushOpacity(opacity);
-        // Render the father separately with actual arm and torso poses.
-        int fatherFrame=(int)(behavior.Life.Elapsed/1.15)%4;
-        if (fatherFrame == 2) fatherFrame=1; // reject the generated extra prop.
-        var father=familyPoses.Sprites[fatherFrame]; double k=156.0/familyPoses.Sprites[0].Height;
-        double x=seat.X-86;
-        dc.DrawImage(father.Image,new Rect(x+(father.CropLeft-father.CellWidth*.5)*k,seat.Y+50+(father.CropTop-father.RegistrationGround)*k,father.Width*k,father.Height*k));
-        DrawAttached(dc,familyPoses.Sprites[childFrame],manifest.ChildHips[childFrame-8],manifest.ChildHands[childFrame-8],seat,pivot,angle,.37,false);
+        var father=fatherFrames.Articulate(1,behavior.Life.Elapsed,true);
+        var rect=fatherFrames.Bounds; rect.Offset(seat.X-86,seat.Y+50);
+        dc.DrawImage(father.Image,rect);
+        var fatherBounds=fatherFrames.VisibleBounds; fatherBounds.Offset(seat.X-86,seat.Y+50); MemoryFatherBounds=fatherBounds;
+        DrawAttached(dc,childFrames,new ClipSample(0,0,0,0),seat,pivot,angle,false);
+        var childBounds=childFrames.VisibleBounds; childBounds.Offset(seat.X,seat.Y); MemoryChildBounds=childBounds;
         dc.Pop();
     }
-    private Rect AttachedRect(Atlas.Sprite sprite,double[] hip,double[] hands,Point seat,double scale)
+    private void DrawAttached(DrawingContext dc,LifePoseFrames frames,ClipSample sample,Point seat,Point pivot,double angle,bool interactive)
     {
-        double sx=52/Math.Max(1,hands[2]-hands[0]);
-        // Use the grip midpoint for the horizontal registration. The measured
-        // hip stays inside the wooden seat, and the whole body remains intact.
-        return new Rect(seat.X+(sprite.CropLeft-(hands[0]+hands[2])*.5)*sx,
-            seat.Y+(sprite.CropTop-hip[1])*scale,sprite.Width*sx,sprite.Height*scale);
-    }
-    private void DrawAttached(DrawingContext dc,Atlas.Sprite sprite,double[] hip,double[] hands,Point seat,Point pivot,double angle,double scale,bool interactive,bool continuousLegs=false)
-    {
-        var rect=AttachedRect(sprite,hip,hands,seat,scale);
+        bool rig=!interactive || behavior.Life.Phase is "swing" or "settle";
+        double rigTime=behavior.Life.RigTime;
+        var sprite=rig ? frames.Articulate(sample.From,rigTime) : frames.Sample(sample);
+        var rect=frames.Bounds; rect.Offset(seat.X,seat.Y);
         var transform=Pendulum(pivot,seat,angle);
-        double amplitude=behavior.Life.Phase == "settle" ? 3*(1-MotionClip.Ease(behavior.Life.Elapsed/2)) : 3;
-        double hinge=seat.Y, shear=continuousLegs ? Math.Sin(Time*2*Math.PI/4.6)*amplitude/Math.Max(1,rect.Bottom-hinge) : 0;
         dc.PushTransform(transform);
-        if (continuousLegs && rect.Bottom>hinge) {
-            dc.PushClip(new RectangleGeometry(new Rect(rect.X-5,rect.Y-3,rect.Width+10,hinge-rect.Y+3))); dc.DrawImage(sprite.Image,rect); dc.Pop();
-            dc.PushClip(new RectangleGeometry(new Rect(rect.X-6,hinge,rect.Width+12,rect.Bottom-hinge+3)));
-            dc.PushTransform(new MatrixTransform(new Matrix(1,0,shear,1,-shear*hinge,0))); dc.DrawImage(sprite.Image,rect); dc.Pop(); dc.Pop();
-        } else dc.DrawImage(sprite.Image,rect);
+        dc.DrawImage(sprite.Image,rect);
         dc.Pop();
-        if (interactive) lifeHits.Add((rect,sprite,transform,hinge,shear));
-        SwingGrips=new[]{ transform.Transform(new Point(seat.X-26,seat.Y+(hands[1]-hip[1])*scale)), transform.Transform(new Point(seat.X+26,seat.Y+(hands[3]-hip[1])*scale)) };
+        if (interactive) {
+            lifeHits.Add((rect,sprite,transform,double.PositiveInfinity,0)); var actorBounds=frames.VisibleBounds; actorBounds.Offset(seat.X,seat.Y); SwingActorBounds=actorBounds;
+            // The ordinary actor renderer can now continue from this complete
+            // registered body when she rises and starts walking away.
+            lastDrawKey="life:"+behavior.Life.Phase; lastDrawSprite=sprite; lastDrawRect=rect;
+            lastDrawRaw=true; lastDrawSequence=true; lastDrawSeated=false; lastDrawLeft=false; lastDrawAnchor=0;
+            if(Math.Abs(angle)>.0001) { lastDrawSprite=null; lastDrawKey=null; }
+        }
+        var hands=frames.Hands(sample);
+        SwingGrips=new[]{ transform.Transform(new Point(seat.X-26,seat.Y+hands[1])), transform.Transform(new Point(seat.X+26,seat.Y+hands[3])) };
     }
     private void DrawPresentRin(DrawingContext dc)
     {
         if (StartupPresentation) { actorHits.Clear(); return; }
         var life=behavior.Life;
+        if(life.Phase != "fadeOut") wasFadingOut=false;
         if (life.PresentOpacity <= .001) { actorHits.Clear(); lastDrawSprite=null; return; }
         if (save.SceneId == "swingTree" && life.DedicatedPose)
         {
-            actorHits.Clear(); lastDrawSprite=null; lastDrawKey=null;
-            int frame=life.PoseFrame; var s=swingPoses.Sprites[frame];
-            var hip=manifest.SwingHips[frame]; var hands=manifest.SwingHands[frame];
+            actorHits.Clear();
+            var sample=life.SwingSample;
             var (pivot,seat)=SwingGeometry();
-            double scale=150.0/305;
-            if (life.Phase == "swing" || life.Phase == "settle" && life.SettleLoopFrame >= 0) {
-                int key=(int)(life.Elapsed/4.6*34)%34;
-                int loopFrame=life.Phase == "settle" ? life.SettleLoopFrame : key<18 ? key : 34-key;
-                s=swingLoop.Sprites[loopFrame]; hip=manifest.LoopHips[loopFrame]; hands=manifest.LoopHands[loopFrame];
-            }
             if (life.Phase is "hold" or "mount" or "dismount")
             {
-                double footHip=(s.CropTop+s.Height-hip[1])*scale;
+                double footHip=swingFrames.Foot(sample);
                 double standingHip=behavior.Y-footHip;
-                double p=life.Phase == "mount" ? MotionClip.Ease(life.Elapsed/1.1) : life.Phase == "dismount" ? 1-MotionClip.Ease(life.Elapsed/1.1) : 0;
+                double p=life.Phase == "mount" ? MotionClip.Ease(life.Elapsed/.65) : life.Phase == "dismount" ? 1-MotionClip.Ease(life.Elapsed/.65) : 0;
                 seat.Y=standingHip+(seat.Y-standingHip)*p;
             }
-            DrawAttached(dc,s,hip,hands,seat,pivot,life.Angle,scale,true,life.Phase is "swing" or "settle"); return;
+            DrawAttached(dc,swingFrames,sample,seat,pivot,life.Angle,true); return;
         }
         if (life.IsMemory)
         {
@@ -189,11 +193,18 @@ public sealed partial class Scene
             var s=poses.Sprites[pose]; double scale=150.0/poses.Sprites[0].Height;
             var rect=new Rect(behavior.X-s.Width*scale/2,behavior.Y-s.Height*scale,s.Width*scale,s.Height*scale);
             if (life.Phase == "fadeOut" && save.SceneId == "swingTree") {
-                pose=100+life.RecallPose; scale=150.0/305;
-                if (life.RecallPose>=100) { int frame=life.RecallPose-100; s=swingLoop.Sprites[frame]; rect=AttachedRect(s,manifest.LoopHips[frame],manifest.LoopHands[frame],SwingGeometry().Seat,scale); }
-                else { s=swingPoses.Sprites[life.RecallPose]; rect=AttachedRect(s,manifest.SwingHips[life.RecallPose],manifest.SwingHands[life.RecallPose],SwingGeometry().Seat,scale); }
+                if(!wasFadingOut) {
+                    var snapshot=ActorBitmapBlend.Snapshot(life.RecallSeated ? swingFrames.Articulate(life.RecallSample.From,life.RecallRigTime) : swingFrames.Sample(life.RecallSample));
+                    recallSprite=snapshot; recallRect=swingFrames.Bounds;
+                    var root=SwingGeometry().Seat;
+                    if(!life.RecallSeated) root.Y=behavior.Y-swingFrames.Foot(life.RecallSample);
+                    recallRect.Offset(root.X,root.Y); blurredPoses.Clear(); wasFadingOut=true;
+                }
+                // Keep the exact stopped body and ground/seat origin through
+                // the existing memory blur, instead of substituting a pose.
+                s=recallSprite!; rect=recallRect; scale=.5; pose=1000;
             }
-            int radius=(int)Math.Round(life.BlurRadius*8);
+            int radius=(int)Math.Round(life.BlurRadius*2);
             BitmapSource image=s.Image;
             if (radius > 0)
             {
@@ -203,7 +214,7 @@ public sealed partial class Scene
                     // Repeated memories at different stopping poses must not
                     // retain an ever growing collection of blurred rasters.
                     if (blurredPoses.Count >= 64) blurredPoses.Clear();
-                    var element=new Image { Source=s.Image,Width=s.Width+32,Height=s.Height+32,Stretch=Stretch.None,Effect=new BlurEffect { Radius=radius/8.0*2,RenderingBias=RenderingBias.Quality } };
+                    var element=new Image { Source=s.Image,Width=s.Width+32,Height=s.Height+32,Stretch=Stretch.None,Effect=new BlurEffect { Radius=radius,RenderingBias=RenderingBias.Performance } };
                     element.Measure(new Size(element.Width,element.Height)); element.Arrange(new Rect(0,0,element.Width,element.Height));
                     var target=new RenderTargetBitmap((int)element.Width,(int)element.Height,96,96,PixelFormats.Pbgra32); target.Render(element); target.Freeze(); image=target; blurredPoses[key]=image;
                 }

@@ -136,9 +136,9 @@ public sealed partial class PetWindow : Window
             if (through != pointerThrough) { pointerThrough = through; Native.Configure(this, through); }
         }
         Scene.InvalidateVisual();
-        if (captureActionFrames && captureDirectory != null && (Behavior.Nurture.Active || Behavior.Journey.Active || Scene.CreationParticleTarget!=null) && runtime-lastActionCapture>=.12) {
+        if (captureActionFrames && captureDirectory != null && (Behavior.Nurture.Active || Behavior.Journey.Active || Behavior.Life.Active || Scene.CreationParticleTarget!=null) && runtime-lastActionCapture>=.12) {
             lastActionCapture=runtime;
-            string stage=Behavior.Journey.Active ? "journey-"+Behavior.Journey.Phase : Behavior.Nurture.Active ? "nurture-"+Behavior.Nurture.Phase : "creation-"+(Scene.CreationParticleCommitted?"born":"gather");
+            string stage=Behavior.Journey.Active ? "journey-"+Behavior.Journey.Phase : Behavior.Nurture.Active ? "nurture-"+Behavior.Nurture.Phase : Behavior.Life.Active ? (Behavior.Life.IsMemory ? "memory-" : "swing-")+Behavior.Life.Phase : "creation-"+(Scene.CreationParticleCommitted?"born":"gather");
             Capture(stage+"-"+frames.ToString("D5")+".png");
         }
     }

@@ -109,6 +109,25 @@ public sealed class LifeSequence
     public double RecallTime { get; private set; }
     public int RecallPose { get; private set; } = 3;
     public int SettleLoopFrame { get; private set; } = -1;
+    public const double SwingPeriod = 4.6;
+    public ClipSample SettleSample { get; private set; } = new(20,20,0,0);
+    public ClipSample RecallSample { get; private set; } = new(3,3,0,0);
+    public bool RecallSeated { get; private set; }
+    public double RecallRigTime { get; private set; }
+    public double RigTime => Phase == "settle" ? settleRigTime+(Math.Ceiling(settleRigTime/SwingPeriod)*SwingPeriod-settleRigTime)*MotionClip.Ease(Elapsed/2) : Elapsed;
+    private static readonly int[] HoldKeys={0,2,3},MountKeys={3,4,5,6,7,8},RiseKeys={8,7,6,5,4,3,0};
+    public ClipSample SwingSample => Phase switch {
+        "hold" => Sequence(HoldKeys,Elapsed/1.5),
+        "mount" => Sequence(MountKeys,Elapsed/.65),
+        "swing" => new(20,20,0,0),
+        "settle" => SettleSample,
+        "dismount" => Sequence(RiseKeys,Elapsed/.65),
+        _ => RecallSample };
+    private static ClipSample Sequence(int[] frames,double progress) {
+        double position=Math.Clamp(progress,0,1)*(frames.Length-1);
+        int from=Math.Min((int)position,frames.Length-1),to=Math.Min(from+1,frames.Length-1);
+        return new(frames[from],frames[to],position-from,0);
+    }
     public double Atmosphere => !IsMemory ? 0 : Phase switch { "fadeOut" => 1-PresentOpacity, "fadeIn" or "watch" => 1-PresentOpacity, _ => 1 };
     public double PresentOpacity => !IsMemory ? 1 : Phase switch {
         "fadeOut" => 1-MotionClip.Ease(Elapsed/1.5), "memory" or "empty" => 0,
@@ -117,11 +136,7 @@ public sealed class LifeSequence
     public double BlurRadius => Phase is "fadeOut" or "fadeIn" ? 7*(1-PresentOpacity) : 0;
     public bool Seated => Phase is "swing" or "settle";
     public bool DedicatedPose => Phase is "hold" or "mount" or "swing" or "settle" or "dismount";
-    public int PoseFrame => Phase switch {
-        "hold" => Math.Clamp(1+(int)(Elapsed/1.5*2),1,3), "mount" => Math.Clamp(3+(int)(Elapsed/1.1*5),3,8),
-        "swing" => 8+((int)((Elapsed/4.6%1)*8))%8, "settle" => 8,
-        "dismount" => Math.Clamp(16+(int)(Elapsed/1.1*4),16,19), _ => 2 };
-    private double originalX,originalY,settleAngle,swingClock;
+    private double originalX,originalY,settleAngle,settleRigTime;
     private string scene="outdoor";
     private bool memoryFree;
     public event Action? MemoryCompleted;
@@ -136,13 +151,14 @@ public sealed class LifeSequence
     private void Begin(SaveData s,bool memory) {
         if (actor.Dragging || (!memory && s.SceneId != "swingTree")) return;
         actor.Journey.Cancel(s); actor.Nurture.Cancel(s); actor.Tablet.Cancel(s); Cancel(); actor.RiseFromBed(s); scene=s.SceneId; memoryFree=s.Settings.FreeMode; originalX=actor.X; originalY=actor.Y;
-        MemoryRequested=memory; IsMemory=false; RecallTime=0; swingClock=0; Angle=0;
+        MemoryRequested=memory; IsMemory=false; RecallTime=0; Angle=0; SettleLoopFrame=-1;
         var seat=s.Layout.FirstOrDefault(p=>p.Id == "swingSeat"); SeatX=seat?.X ?? 300; SeatY=seat?.Y ?? 260;
         Phase="approach"; Elapsed=0; actor.Visit("ropeHold",scene == "indoor" ? 260 : SeatX,HomeY(s));
     }
     private void Enter(string phase) {
-        if (phase == "settle") { settleAngle=Angle; int key=(int)(Elapsed/4.6*34)%34; SettleLoopFrame=Phase == "swing" ? key<18 ? key : 34-key : -1; }
-        if (phase == "fadeOut") RecallPose=Phase == "settle" ? SettleLoopFrame >= 0 ? 100+SettleLoopFrame : 8 : 3;
+        if (phase == "settle") { settleAngle=Angle; SettleSample=SwingSample; settleRigTime=Phase == "swing" ? Elapsed : 0; SettleLoopFrame=Phase == "swing" ? Math.Max(0,SettleSample.From-20) : -1; }
+        if (phase == "fadeOut") { RecallSample=SwingSample; RecallRigTime=RigTime; RecallSeated=Phase == "settle"; RecallPose=RecallSeated ? 100+Math.Max(0,RecallSample.From-20) : 3; }
+        if (phase == "empty") settleAngle=Angle;
         if (phase == "fadeIn") { actor.X=originalX; actor.Y=originalY; }
         Phase=phase; Elapsed=0; actor.Start("ropeHold");
     }
@@ -159,18 +175,36 @@ public sealed class LifeSequence
     public bool Tick(double dt,SaveData s) {
         if (s.SceneId != scene || s.Settings.FreeMode != memoryFree) { Cancel(); return true; }
         if (Phase == "approach") { if (actor.Current.Id != "ropeHold") return false; Enter("hold"); return true; }
-        Elapsed+=dt; if (IsMemory) RecallTime+=dt;
+        // Consume the overshoot in the next phase. Discarding it at every
+        // boundary made 30 Hz and 60 Hz memories finish at different times.
+        double remaining=Math.Max(0,dt);
+        for(int boundary=0;boundary<12 && Active;boundary++) {
+        double duration=Phase switch { "hold"=>1.5,"mount"=>.65,"swing"=>20,"settle"=>2,"dismount"=>.65,"fadeOut"=>1.5,"memory"=>17,"empty"=>2,"fadeIn"=>1.5,"watch"=>3,_=>double.PositiveInfinity };
+        double step=Math.Min(remaining,Math.Max(0,duration-Elapsed));
+        Elapsed+=step; remaining-=step; if(IsMemory) RecallTime+=step;
+        if(Phase == "swing") Angle=8*Math.Sin(Elapsed*2*Math.PI/SwingPeriod)*MotionClip.Ease(Elapsed/3);
+        if(Phase == "settle") Angle=settleAngle*(1-MotionClip.Ease(Elapsed/2));
+        if(Phase == "memory") Angle=7*Math.Sin(Elapsed*2*Math.PI/SwingPeriod);
+        if(Phase == "empty") Angle=settleAngle*(1-MotionClip.Ease(Elapsed/2));
+        if(Elapsed+1e-9<duration) break;
+        Elapsed=duration;
         switch (Phase) {
             case "hold": if (Elapsed >= 1.5) { if (MemoryRequested) { IsMemory=true; Enter("fadeOut"); } else Enter("mount"); } break;
-            case "mount": if (Elapsed >= 1.1) Enter("swing"); break;
-            case "swing": swingClock+=dt; Angle=8*Math.Sin(swingClock*2*Math.PI/4.6)*MotionClip.Ease(Elapsed/3); if (Elapsed >= 20 || MemoryRequested) Enter("settle"); break;
+            case "mount": Enter(MemoryRequested ? "settle" : "swing"); break;
+            case "swing": Enter("settle"); break;
             case "settle": Angle=settleAngle*(1-MotionClip.Ease(Elapsed/2)); if (Elapsed >= 2) { Angle=0; if (MemoryRequested) { IsMemory=true; Enter("fadeOut"); } else Enter("dismount"); } break;
-            case "dismount": if (Elapsed >= 1.1) { Phase="none"; actor.Y=HomeY(s); actor.Start("walk",SeatX-80,HomeY(s)); } break;
+            case "dismount":
+                actor.Y=HomeY(s);
+                if(MemoryRequested) Enter("hold");
+                else { Phase="none"; actor.Start("walk",SeatX-80,HomeY(s)); }
+                break;
             case "fadeOut": if (Elapsed >= 1.5) Enter("memory"); break;
             case "memory": if (Elapsed >= 17) Enter("empty"); break;
-            case "empty": Angle=2*Math.Sin(Elapsed*2)*Math.Exp(-Elapsed*.7); if (Elapsed >= 2) { Angle=0; Enter("fadeIn"); } break;
+            case "empty": Angle=0; Enter("fadeIn"); break;
             case "fadeIn": if (Elapsed >= 1.5) { Enter("watch"); if (Story.CompleteMemory(s,scene,memoryFree)) MemoryCompleted?.Invoke(); } break;
             case "watch": if (Elapsed >= 3) Cancel(); break;
+        }
+        if(remaining<=1e-9) break;
         }
         return true;
     }

@@ -1,4 +1,4 @@
-param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.0.0/RinsLittleShelter')
+param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.0.1/RinsLittleShelter')
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Push-Location -LiteralPath $projectRoot

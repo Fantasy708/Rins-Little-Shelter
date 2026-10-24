@@ -25,6 +25,8 @@ public sealed class TabletSession
     public bool DedicatedPose => Active && Phase != "approach";
     public bool Automatic => automatic;
     public bool HasEmitted => emitted;
+    public bool Recovering { get; private set; }
+    public bool InternalScheduling { get; private set; }
     public double Expansion => Phase switch { "opening"=>MotionClip.Ease(Elapsed/.65),"ready"=>1,"closing"=>closingFromExpansion*(1-MotionClip.Ease(Elapsed/.55)),_=>0 };
     public bool ScreenVisible => Phase is "opening" or "ready" or "closing";
     public double DeviceVisibility => Phase switch { "present"=>Math.Clamp(Elapsed/.9,0,1),"stowing"=>stowingFromVisibility*(1-Math.Clamp(Elapsed/.8,0,1)),_=>DedicatedPose ? 1 : 0 };
@@ -34,7 +36,13 @@ public sealed class TabletSession
         "stowing"=>Math.Clamp(8+(int)(Elapsed/.8*4),8,11),_=>4 };
     public event Action? StoryChanged;
     public TabletSession(Behavior actor) => this.actor=actor;
+    private void Schedule(Action action) { InternalScheduling=true;try { action(); } finally { InternalScheduling=false; } }
     public bool Matches(SaveData s) => s.SceneId == scene && s.Settings.FreeMode == free;
+    public bool EnsureValid(SaveData s)
+    {
+        if(!Active || Matches(s) && !actor.Dragging)return true;
+        Cancel(s);return false;
+    }
     public bool Open(SaveData s,bool invited=false,string page="create",string? preselect=null,DateTime? date=null)
     {
         if (Active || actor.Dragging || actor.Life.Active || actor.Current.Kind == "create") return false;
@@ -46,7 +54,7 @@ public sealed class TabletSession
         if (invited && Candidates.Length == 0) return false;
         if (invited) Candidates=Candidates.Take(2).ToArray();
         actor.Journey.Cancel(s); actor.Nurture.Cancel(s);
-        scene=s.SceneId; free=s.Settings.FreeMode; automatic=invited; confirmed=null; emitted=false; closingFromExpansion=1; stowingFromVisibility=1;
+        scene=s.SceneId; free=s.Settings.FreeMode; automatic=invited; confirmed=null; emitted=false; closingFromExpansion=1; stowingFromVisibility=1;Recovering=false;
         Generation++; Page=page == "messages" ? "messages" : "create"; Selected=preselect;
         CandidatePage=preselect == null ? 0 : Array.IndexOf(Candidates,preselect)/4;
         LetterPage=0; Reading=false; UnansweredSeconds=0;
@@ -55,21 +63,45 @@ public sealed class TabletSession
         // Make room through real grounded footsteps, rather than translating
         // the standing illustration or covering Rin's face with a panel.
         double target=actor.X>=240 ? 365 : 115;
-        if (Math.Abs(actor.X-target)>8) { Phase="approach"; Elapsed=0; actor.Visit("invite",target,actor.Y); }
+        if (Math.Abs(actor.X-target)>8) { Phase="approach"; Elapsed=0; Schedule(()=>actor.Visit("invite",target,actor.Y)); }
         else Enter("present");
         return true;
     }
     private void Enter(string phase) {
         if (phase == "closing") closingFromExpansion=Expansion;
         if (phase == "stowing") stowingFromVisibility=DeviceVisibility;
-        Phase=phase; Elapsed=0; if (phase != "approach") actor.Start("invite");
+        Phase=phase; Elapsed=0; if (phase != "approach") Schedule(()=>actor.Start("invite"));
     }
     public void StowHeld(SaveData s)
     {
         if (Active) return;
         scene=s.SceneId; free=s.Settings.FreeMode; Generation++;
         confirmed=null; emitted=false; automatic=false; Reading=false; Candidates=Array.Empty<string>();
-        stowingFromVisibility=1; Phase="stowing"; Elapsed=0; actor.Start("invite");
+        stowingFromVisibility=1; Phase="stowing"; Elapsed=0;Recovering=false;Schedule(()=>actor.Start("invite"));
+    }
+    public bool Retarget(SaveData s,string page,string? preselect)
+    {
+        if(!Active || !Matches(s) || Recovering || Phase is not ("approach" or "present" or "opening" or "ready"))return false;
+        if(preselect!=null && !Available(s,preselect))return false;
+        // A manual request updates the same held device. It neither repeats
+        // pickup nor consumes another automatic invitation.
+        Respond();Page=page=="messages" ? "messages" : "create";Reading=false;LetterPage=0;
+        Candidates=World.Available(s).Where(d=>!Scenes.Foundation(d.Id)).OrderBy(d=>s.Layout.Any(p=>p.Id==d.Id && !p.Hidden)).Select(d=>d.Id).ToArray();
+        Selected=preselect;CandidatePage=preselect==null ? 0 : Array.IndexOf(Candidates,preselect)/4;
+        return true;
+    }
+    internal bool RequestRecovery(SaveData s)
+    {
+        if(!Active || !Matches(s) || actor.Dragging)return false;
+        if(Recovering)return true;
+        Recovering=true;confirmed=null;
+        if(Phase=="approach") {
+            // No device is out yet: finish grounded stopping at the present
+            // position, then dispatch without inventing a pickup/stow.
+            Schedule(()=>actor.Visit("invite",actor.X,actor.Y));return true;
+        }
+        if(Phase=="present")return true; // Finish the pickup, then stow.
+        Close(s);return true;
     }
     private void Respond() { automatic=false; UnansweredSeconds=0; }
     public bool Select(SaveData s,string id)
@@ -113,7 +145,8 @@ public sealed class TabletSession
     public void Close(SaveData s) {
         if (!Active) return;
         confirmed=null;
-        if (!Matches(s) || Phase == "approach") { Cancel(s); return; }
+        if (!Matches(s)) { Cancel(s); return; }
+        if(Phase is "approach" or "present") { RequestRecovery(s);return; }
         // An opening screen returns from its current size. Closing a hand-held
         // presentation or post-confirmation pose never flashes a full UI back
         // into view, and repeated closes cannot keep restarting the same exit.
@@ -122,23 +155,35 @@ public sealed class TabletSession
     }
     public void Cancel(SaveData s)
     {
-        bool active=Active; if (active) Generation++;
+        bool active=Active,recovering=Recovering; if (active) Generation++;
+        Reset();
+        if(recovering)actor.CancelActionRecovery();
+        if (active && !actor.Dragging) { actor.Y=Scenes.Home(s).Y; Schedule(()=>actor.Start("stand")); }
+    }
+    private void Reset()
+    {
         Phase="none"; Elapsed=0; confirmed=null; Selected=null; Reading=false; Candidates=Array.Empty<string>();
-        CandidatePage=0; LetterPage=0; UnansweredSeconds=0; automatic=false;
-        if (active && !actor.Dragging) { actor.Y=Scenes.Home(s).Y; actor.Start("stand"); }
+        CandidatePage=0; LetterPage=0; UnansweredSeconds=0; automatic=false;Recovering=false;
+    }
+    private void CompleteRecovery(SaveData s)
+    {
+        Generation++;Reset();actor.CompleteActionRecovery(s);
     }
     // false during approach: the existing walking/settling path advances then.
     public bool Tick(double dt,SaveData s)
     {
         if (!Active) return false;
-        if (!Matches(s) || actor.Dragging) { Cancel(s); return true; }
-        if (Phase == "approach") { if (actor.Current.Id != "invite") return false; Enter("present"); return true; }
+        if (!EnsureValid(s)) return true;
+        if (Phase == "approach") {
+            if (actor.Current.Id != "invite") return false;
+            if(Recovering)CompleteRecovery(s);else Enter("present");return true;
+        }
         // The same bounded frame clock drives the sole actor state machine.
         // Hidden/paused time is deliberately not supplied by the owner.
         if (!double.IsFinite(dt)) return true;
         Elapsed+=Math.Clamp(dt,0,.15);
         switch(Phase) {
-            case "present": if (Elapsed>=.9) Enter("opening"); break;
+            case "present": if (Elapsed>=.9) Enter(Recovering ? "stowing" : "opening"); break;
             case "opening": if (Elapsed>=.65) Enter("ready"); break;
             case "ready": if (automatic) { UnansweredSeconds+=Math.Clamp(dt,0,.15); if (UnansweredSeconds>=20) Close(s); } break;
             case "closing": if (Elapsed>=.55) Enter(confirmed == null ? "stowing" : "tap"); break;
@@ -152,7 +197,7 @@ public sealed class TabletSession
                 }
                 if (Elapsed>=1.4) Enter("observe"); break;
             case "observe": if (Elapsed>=1.7) Enter("stowing"); break;
-            case "stowing": if (Elapsed>=.8) Cancel(s); break;
+            case "stowing": if (Elapsed>=.8) { if(Recovering)CompleteRecovery(s);else Cancel(s); } break;
         }
         return true;
     }

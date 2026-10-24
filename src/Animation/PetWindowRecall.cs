@@ -20,7 +20,7 @@ public sealed partial class PetWindow
         else if(!paused && !manualHidden && !fullscreen && !locked && !Opening.Active && !Scene.Editing && !Save.Settings.ClickThrough && IsVisible) ShowIdeal();
     }
     public void ShowRecall() => BeginRecall();
-    public bool CanRecall => !Recall.Active && Scenes.MemoriesUnlocked(Save) && !Opening.Active && !paused && !manualHidden && !fullscreen && !locked && !closed && IsLoaded && IsVisible && !Scene.Editing && !Save.Settings.ClickThrough && !Behavior.Dragging && !dragging && !Behavior.Journey.Active && !Behavior.Nurture.Active && !Behavior.Tablet.Active && !Behavior.Life.Active && Behavior.Current.Kind is not ("create" or "move");
+    public bool CanRecall => !Recall.Active && Scenes.MemoriesUnlocked(Save) && !Opening.Active && !paused && !manualHidden && !fullscreen && !locked && !closed && IsLoaded && IsVisible && !Scene.Editing && !Save.Settings.ClickThrough && !Behavior.Dragging && !dragging && !Behavior.Bridge.Active && !Behavior.MotionExit.Active && !Behavior.Journey.Active && !Behavior.Nurture.Active && !Behavior.Tablet.Active && !Behavior.Life.Active && Behavior.Current.Kind is not ("create" or "move");
     public bool BeginRecall()
     {
         if(!CanRecall) return false;
@@ -34,6 +34,7 @@ public sealed partial class PetWindow
     public void EndRecall() => Recall.Stop();
     private void FinishRecall()
     {
+        if(RecallCanvas.DisplayedActor is { } actor) Scene.ContinueActorFrom(actor,RecallCanvas.DisplayedActorRoot);
         RecallCanvas.Visibility=Visibility.Collapsed; RecallCanvas.Reset(); Scene.SetStartupPresentation(false); Scene.Visibility=Visibility.Visible;
         lastFrame=watch.Elapsed.TotalSeconds; lastOffer=lastReminder=runtime;
         if(IsLoaded && !closed) { pointerThrough=Save.Settings.ClickThrough; Native.Configure(this,pointerThrough); }

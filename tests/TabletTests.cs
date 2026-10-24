@@ -104,7 +104,8 @@ foreach(string phase in new[]{"approach","present","opening","ready","closing","
     if (phase=="opening") Advance(b,s,.2);
     double expansion=b.Tablet.Expansion; int before=events; b.Tablet.Close(s);
     Check(b.Tablet.Expansion<=expansion+1e-9 && !b.Tablet.Interactive,"关闭阶段不弹出整屏或残留命中 "+phase);
-    if (phase is "present" or "tap" or "observe") Check(!b.Tablet.ScreenVisible && b.Tablet.Phase=="stowing","手持阶段关闭直接收起 "+phase);
+    if (phase=="present") Check(!b.Tablet.ScreenVisible && b.Tablet.Phase=="present" && b.Tablet.Recovering,"拿板中关闭先完成当前拿板再收起");
+    if (phase is "tap" or "observe") Check(!b.Tablet.ScreenVisible && b.Tablet.Phase=="stowing","手持阶段关闭直接收起 "+phase);
     Advance(b,s,.1); double elapsed=b.Tablet.Elapsed; string after=b.Tablet.Phase; b.Tablet.Close(s);
     Check(b.Tablet.Phase==after && b.Tablet.Elapsed==elapsed,"重复关闭不重置计时 "+phase);
     Until(b,s,"none"); Check(events==before,"关闭各阶段不会晚到生成 "+phase);

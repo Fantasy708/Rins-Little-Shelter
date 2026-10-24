@@ -4,6 +4,13 @@ using System.Text.Json;
 var checks = new List<string>();
 void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL: " + name); checks.Add(name); Console.WriteLine("PASS: " + name); }
 var save = new SaveData(); World.Initialize(save);
+void FinishBridge(Behavior actor) {
+    bool frozen=true;int steps=0;
+    while(actor.Bridge.Active && steps++<1000) {
+        double time=actor.Time;actor.Tick(.01,save,false);frozen&=Math.Abs(actor.Time-time)<1e-9;
+    }
+    Check(!actor.Bridge.Active && frozen,"实际身体过渡完成后才推进原动作时钟");
+}
 Check(save.GrowthLayout.Count == 1 && save.FreeLayout.Count == 12, "初始成长场景和自由场景隔离");
 var clock = new CompanionClock(); var start = new DateTime(2026, 10, 10, 10, 0, 0);
 clock.Tick(save, start, false, false);
@@ -61,14 +68,18 @@ while (longVisit.Current.Id == "visit")
 Check(phaseTracksTravel, "回长椅时脚步与实际移动距离同步");
 Check(lateSpeed < peakSpeed*.5 && Math.Abs(longVisit.X-270) < .001, "到长椅前减速且准确到达");
 Check(longVisit.Current.Id == "stand" && longVisit.Settling, "到长椅先站稳再坐下");
+FinishBridge(longVisit);
 longVisit.Tick(.15,save,false); longVisit.Tick(.15,save,false);
 Check(longVisit.Current.Id == "stand", "站稳过渡保留短暂停顿");
 longVisit.Tick(.1,save,false);
+Check(longVisit.Current.Id=="benchSit" && longVisit.Bridge.Active,"站稳后开始真实坐下过渡");
+FinishBridge(longVisit);
 Check(longVisit.Current.Id == "benchSit", "站稳后进入长椅坐姿");
 shortVisit.Tick(.1,save,false); shortVisit.Start("smile"); for(int i=0;i<6;i++) shortVisit.Tick(.1,save,false);
 Check(shortVisit.Current.Id == "smile", "新交互取消待执行的坐下动作");
 void Advance(Behavior actor, double seconds) { while(seconds > .000001) { double dt=Math.Min(.02,seconds); actor.Tick(dt,save,false); seconds-=dt; } }
 var hopping=new Behavior(1) { X=240, Y=252 }; hopping.Start("hop",390,100);
+FinishBridge(hopping);
 Advance(hopping,MotionClips.Hop.Duration*.25);
 Check(hopping.X == 240 && hopping.Y == 252 && MotionClips.Hop.Sample(hopping.Time).FootLift == 0, "轻跃蓄力时双脚不滑动且保持平台高度");
 Advance(hopping,MotionClips.Hop.Duration*.2);
@@ -82,9 +93,15 @@ Check(hopping.Time == frozenTime, "拖动中轻跃动画保持冻结");
 hopping.Released(); Check(hopping.Current.Id == "gaze", "拖动打断轻跃后进入观察而非补播跳跃");
 var turning=new Behavior(1) { X=350, Y=252 }; turning.Start("turn",100,140);
 Check(!turning.FacingLeft && !turning.SequenceMirror && turning.X == 350, "转身开始时不立即镜像或向目标滑动");
+FinishBridge(turning);
 Advance(turning,MotionClips.Turn.Duration*.39); Check(!turning.FacingLeft && turning.X == 350 && turning.Y == 252, "视线与肩髋转动阶段保持原支撑位置");
 Advance(turning,MotionClips.Turn.Duration*.22); Check(turning.FacingLeft && !turning.SequenceMirror, "转身后半程更新朝向而不再次镜像图集");
-Advance(turning,MotionClips.Turn.Duration*.4); Check(turning.Current.Id == "stand" && turning.FacingLeft, "转身结束保持新朝向并自然站稳");
+Advance(turning,MotionClips.Turn.Duration*.4);
+Check(turning.MotionExit.DedicatedPose && turning.FacingLeft && turning.X == 350 && turning.Y == 252,
+    "转身片段结束保持新朝向和支撑点，进入专用收尾而非直接换站姿");
+Advance(turning,.4);
+Check(turning.Current.Id == "stand" && !turning.MotionExit.Active && turning.FacingLeft && turning.X == 350 && turning.Y == 252,
+    "转身收尾后保持新朝向并自然站稳");
 turning.Start("turn"); Check(turning.SequenceMirror, "从左朝向开始时完整反向播放转身姿势");
 turning.Start("smile"); Advance(turning,.5); Check(turning.Current.Id == "smile" && turning.FacingLeft, "点击打断转身后不残留翻面或待执行动作");
 foreach (var clip in new[]{MotionClips.Hop,MotionClips.Turn})
@@ -114,4 +131,3 @@ try
 }
 finally { Directory.Delete(folder, true); }
 Console.WriteLine("All " + checks.Count + " checks passed.");
-

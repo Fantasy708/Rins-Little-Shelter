@@ -9,5 +9,5 @@
     <Compile Include="../src/TabletSession.cs"/><Compile Include="../src/Nurture.cs"/><Compile Include="../src/OutdoorJourney.cs"/><Compile Include="../src/Scenes.cs"/>
     <Compile Include="../src/Models.cs"/><Compile Include="../src/Core.cs"/>
     <Compile Include="../src/MotionClips.cs"/><Compile Include="../src/Storage.cs"/>
-  </ItemGroup>
+  <Compile Include="../src/MotionExit.cs" /><Compile Include="../src/ActionBridge.cs" /></ItemGroup>
 </Project>

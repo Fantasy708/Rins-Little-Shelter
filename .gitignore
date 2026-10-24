@@ -59,3 +59,19 @@ assets/reference/*
 !docs/screenshots/creation-transition.gif
 !docs/screenshots/creation-runtime.png
 !docs/screenshots/creation-material-transition.gif
+
+# Public v1.1.0 motion and memory previews
+!docs/screenshots/motion-trot-registration.gif
+!docs/screenshots/motion-hop-registration.gif
+!docs/screenshots/motion-turn-registration.gif
+!docs/screenshots/motion-trot-exit.gif
+!docs/screenshots/motion-hop-exit.gif
+!docs/screenshots/motion-turn-exit.gif
+!docs/screenshots/climb-continuity.gif
+!docs/screenshots/climb-gait-up.gif
+!docs/screenshots/climb-gait-down.gif
+!docs/screenshots/action-bridges-ground.gif
+!docs/screenshots/action-bridges-upper.gif
+!docs/screenshots/mountain-roundtrip.gif
+!docs/screenshots/action-bridges-runtime.png
+!docs/screenshots/indoor-memory-unified.png

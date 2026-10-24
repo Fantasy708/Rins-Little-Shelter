@@ -96,6 +96,9 @@ public sealed class Atlas
 
 public sealed class ResourceManifest
 {
+    public string ClimbRigAtlas { get; set; }="rin/climb-body-v2.png";
+    public double[] ClimbRigRegion { get; set; }=Array.Empty<double>();
+    public string ClimbRegistration { get; set; }="rin/climb-registration.json";
     public string Poses { get; set; } = "rin/poses.png";
     public string Walk { get; set; } = "rin/walk.png";
     public string Trot { get; set; } = "rin/trot-v2.png";
@@ -111,6 +114,9 @@ public sealed class ResourceManifest
     public double[][] TurnAnchors { get; set; } = Array.Empty<double[]>();
     public double[] HopStandingHeights { get; set; } = Array.Empty<double>();
     public double[] TurnStandingHeights { get; set; } = Array.Empty<double>();
+    public string MotionRegistration { get; set; } = "rin/motion-registration.json";
+    public string MotionExitAtlas { get; set; } = "rin/motion-exits-v1.png";
+    public double[][] MotionExitRegions { get; set; } = Array.Empty<double[]>();
     public double[][] WorldRegions { get; set; } = Array.Empty<double[]>();
     public double[] FeetAnchor { get; set; } = new[] { .5, 1.0 };
     public double[] BenchSeatAnchor { get; set; } = new[] { .5, .56 };
@@ -168,7 +174,9 @@ public sealed partial class Scene : FrameworkElement
     private readonly AudioService audio;
     private readonly Atlas poses, walking, jogging, hopping, turning, world;
     private readonly ResourceManifest manifest;
-    private readonly RegisteredPoseFrames hopFrames, turnFrames;
+    private readonly MotionPoseFrames trotFrames,hopFrames,turnFrames;
+    private readonly MotionPoseFrames motionExitFrames;
+    private readonly ActorPoseRegistration poseRegistration,walkRegistration;
     private readonly ActorTransitionBlend transitionBlend = new();
     private readonly Dictionary<string, (Rect Rect, Atlas.Sprite Sprite)> hits = new();
     private readonly Dictionary<string, double> births = new();
@@ -178,10 +186,6 @@ public sealed partial class Scene : FrameworkElement
     private string? lastDrawKey;
     private Atlas.Sprite? lastDrawSprite, oldDrawSprite;
     private Rect lastDrawRect, oldDrawRect;
-    private bool lastDrawSeated, oldDrawSeated, lastDrawLeft, oldDrawLeft;
-    private bool lastDrawRaw, oldDrawRaw;
-    private bool lastDrawSequence, oldDrawSequence;
-    private double lastDrawAnchor, oldDrawAnchor;
     private double poseChanged;
     public double Time { get; set; }
     public bool Editing { get; set; }
@@ -201,12 +205,21 @@ public sealed partial class Scene : FrameworkElement
         poses = new Atlas(Path.Combine(root, manifest.Poses), manifest.PoseRegions);
         walking = new Atlas(Path.Combine(root, manifest.Walk), manifest.WalkRegions);
         jogging = new Atlas(Path.Combine(root, manifest.Trot), manifest.TrotRegions);
+        poseRegistration=ActorPoseRegistration.ForPoses(poses);
+        walkRegistration=ActorPoseRegistration.ForLocomotion(walking);
         hopping = new Atlas(Path.Combine(root, manifest.Hop), manifest.HopRegions);
         turning = new Atlas(Path.Combine(root, manifest.Turn), manifest.TurnRegions);
         ValidateSequence(hopping, manifest.HopAnchors, manifest.HopStandingHeights);
         ValidateSequence(turning, manifest.TurnAnchors, manifest.TurnStandingHeights);
-        hopFrames=new RegisteredPoseFrames(hopping,manifest.HopAnchors,manifest.HopStandingHeights);
-        turnFrames=new RegisteredPoseFrames(turning,manifest.TurnAnchors,manifest.TurnStandingHeights);
+        var anatomy=MotionAnatomy.Load(Path.Combine(root,manifest.MotionRegistration));
+        bridgeRegistration=ActorPoseBridgeRegistration.Load(Path.Combine(root,"rin/pose-bridges.json"));
+        bridgeArt=new ActionBridgeArt(root);
+        trotFrames=new MotionPoseFrames(jogging,anatomy.Trot,anatomy);
+        hopFrames=new MotionPoseFrames(hopping,anatomy.Hop,anatomy);
+        turnFrames=new MotionPoseFrames(turning,anatomy.Turn,anatomy);
+        var exits=new Atlas(Path.Combine(root,manifest.MotionExitAtlas),manifest.MotionExitRegions,true);
+        if(exits.Sprites.Length!=24 || anatomy.Stops.Length!=24) throw new InvalidDataException("动作收尾姿势不完整");
+        motionExitFrames=new MotionPoseFrames(exits,anatomy.Stops,anatomy);
         world = new Atlas(Path.Combine(root, manifest.World), manifest.WorldRegions);
         LoadLifeAssets(root);
         LoadTabletAssets(root);
@@ -278,8 +291,10 @@ public sealed partial class Scene : FrameworkElement
             if(p.Id=="mountainBase") rect.Y+=18; // Authored empty sky/ground padding keeps the summit at the route contact.
             bool material=HasCreationMaterial(p.Id);
             double appear = material && !creationCommitted ? 0 : ObjectAppearance(p.Id);
-            double visibleOpacity=appear*(save.SceneId == "indoor" && !Scenes.Foundation(p.Id) ? 1-behavior.Life.Atmosphere : 1);
-            dc.PushOpacity(material ? save.SceneId == "indoor" && !Scenes.Foundation(p.Id) ? 1-behavior.Life.Atmosphere : 1 : visibleOpacity);
+            // Recollections share the current bedroom and saved furnishings.
+            // Only the people and the quiet memory lighting change.
+            double visibleOpacity=appear;
+            dc.PushOpacity(material ? 1 : visibleOpacity);
             double appearanceScale=material || creationRevealObjects.Contains(p.Id)?1:.85+.15*appear;
             dc.PushTransform(new ScaleTransform(appearanceScale,appearanceScale,p.X,p.Y));
             if (p.Id == "stars") dc.PushOpacity(night || ideal || audio.IsShelter ? .95 : .28);
@@ -292,7 +307,6 @@ public sealed partial class Scene : FrameworkElement
                 if(material)dc.Pop();
             }
             if(!DrawCreationMaterial(dc,p.Id,sprite,rect))dc.DrawImage(sprite.Image, rect);
-            if (p.Id == "roomBase" && behavior.Life.Atmosphere > 0) { dc.PushOpacity(behavior.Life.Atmosphere); dc.DrawImage(environments.Sprites[1].Image,rect); dc.Pop(); }
             dc.Pop(); dc.Pop(); dc.Pop(); if (visibleOpacity > .5) hits[p.Id] = (rect, sprite);
             if (p.Id == "house" && save.SceneId == "outdoor" && visibleOpacity>.5) doorRect=new Rect(rect.X+rect.Width*.26,rect.Y+rect.Height*.52,rect.Width*.15,rect.Height*.39);
             if (p.Id is "lamp" or "house" && (night || theme == "傍晚" || FeedbackObject == p.Id && Time < FeedbackUntil))
@@ -316,7 +330,6 @@ public sealed partial class Scene : FrameworkElement
         DrawPresentRin(dc);
         DrawOutdoorContactEffects(dc);
         DrawNurtureGrass(dc);
-        DrawHeldTablet(dc);
         DrawMemoryControls(dc);
         DrawTablet(dc,theme);
         if (!behavior.Tablet.Active && Time < BubbleUntil) DrawBubble(dc, Bubble);
@@ -324,34 +337,37 @@ public sealed partial class Scene : FrameworkElement
     }
     private void DrawRin(DrawingContext dc)
     {
+        if(behavior.MotionExit.DedicatedPose) { DrawMotionExit(dc); return; }
+        if(behavior.Journey.Phase is "ascendPrepare" or "descendPrepare" or "summitSettle" or "footSettle") { DrawMountainBridge(dc);return; }
         var action=behavior.Current;
+        int basePose=behavior.Journey.Active && behavior.Journey.Phase=="approach" && action.Kind=="journey"
+            || behavior.Tablet.Active && behavior.Tablet.Phase=="approach" && action.Id=="invite" ? 0 : action.Pose;
         bool move=behavior.IsLocomotion;
         var clip=MotionClips.Find(action.Id);
         bool tabletPose=behavior.Tablet.DedicatedPose && behavior.Tablet.Matches(save);
         bool nurturePose=behavior.Nurture.DedicatedPose;
         bool climbingPose=behavior.Journey.DedicatedPose;
         bool polarPose=behavior.Journey.Active && behavior.Journey.Phase=="snow";
-        bool raw=clip != null || tabletPose || nurturePose || climbingPose || polarPose;
+        bool mountainJourney=behavior.Journey.Active && behavior.Journey.ActionId=="mountainClimb";
+        bool journeyWalkPose=mountainJourney && move && action.Id!="trot";
+        bool journeySkyPose=mountainJourney && behavior.Journey.Phase=="look" && action.Id=="sky";
+        bool raw=clip != null || tabletPose || nurturePose || climbingPose || polarPose || journeyWalkPose || journeySkyPose;
         bool left=raw ? behavior.SequenceMirror : behavior.FacingLeft;
         if (tabletPose) left=false;
         if (nurturePose) left=false;
         if (climbingPose) left=behavior.Journey.Direction<0;
         if (polarPose) left=false;
+        if(journeyWalkPose || journeySkyPose)left=behavior.FacingLeft;
         // The sky-watching pose was drawn looking left in its source frame.
         // Orient this pose toward the actual window instead of the walk facing.
         if (action.Id == "windowWatch" && save.SceneId == "indoor" && save.Layout.FirstOrDefault(p=>p.Id == "window" && !p.Hidden) is { } window) left=window.X>behavior.X;
         double breath=move || raw ? 0 : Math.Sin(Time*1.5)*.45;
         double seatOffset=action.Id == "swing" ? 45 : 0;
-        string key=(polarPose ? "snow:"+behavior.Journey.Generation : climbingPose ? "climb:"+behavior.Journey.Generation+":"+behavior.Journey.Direction : nurturePose ? "nurture:"+behavior.Nurture.Generation : tabletPose ? "tablet:"+behavior.Tablet.Generation : raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Pose+":"+seatOffset)+(left ? ":left" : ":right");
+        string tabletBody=behavior.Tablet.Phase=="stowing" ? "stow" : behavior.Tablet.Phase is "tap" or "observe" ? "tap" : "present";
+        string key=(polarPose ? "snow:"+behavior.Journey.Generation : climbingPose ? "climb:"+behavior.Journey.Generation+":"+behavior.Journey.Direction : nurturePose ? "nurture:"+behavior.Nurture.Generation+(behavior.Nurture.PoseFrame>=10 ? ":rise" : ":lower") : tabletPose ? "tablet:"+behavior.Tablet.Generation+":"+tabletBody : raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Id+":"+behavior.ActionRevision+":"+seatOffset)+(left ? ":left" : ":right");
         // Capture the last displayed raster before a reusable pose/transition
         // buffer is updated, including interrupted and nested crossfades.
-        if (key != lastDrawKey)
-        {
-            oldDrawSprite=lastDrawSprite == null ? null : lastDrawRaw ? ActorBitmapBlend.Snapshot(lastDrawSprite) : lastDrawSprite;
-            oldDrawRect=lastDrawRect; oldDrawSeated=lastDrawSeated;
-            oldDrawLeft=lastDrawLeft; oldDrawRaw=lastDrawRaw; oldDrawSequence=lastDrawSequence;
-            oldDrawAnchor=lastDrawAnchor; lastDrawKey=key; poseChanged=Time;
-        }
+        PrepareActorTransition(key);
         Atlas.Sprite sprite;
         Rect rect;
         if (polarPose)
@@ -361,8 +377,13 @@ public sealed partial class Scene : FrameworkElement
         }
         else if (climbingPose)
         {
-            int frame=behavior.Journey.PoseFrame; sprite=climbFrames.Sample(new ClipSample(frame,frame,0,0));
-            rect=new Rect(behavior.X+climbFrames.Bounds.X,behavior.Y+climbFrames.Bounds.Y,climbFrames.Bounds.Width,climbFrames.Bounds.Height);
+            sprite=DrawClimbFrame();
+            rect=new Rect(behavior.X+climbRig.Bounds.X,behavior.Y+climbRig.Bounds.Y+climbDrop,climbRig.Bounds.Width,climbRig.Bounds.Height);
+        }
+        else if(journeySkyPose)
+        {
+            sprite=journeySkyFrames.Frame(0);
+            rect=new Rect(behavior.X+journeySkyFrames.Bounds.X,behavior.Y+journeySkyFrames.Bounds.Y,journeySkyFrames.Bounds.Width,journeySkyFrames.Bounds.Height);
         }
         else if (nurturePose)
         {
@@ -386,17 +407,19 @@ public sealed partial class Scene : FrameworkElement
         {
             var motion=action.Id == "trot" ? jogging : walking;
             int frame=(int)(behavior.StepPhase*motion.Sprites.Length)%motion.Sprites.Length;
-            sprite=motion.Sprites[frame];
-            double scale=150.0/sprite.RegistrationHeight;
+            if(action.Id=="retreat")frame=(motion.Sprites.Length-frame)%motion.Sprites.Length;
+            sprite=action.Id=="trot" ? trotFrames.Frame(frame) : journeyWalkPose ? journeyWalkFrames.Frame(frame) : motion.Sprites[frame];
             double stepProgress=behavior.StepPhase*2%1;
             double bounce=-Math.Sin(stepProgress*Math.PI)*(action.Id == "trot" ? 2 : .45);
-            rect=new Rect(behavior.X+(sprite.CropLeft-sprite.HeadCenter)*scale, behavior.Y+(sprite.CropTop-sprite.RegistrationGround)*scale+bounce, sprite.Width*scale,sprite.Height*scale);
+            rect=action.Id=="trot"
+                ? new Rect(behavior.X+trotFrames.Bounds.X,behavior.Y+bounce+trotFrames.Bounds.Y,trotFrames.Bounds.Width,trotFrames.Bounds.Height)
+                : journeyWalkPose ? new Rect(behavior.X+journeyWalkFrames.Bounds.X,behavior.Y+bounce+journeyWalkFrames.Bounds.Y,journeyWalkFrames.Bounds.Width,journeyWalkFrames.Bounds.Height)
+                : walkRegistration.Bounds(frame,new Point(behavior.X,behavior.Y+bounce));
         }
         else
         {
-            sprite=poses.Sprites[action.Pose];
-            double scale=150.0/poses.Sprites[0].Height;
-            rect=new Rect(behavior.X-sprite.Width*scale/2,behavior.Y-sprite.Height*scale+seatOffset,sprite.Width*scale,sprite.Height*scale);
+            sprite=poses.Sprites[basePose];
+            rect=poseRegistration.Bounds(basePose,new Point(behavior.X,behavior.Y+seatOffset));
             // Placement.Y is the furniture's ground anchor, not its seat surface.
             // Keep the actor's drag offset, but register the seated hips to the
             // wooden seat rather than aligning her sandals with the chair legs.
@@ -407,13 +430,12 @@ public sealed partial class Scene : FrameworkElement
                 var seatAnchor=action.Id == "roomRest" ? manifest.BedSeatAnchor : manifest.BenchSeatAnchor;
                 double seatX=behavior.X+image.Width*k*(seatAnchor[0]-.5);
                 double seatY=behavior.Y-image.Height*k*(1-seatAnchor[1]);
-                rect=new Rect(seatX-rect.Width*manifest.SeatedContactAnchor[0],seatY-rect.Height*manifest.SeatedContactAnchor[1],rect.Width,rect.Height);
+                rect=poseRegistration.SeatBounds(action.Pose,new Point(seatX,seatY),manifest.SeatedContactAnchor);
             }
         }
         bool seated=!move && !raw && action.Pose == 7;
         SetOutdoorContacts(rect,left,climbingPose);
         actorHits.Clear();
-        double fade=oldDrawSprite == null ? 1 : Math.Clamp((Time-poseChanged)/(raw || oldDrawSequence ? .08 : .25),0,1);
         void Draw(DrawingContext target, Atlas.Sprite image, Rect destination, bool sitting, bool mirror, bool unlayered, double anchor)
         {
             if (mirror) target.PushTransform(new ScaleTransform(-1,1,anchor,behavior.Y));
@@ -421,26 +443,30 @@ public sealed partial class Scene : FrameworkElement
             else DrawLayered(target,image,destination,breath,sitting);
             if (mirror) target.Pop();
         }
-        if (fade < 1 && oldDrawSprite != null)
-        {
-            Rect Visible(Rect r, bool mirror, double anchor) => mirror ? new Rect(2*anchor-r.Right,r.Y,r.Width,r.Height) : r;
-            var bounds=Visible(oldDrawRect,oldDrawLeft,oldDrawAnchor); bounds.Union(Visible(rect,left,behavior.X)); bounds.Inflate(4,4);
-            bounds=ActorBitmapBlend.PixelBounds(bounds);
-            var output=transitionBlend.Blend(bounds,
-                target=>Draw(target,oldDrawSprite,oldDrawRect,oldDrawSeated,oldDrawLeft,oldDrawRaw,oldDrawAnchor),
-                target=>Draw(target,sprite,rect,seated,left,raw,behavior.X),fade);
-            dc.DrawImage(output.Image,bounds);
-            actorHits.Add(new(bounds,output,false,0,double.PositiveInfinity,0,1));
-            lastDrawSprite=output; lastDrawRect=bounds; lastDrawSeated=false; lastDrawLeft=false; lastDrawRaw=true; lastDrawAnchor=0;
+        var target=new DrawingGroup();using(var draw=target.Open()) {
+            Draw(draw,sprite,rect,seated,left,raw || action.Id=="trot",behavior.X);
+            DrawHeldTablet(draw);
         }
-        else
-        {
-            Draw(dc,sprite,rect,seated,left,raw,behavior.X);
+        if(climbingPose)nextActorControls=ClimbControls(sprite,rect);
+        else if(tabletPose)nextActorControls=WorldControls(tabletFrames.Controls(behavior.Tablet.PoseFrame),new Point(behavior.X,behavior.Y),false);
+        else if(clip!=null) {
+            var sample=clip.Sample(behavior.Time);var frames=action.Id=="hop" ? hopFrames : turnFrames;
+            nextActorControls=WorldControls(frames.Controls(sample.Blend<.5 ? sample.From : sample.To),new Point(behavior.X,behavior.Y-sample.FootLift),left);
+        }
+        else if(move && (action.Id=="trot" || journeyWalkPose)) {
+            int frame=(int)(behavior.StepPhase*walking.Sprites.Length)%walking.Sprites.Length;
+            if(action.Id=="retreat")frame=(walking.Sprites.Length-frame)%walking.Sprites.Length;
+            double bounce=-Math.Sin(behavior.StepPhase*2%1*Math.PI)*(action.Id=="trot" ? 2 : .45);
+            nextActorControls=WorldControls((action.Id=="trot" ? trotFrames : journeyWalkFrames).Controls(frame),new Point(behavior.X,behavior.Y+bounce),left);
+        }
+        else if(journeySkyPose)nextActorControls=WorldControls(journeySkyFrames.Controls(0),new Point(behavior.X,behavior.Y),left);
+        else nextActorControls=!raw && !move ? bridgeRegistration.Map(basePose,sprite,rect,left,behavior.X) : null;
+        bool transition=ActorTransitionActive;
+        PresentActor(dc,target,rect,sprite,new Point(behavior.X,behavior.Y));
+        if(!transition) {
             double hinge=rect.Y+rect.Height*SeatedHip;
             actorHits.Add(new(rect,sprite,left,behavior.X,hinge,seated ? LegSwing/(rect.Bottom-hinge) : 0,1));
-            lastDrawSprite=sprite; lastDrawRect=rect; lastDrawSeated=seated; lastDrawLeft=left; lastDrawRaw=raw; lastDrawAnchor=behavior.X;
         }
-        lastDrawSequence=raw;
     }
     private static void ValidateSequence(Atlas atlas, double[][] anchors, double[] heights)
     {

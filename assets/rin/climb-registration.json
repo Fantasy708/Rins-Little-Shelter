@@ -1,0 +1,200 @@
+{
+  "HeadHeight": 31.06508875739645,
+  "TorsoLength": 57.248520710059175,
+  "LegLength": 61.68639053254438,
+  "Climb": [
+    {
+      "HeadX": 146.89,
+      "Crown": 3,
+      "Chin": 98,
+      "Hip": 258,
+      "TorsoLength": 160,
+      "LegLength": 162.298116,
+      "Root": [
+        136.5,
+        410
+      ]
+    }
+  ],
+  "RigJoints": [
+    [
+      [
+        145,
+        258
+      ],
+      [
+        156,
+        323
+      ],
+      [
+        177,
+        372
+      ],
+      [
+        213,
+        390
+      ]
+    ],
+    [
+      [
+        128,
+        258
+      ],
+      [
+        123,
+        295
+      ],
+      [
+        74,
+        357
+      ],
+      [
+        87,
+        392
+      ]
+    ]
+  ],
+  "RigSoles": [
+    [
+      190,
+      410
+    ],
+    [
+      73,
+      408
+    ]
+  ],
+  "RigBoneLengths": [
+    [
+      65.924199,
+      53.310412
+    ],
+    [
+      37.336309,
+      79.025312
+    ]
+  ],
+  "SourceSha256": {
+    "climb-body-v2.png": "248C6DE1724B7A060684C74C2B0F711F597E8D9375A14963283DAE55A52A46A7"
+  },
+  "RegistrationNotes": [
+    "Coordinates are relative to the exact integer Atlas cell [70,87,238,413] before alpha trimming.",
+    "Near leg is the pale foreground straight shin with the right sandal; far leg is the partially occluded rear thigh and left sandal. Hip identities at the shorts hem are inferred from the drawn overlap, not motion capture.",
+    "Crown/chin/hip and both physical bone segment lengths were measured separately from source silhouette height. LegLength is mean hip-knee-ankle polyline plus ankle-to-source-sole vertical depth; this matches the existing full leg-to-ground target without stretching a bent pose to standing total height.",
+    "RootX is the pelvis midpoint vertical axis (206.5 absolute); RootY=497 is the source ground registration. Neither is copied into foot-contact measurements.",
+    "RigSoles are independent visible sole observations. The rear sandal is tilted; the sole midpoint at x143/y495 is the ground-contact side, not the ankle or shoe toe.",
+    "First-batch multi-frame sheets were rejected as an alternating gait; only one complete connected original pose supplies this rig texture."
+  ],
+  "JourneyWalk": [
+    {
+      "HeadX": 260.063268,
+      "Crown": 32,
+      "Chin": 122,
+      "Hip": 281,
+      "TorsoLength": 159,
+      "LegLength": 159,
+      "Root": [
+        260.063268,
+        437
+      ]
+    },
+    {
+      "HeadX": 255.795659,
+      "Crown": 32,
+      "Chin": 121,
+      "Hip": 281,
+      "TorsoLength": 160,
+      "LegLength": 159,
+      "Root": [
+        255.795659,
+        437
+      ]
+    },
+    {
+      "HeadX": 256.550905,
+      "Crown": 32,
+      "Chin": 121,
+      "Hip": 281,
+      "TorsoLength": 160,
+      "LegLength": 159,
+      "Root": [
+        256.550905,
+        437
+      ]
+    },
+    {
+      "HeadX": 252.730798,
+      "Crown": 32,
+      "Chin": 121,
+      "Hip": 287,
+      "TorsoLength": 166,
+      "LegLength": 159,
+      "Root": [
+        252.730798,
+        437
+      ]
+    },
+    {
+      "HeadX": 261.507575,
+      "Crown": 28,
+      "Chin": 116,
+      "Hip": 267,
+      "TorsoLength": 151,
+      "LegLength": 160,
+      "Root": [
+        261.507575,
+        426
+      ]
+    },
+    {
+      "HeadX": 260.649209,
+      "Crown": 27,
+      "Chin": 115,
+      "Hip": 270,
+      "TorsoLength": 155,
+      "LegLength": 160,
+      "Root": [
+        260.649209,
+        426
+      ]
+    },
+    {
+      "HeadX": 251.416724,
+      "Crown": 25,
+      "Chin": 114,
+      "Hip": 270,
+      "TorsoLength": 156,
+      "LegLength": 160,
+      "Root": [
+        251.416724,
+        426
+      ]
+    },
+    {
+      "HeadX": 249.572236,
+      "Crown": 24,
+      "Chin": 114,
+      "Hip": 270,
+      "TorsoLength": 156,
+      "LegLength": 160,
+      "Root": [
+        249.572236,
+        426
+      ]
+    }
+  ],
+  "JourneySky": [
+    {
+      "HeadX": 167.163488,
+      "Crown": 97,
+      "Chin": 167,
+      "Hip": 297,
+      "TorsoLength": 130,
+      "LegLength": 136,
+      "Root": [
+        157.217136,
+        433
+      ]
+    }
+  ]
+}

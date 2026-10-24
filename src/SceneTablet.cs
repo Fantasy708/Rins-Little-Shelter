@@ -18,7 +18,7 @@ public sealed partial class Scene
         var atlas=new Atlas(Path.Combine(root,manifest.TabletAtlas),manifest.TabletRegions);
         if (atlas.Sprites.Length != 12 || manifest.TabletFeet.Length != 12 || manifest.TabletHeights.Length != 12 || manifest.TabletHands.Length != 12)
             throw new InvalidDataException("平板姿势/脚部/握持锚点不完整");
-        tabletFrames=new RegisteredPoseFrames(atlas,manifest.TabletFeet,manifest.TabletHeights);
+        tabletFrames=new RegisteredPoseFrames(atlas,manifest.TabletFeet,manifest.TabletHeights,upright:true);
     }
     public void ClearTabletHits()
     {

@@ -18,11 +18,10 @@ internal static class VisualTests
         scene.Measure(new Size(480, 340)); scene.Arrange(new Rect(0, 0, 480, 340));
         BitmapSource Render(string file, double scale = 1)
         {
+            // Catalogue stills require the requested body to have actually
+            // arrived. Entry/exit boundary pixels have their dedicated suite.
+            FinishBodyPreparation(scene,behavior,save);
             scene.InvalidateVisual(); scene.UpdateLayout();
-            // The first render starts the production 250 ms pose crossfade.
-            // Sample after it settles, rather than capturing the outgoing pose.
-            var warmup = new RenderTargetBitmap(480, 340, 96, 96, PixelFormats.Pbgra32); warmup.Render(scene);
-            scene.Time += .3; scene.InvalidateVisual(); scene.UpdateLayout();
             var target = new RenderTargetBitmap((int)(480 * scale), (int)(340 * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32); target.Render(scene);
             using var f = File.Create(Path.Combine(output, file)); var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(target)); png.Save(f); return target;
         }
@@ -38,8 +37,10 @@ internal static class VisualTests
         for (int i = 0; i < Actions.All.Length; i++)
         {
             behavior.X = 240; behavior.Y = 252; behavior.Start(Actions.All[i].Id, 280, 252, "flower");
-            double sample=Math.Min(1.2,behavior.ActiveDuration*.5); for (int j = 0; j < 12; j++) behavior.Tick(sample/12, save, false);
-            scene.Time += 4; Render("action-" + Actions.All[i].Id + ".png");
+            FinishBodyPreparation(scene,behavior,save);
+            double sample=Math.Min(1.2,behavior.ActiveDuration*.5);
+            AdvanceScene(scene,behavior,save,sample);
+            Render("action-" + Actions.All[i].Id + ".png");
         }
         behavior.Start("stand"); behavior.X = 240; scene.Time += 3;
         foreach (double scale in new[] { 1.0, 1.5, 2.0 }) Render("dpi-" + scale.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + ".png", scale);
@@ -80,7 +81,8 @@ internal static class VisualTests
                 scene.Time = time; scene.InvalidateVisual(); scene.UpdateLayout();
                 var frame = new RenderTargetBitmap((int)(480*dpi),(int)(340*dpi),96*dpi,96*dpi,PixelFormats.Pbgra32); frame.Render(scene); return frame;
             }
-            Frame(0); // Start and settle the normal pose transition.
+            Frame(0);
+            FinishBodyPreparation(scene,behavior,save);
             var positive = Frame((Math.PI/2 + Math.PI*2)/1.8);
             var negative = Frame((Math.PI*3/2 + Math.PI*2)/1.8);
             double Shift(double fraction) => (RowCenter(positive,actor,fraction,dpi) - RowCenter(negative,actor,fraction,dpi))/dpi;
@@ -147,7 +149,7 @@ internal static class VisualTests
                 scene.Time=time; scene.InvalidateVisual(); scene.UpdateLayout();
                 var image=new RenderTargetBitmap((int)(480*dpi),(int)(340*dpi),96*dpi,96*dpi,PixelFormats.Pbgra32); image.Render(scene); return image;
             }
-            Frame(0); var image=Frame(4);
+            Frame(0); FinishBodyPreparation(scene,behavior,save); var image=Frame(4);
             double seatY=bench.Y-benchSprite.Height*k*.44;
             // Compare a production-rendered torso scanline to the source seated
             // sprite: this catches registration to the chair feet or backrest.
@@ -170,6 +172,7 @@ internal static class VisualTests
         var complete=new SaveData(); complete.Settings.FreeMode=true; complete.Settings.Music=false; complete.Settings.Theme="白天"; World.Initialize(complete);
         var actor=new Behavior(1){X=270,Y=252}; actor.Start("benchSit"); using var quiet=new AudioService();
         var whole=new Scene(complete,actor,quiet){Width=480,Height=340}; whole.Measure(new Size(480,340)); whole.Arrange(new Rect(0,0,480,340));
+        FinishBodyPreparation(whole,actor,complete);
         whole.Time=4; whole.InvalidateVisual(); whole.UpdateLayout(); var full=new RenderTargetBitmap(960,680,192,192,PixelFormats.Pbgra32); full.Render(whole);
         SavePng(full,Path.Combine(output,"bench-seat-corrected.png"));
         Console.WriteLine($"PASS: {cases} bench contact cases, wooden-seat registration, moved chair, both modes, both directions, three DPI scales and seated alpha hit regions.");
@@ -189,6 +192,34 @@ internal static class VisualTests
     private static void SavePng(BitmapSource bitmap, string path)
     {
         using var file=File.Create(path); var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); encoder.Save(file);
+    }
+    private static void DrawObservedFrame(Scene scene)
+    {
+        scene.InvalidateVisual();scene.UpdateLayout();
+        var frame=new RenderTargetBitmap(480,340,96,96,PixelFormats.Pbgra32);frame.Render(scene);
+    }
+    private static double FinishBodyPreparation(Scene scene,Behavior behavior,SaveData save)
+    {
+        // Observe every real preparation tick, including its exact endpoint.
+        // Changing Scene.Time alone cannot advance Behavior's body route.
+        string requested=behavior.Current.Id;
+        bool preparing=behavior.Bridge.Active;
+        double elapsed=0;
+        DrawObservedFrame(scene);
+        for(int i=0;behavior.Bridge.Active && i<600;i++) {
+            const double dt=1.0/60;
+            behavior.Tick(dt,save,false);scene.Time+=dt;elapsed+=dt;DrawObservedFrame(scene);
+        }
+        if(behavior.Bridge.Active || preparing && (behavior.Current.Id!=requested || behavior.Time!=0))
+            throw new Exception("Catalogue body preparation did not reach the requested action with its original clock still frozen.");
+        return elapsed;
+    }
+    private static void AdvanceScene(Scene scene,Behavior behavior,SaveData save,double seconds)
+    {
+        while(seconds>1e-8) {
+            double dt=Math.Min(1.0/60,seconds);
+            behavior.Tick(dt,save,false);scene.Time+=dt;seconds-=dt;DrawObservedFrame(scene);
+        }
     }
     private static void CheckLocomotion(string output)
     {
@@ -220,6 +251,7 @@ internal static class VisualTests
         var atlas=new Atlas(Path.Combine(root,manifest.Trot),manifest.TrotRegions);
         if (atlas.Sprites.Length!=8 || atlas.Sprites.Any(s=>s.CropTop<15 || s.CropTop+s.Height>s.CellHeight-5 || s.CropLeft<5 || s.CropLeft+s.Width>s.CellWidth-5)) throw new Exception("Jog atlas contains clipped or cross-cell sprites.");
         behavior.Start("trot",350,252);
+        elapsed+=FinishBodyPreparation(scene,behavior,save);
         var contact=Frame(); AdvanceTo(.25); var flight=Frame();
         SavePng(contact,Path.Combine(output,"trot-contact.png")); SavePng(flight,Path.Combine(output,"trot-flight.png"));
         AdvanceTo(.5); var oppositeContact=Frame(); if(Math.Abs(FeetY(oppositeContact)-FeetY(contact))>3) throw new Exception("Both jog contact phases must share the ground line.");
@@ -228,7 +260,8 @@ internal static class VisualTests
         using(var drawing=preview.RenderOpen())
         {
             drawing.DrawRectangle(Brushes.White,null,new Rect(0,0,1120,720));
-            behavior.X=120; behavior.Start("trot",350,252);
+            behavior.Start("stand");elapsed+=FinishBodyPreparation(scene,behavior,save);
+            behavior.X=120;behavior.Start("trot",350,252);elapsed+=FinishBodyPreparation(scene,behavior,save);
             for(int i=0;i<8;i++)
             {
                 AdvanceTo(i/8.0); var image=Frame(); SavePng(image,Path.Combine(output,$"trot-phase-{i}.png"));
@@ -245,12 +278,12 @@ internal static class VisualTests
             behavior.Tick(.05,save,false); elapsed+=.05;
             sawWalking |= behavior.IsLocomotion;
             sawSettling |= behavior.Settling;
-            sawSitting |= behavior.Current.Id == "benchSit";
-            if (elapsed>=nextCapture) { SavePng(Frame(false),Path.Combine(output,$"bench-return-{images++:00}.png")); nextCapture=elapsed+.25; }
+            var observed=Frame(false);
+            sawSitting |= behavior.Current.Id == "benchSit" && !behavior.Bridge.Active;
+            if (elapsed>=nextCapture) { SavePng(observed,Path.Combine(output,$"bench-return-{images++:00}.png")); nextCapture=elapsed+.25; }
             if (images>30) throw new Exception("Bench approach did not finish.");
         }
-        Frame(false); // Register the new seated image before sampling its crossfade.
-        for(int i=0;i<6;i++) { behavior.Tick(.05,save,false); elapsed+=.05; } SavePng(Frame(false),Path.Combine(output,"bench-return-seated.png"));
+        SavePng(Frame(false),Path.Combine(output,"bench-return-seated.png"));
         if (!sawWalking || !sawSettling || Math.Abs(behavior.X-270)>.001) throw new Exception("Bench approach must walk, settle, then sit at the destination.");
         Console.WriteLine("PASS: distinct jog flight and grounded registration; walk-to-bench, deceleration, standing settle and sit sequence rendered.");
     }
@@ -268,10 +301,11 @@ internal static class VisualTests
             double elapsed=0;
             BitmapSource At(double seconds)
             {
-                while(elapsed<seconds-.000001) { double dt=Math.Min(.01,seconds-elapsed); behavior.Tick(dt,save,false); elapsed+=dt; }
+                while(behavior.Time<seconds-.000001) { double dt=Math.Min(.01,seconds-behavior.Time); behavior.Tick(dt,save,false); elapsed+=dt;scene.Time=elapsed;DrawObservedFrame(scene); }
                 scene.Time=elapsed; scene.InvalidateVisual(); scene.UpdateLayout();
                 var bitmap=new RenderTargetBitmap((int)(480*dpi),(int)(340*dpi),96*dpi,96*dpi,PixelFormats.Pbgra32); bitmap.Render(scene); return bitmap;
             }
+            elapsed+=FinishBodyPreparation(scene,behavior,save);
             At(0); var clip=MotionClips.Find(id)!;
             foreach(int pair in new[]{1,4,6,9})
             {
@@ -354,10 +388,11 @@ internal static class VisualTests
             var clip=MotionClips.Find(id)!; double elapsed=0;
             BitmapSource At(double seconds)
             {
-                while(elapsed<seconds-.000001) { double dt=Math.Min(.01,seconds-elapsed); behavior.Tick(dt,save,false); elapsed+=dt; }
+                while(behavior.Time<seconds-.000001) { double dt=Math.Min(.01,seconds-behavior.Time); behavior.Tick(dt,save,false); elapsed+=dt;scene.Time=elapsed;DrawObservedFrame(scene); }
                 scene.Time=elapsed; scene.InvalidateVisual(); scene.UpdateLayout();
                 var bitmap=new RenderTargetBitmap((int)(480*dpi),(int)(340*dpi),96*dpi,96*dpi,PixelFormats.Pbgra32); bitmap.Render(scene); return bitmap;
             }
+            elapsed+=FinishBodyPreparation(scene,behavior,save);
             var frames=new BitmapSource[12]; var bounds=new Rect[12]; var roots=new double[12];
             for(int frame=0;frame<12;frame++)
             {
@@ -397,7 +432,8 @@ internal static class VisualTests
                 var sheet=new RenderTargetBitmap(960,750,96,96,PixelFormats.Pbgra32); sheet.Render(preview); SavePng(sheet,Path.Combine(output,id+"-preview.png"));
             }
             // Intermediate samples exercise two different visible sprite frames.
-            behavior.Start(id,mirror ? 120 : 360,252); elapsed=0; scene.Time=0;
+            behavior.Start("stand");elapsed+=FinishBodyPreparation(scene,behavior,save);
+            behavior.Start(id,mirror ? 120 : 360,252);elapsed+=FinishBodyPreparation(scene,behavior,save);
             At(0);
             foreach(double phase in new[]{.255,.445,.59,.775})
             {
@@ -419,19 +455,22 @@ internal static class VisualTests
             var save=new SaveData(); World.Initialize(save); save.Settings.Music=false; save.Settings.Theme="白天";
             var behavior=new Behavior(1); behavior.Start(id); using var audio=new AudioService();
             var scene=new Scene(save,behavior,audio){Width=480,Height=340}; scene.Measure(new Size(480,340)); scene.Arrange(new Rect(0,0,480,340));
-            int count=(int)Math.Ceiling((MotionClips.Find(id)!.Duration+.32)/.02);
-            for(int i=0;i<=count;i++)
+            bool returned=false;
+            for(int i=0;i<=450;i++)
             {
                 scene.Time=i*.02; scene.InvalidateVisual(); scene.UpdateLayout();
                 var image=new RenderTargetBitmap(480,340,96,96,PixelFormats.Pbgra32); image.Render(scene);
-                SavePng(image,Path.Combine(output,$"{id}-motion-{i:000}.png")); behavior.Tick(.02,save,false);
+                SavePng(image,Path.Combine(output,$"{id}-motion-{i:000}.png"));
+                if(i>0 && behavior.Current.Id=="stand" && !behavior.Bridge.Active && !behavior.MotionExit.Active && !scene.ActorTransitionActive) {
+                    returned=true;break;
+                }
+                behavior.Tick(.02,save,false);
             }
+            if(!returned)throw new Exception("Observed motion entry, clip and recovery did not return to standing within nine seconds: "+id);
         }
         Console.WriteLine($"PASS: {cases} hop/turn cases (144 key poses), crouch/flight/landing, unsquashed turning, both directions, 3 DPI scales, animated hit regions and full sequence exports.");
     }
 }
-
-
 
 
 

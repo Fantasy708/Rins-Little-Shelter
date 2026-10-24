@@ -42,12 +42,21 @@ internal static class StartupTests
         string Persistent() => JsonSerializer.Serialize(new{save.Version,save.CompanionDates,save.DailySeconds,save.ChoiceCounts,save.Created,save.GrowthLayout,save.FreeLayout,save.GrowthSceneLayouts,save.FreeSceneLayouts,save.GrowthStory,save.FreeStory,save.Interactions,save.MusicSeconds});
         void Field(string name,bool value) => typeof(PetWindow).GetField(name,BindingFlags.NonPublic|BindingFlags.Instance)!.SetValue(pet,value);
         void Invoke(string name,params object[] values) => typeof(PetWindow).GetMethod(name,BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(pet,values);
+        void FinishBridge()
+        {
+            bool frozen=true; int steps=0;
+            while(pet.Behavior.Bridge.Active && steps++<1000) {
+                double time=pet.Behavior.Time; pet.Behavior.Tick(.01,save,false);
+                frozen&=Math.Abs(pet.Behavior.Time-time)<1e-9;
+            }
+            Check(!pet.Behavior.Bridge.Active && frozen,"测试准备先完成身体过渡，原动作时钟保持冻结");
+        }
         void Reset(string id="cloud",bool free=false)
         {
             pet.SkipStartup(); pet.Behavior.Tablet.Cancel(save); pet.Behavior.Nurture.Cancel(save); pet.Behavior.Life.Cancel();
             foreach(string field in new[]{"paused","manualHidden","fullscreen","sessionLocked","suspended"}) Field(field,false);
             save.Settings.ClickThrough=false; save.Settings.StartupAnimationEnabled=true; save.Settings.StartupAnimationPlayback="adaptive";
-            save.Settings.FreeMode=free; Scenes.Switch(save,id); Scenes.PlaceActor(save,pet.Behavior); pet.Behavior.Start("stand"); pet.Scene.Editing=false; Invoke("UpdateVisibility");
+            save.Settings.FreeMode=free; Scenes.Switch(save,id); Scenes.PlaceActor(save,pet.Behavior); pet.Behavior.Start("stand"); pet.Scene.Editing=false; Invoke("UpdateVisibility"); FinishBridge();
         }
         BitmapSource Render(UIElement visual,double dpi=1,string? name=null)
         {
@@ -57,6 +66,24 @@ internal static class StartupTests
             return bitmap;
         }
         byte Alpha(BitmapSource image,int x,int y) { var px=new byte[4]; image.CopyPixels(new Int32Rect(x,y,1,1),px,4,0); return px[3]; }
+        var drawSceneActor=typeof(Scene).GetMethod("DrawPresentRin",BindingFlags.NonPublic|BindingFlags.Instance)!;
+        var drawOpeningActor=typeof(StartupAnimationCanvas).GetMethod("Actor",BindingFlags.NonPublic|BindingFlags.Instance)!;
+        BitmapSource ActorImage(Action<DrawingContext> draw,double dpi)
+        {
+            var visual=new DrawingVisual(); RenderOptions.SetBitmapScalingMode(visual,BitmapScalingMode.HighQuality);
+            using(var dc=visual.RenderOpen()) draw(dc);
+            var image=new RenderTargetBitmap((int)(480*dpi),(int)(340*dpi),96*dpi,96*dpi,PixelFormats.Pbgra32); image.Render(visual); image.Freeze(); return image;
+        }
+        void SameActor(BitmapSource from,BitmapSource to,string label)
+        {
+            var a=new byte[from.PixelWidth*from.PixelHeight*4];var b=new byte[a.Length];from.CopyPixels(a,from.PixelWidth*4,0);to.CopyPixels(b,to.PixelWidth*4,0);
+            long error=0;int occupied=0,changed=0;
+            for(int p=0;p<a.Length;p+=4) {
+                if(a[p+3]==0 && b[p+3]==0)continue;occupied++;int peak=0;
+                for(int c=0;c<4;c++) {int d=Math.Abs(a[p+c]-b[p+c]);error+=d;peak=Math.Max(peak,d);}if(peak>4)changed++;
+            }
+            Check(occupied>0 && error/(double)(occupied*4)<=.5 && changed/(double)occupied<=.04,label);
+        }
         try {
             pet.Show(); Check(!pet.ShowActivated && !pet.OpeningCanvas.Focusable,"呈现层不抢键盘焦点");
             foreach(bool free in new[]{false,true}) foreach(string id in Scenes.All.Select(x=>x.Id)) foreach(var kind in new[]{StartupPlayback.Full,StartupPlayback.Brief}) {
@@ -103,6 +130,33 @@ internal static class StartupTests
                     Check(Alpha(image,0,0)==0,"三档导出透明圆角"); Check(pet.OpeningCanvas.Hit(new Point(433,317))=="startup:skip","三档跳过逻辑命中");
                     var px=new byte[image.PixelWidth*image.PixelHeight*4]; image.CopyPixels(px,image.PixelWidth*4,0); Check(px.Where((v,n)=>n%4==3&&v>=250).Count()>500*dpi*dpi,"开场保持可见完整不透明图画");
                 }
+            }
+            foreach(double dpi in new[]{1.0,1.5,2.0})
+            foreach(var entry in new[]{(StartupPlayback.Full,14.35,true),(StartupPlayback.Brief,3.05,true),(StartupPlayback.Full,5.1,false),(StartupPlayback.Full,7.2,false),(StartupPlayback.Full,9.4,false),(StartupPlayback.Full,13.1,false),(StartupPlayback.Brief,.1,false)}) {
+                Reset("indoor",true);
+                // Deliberately leave an unrelated daily pose in Scene's cache.
+                // A hand-off from that cache must fail the pixel comparison.
+                pet.Behavior.Start("nap");FinishBridge();pet.Scene.ResetLifeVisuals();ActorImage(c=>drawSceneActor.Invoke(pet.Scene,new object[]{c}),dpi);
+                Check(pet.BeginStartup(entry.Item1),"角色交接前开场");pet.AdvanceStartup(entry.Item2);Render(pet.OpeningCanvas,dpi);
+                var shown=(DrawingGroup)typeof(StartupAnimationCanvas).GetProperty("DisplayedActor",BindingFlags.NonPublic|BindingFlags.Instance)!.GetValue(pet.OpeningCanvas)!;
+                var snapshot=shown.CloneCurrentValue();snapshot.Freeze();var source=ActorImage(c=>c.DrawDrawing(snapshot),dpi);
+                // Independently replay only the production actor, with the
+                // actual presentation transforms and appearance at this frame.
+                double t=pet.Opening.Elapsed;bool brief=entry.Item1==StartupPlayback.Brief;
+                double home=StartupAnimationController.Ease(t,brief?1.8:12.7,pet.Opening.Duration);
+                var destination=pet.OpeningCanvas.Destination;var root=brief?destination:new Point(240+(destination.X-240)*home,277+(destination.Y-277)*home);
+                double camera=1.045-.045*StartupAnimationController.Ease(t,brief?0:11.4,pet.Opening.Duration);
+                var expected=ActorImage(c=> {
+                    c.PushClip(new RectangleGeometry(new Rect(0,0,480,340),14,14));c.PushTransform(new TranslateTransform(root.X-240,root.Y-277));c.PushTransform(new ScaleTransform(camera,camera,240,277));
+                    drawOpeningActor.Invoke(pet.OpeningCanvas,new object[]{c,t,brief?StartupAnimationController.Ease(t,0,.3):StartupAnimationController.Ease(t,4.9,5.6),new Point(240,277)});c.Pop();c.Pop();c.Pop();
+                },dpi);
+                string label=$"{entry.Item1}/{entry.Item2}/{dpi}";
+                SameActor(expected,source,"实际角色快照保留camera/位置/出现透明度/实体平板 "+label);
+                if(entry.Item3)pet.AdvanceStartup(.1);else pet.SkipStartup();
+                Check(!pet.Opening.Active,"角色交接结束覆盖层 "+label);
+                var first=ActorImage(c=>drawSceneActor.Invoke(pet.Scene,new object[]{c}),dpi);
+                SameActor(source,first,"自然结束或跳过后首帧继续上一实际角色 "+label);
+                SameActor(first,ActorImage(c=>drawSceneActor.Invoke(pet.Scene,new object[]{c}),dpi),"交接零时刻重复绘图幂等 "+label);
             }
             // Full temporal preview from actual production rendering, not a mock.
             Reset(); pet.BeginStartup(StartupPlayback.Full); pet.AdvanceStartup(7.4); Render(pet.OpeningCanvas);

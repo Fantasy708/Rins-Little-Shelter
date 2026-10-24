@@ -115,9 +115,14 @@ public sealed class LifeSequence
     public bool RecallSeated { get; private set; }
     public double RecallRigTime { get; private set; }
     public double RigTime => Phase == "settle" ? settleRigTime+(Math.Ceiling(settleRigTime/SwingPeriod)*SwingPeriod-settleRigTime)*MotionClip.Ease(Elapsed/2) : Elapsed;
+    public bool InternalScheduling { get; private set; }
+    public bool Recovering { get; private set; }
+    public bool CanRecover => DedicatedPose && !IsMemory && !MemoryRequested;
+    private double reverseHoldFrom;
     private static readonly int[] HoldKeys={0,2,3},MountKeys={3,4,5,6,7,8},RiseKeys={8,7,6,5,4,3,0};
     public ClipSample SwingSample => Phase switch {
         "hold" => Sequence(HoldKeys,Elapsed/1.5),
+        "releaseHold" => Sequence(HoldKeys,(reverseHoldFrom-Elapsed)/1.5),
         "mount" => Sequence(MountKeys,Elapsed/.65),
         "swing" => new(20,20,0,0),
         "settle" => SettleSample,
@@ -135,7 +140,7 @@ public sealed class LifeSequence
     public double MemoryOpacity => Phase == "memory" ? Math.Min(MotionClip.Ease(Elapsed/1.5),1-MotionClip.Ease((Elapsed-15.5)/1.5)) : 0;
     public double BlurRadius => Phase is "fadeOut" or "fadeIn" ? 7*(1-PresentOpacity) : 0;
     public bool Seated => Phase is "swing" or "settle";
-    public bool DedicatedPose => Phase is "hold" or "mount" or "swing" or "settle" or "dismount";
+    public bool DedicatedPose => Phase is "hold" or "releaseHold" or "mount" or "swing" or "settle" or "dismount";
     private double originalX,originalY,settleAngle,settleRigTime;
     private string scene="outdoor";
     private bool memoryFree;
@@ -144,7 +149,12 @@ public sealed class LifeSequence
     public void BeginSwing(SaveData s) => Begin(s,false);
     public bool BeginMemory(SaveData s) {
         if (!Scenes.MemoriesUnlocked(s) || s.SceneId is not "indoor" and not "swingTree" || actor.Dragging) return false;
-        if (Active && scene == "swingTree" && !IsMemory && !MemoryRequested) { MemoryRequested=true; if (Phase == "swing") Enter("settle"); return true; }
+        if (Active && scene == "swingTree" && !IsMemory && !MemoryRequested) {
+            actor.CancelActionRecovery(); Recovering=false; MemoryRequested=true;
+            if(Phase == "releaseHold") { double progress=reverseHoldFrom-Elapsed; Enter("hold"); Elapsed=Math.Max(0,progress); }
+            else if (Phase == "swing") Enter("settle");
+            return true;
+        }
         if (Active) return false;
         Begin(s,true); return true;
     }
@@ -160,26 +170,46 @@ public sealed class LifeSequence
         if (phase == "fadeOut") { RecallSample=SwingSample; RecallRigTime=RigTime; RecallSeated=Phase == "settle"; RecallPose=RecallSeated ? 100+Math.Max(0,RecallSample.From-20) : 3; }
         if (phase == "empty") settleAngle=Angle;
         if (phase == "fadeIn") { actor.X=originalX; actor.Y=originalY; }
-        Phase=phase; Elapsed=0; actor.Start("ropeHold");
+        Phase=phase; Elapsed=0;
+        InternalScheduling=true;
+        try { actor.Start("ropeHold"); } finally { InternalScheduling=false; }
+    }
+    internal void RequestRecovery() {
+        if(!CanRecover || Recovering) return;
+        Recovering=true;
+        if(Phase == "hold") { reverseHoldFrom=Elapsed; Phase="releaseHold"; Elapsed=0; }
+        else if(Phase == "swing") Enter("settle");
+        // A partial mount completes its remaining poses before settling.
+        // Existing settle and dismount phases keep their current time.
     }
     public void RequestStop() {
+        actor.CancelActionRecovery();
         if (IsMemory || MemoryRequested) { Cancel(); return; }
-        if (Phase == "swing") Enter("settle"); else if (Phase is "hold" or "mount" or "approach") Cancel();
+        if(CanRecover)RequestRecovery();
+        else if(Phase=="approach")Cancel();
     }
     public void Cancel() {
         bool memory=IsMemory || MemoryRequested, active=Active;
+        if(!active)return;
+        actor.CancelActionRecovery(); Recovering=false;
         Phase="none"; Elapsed=0; Angle=0; IsMemory=false; MemoryRequested=false; RecallTime=0;
-        if (active) { if (memory) { actor.X=originalX; actor.Y=originalY; } if (!actor.Dragging) actor.Start("stand"); }
+        if (active) { if (memory && !actor.Dragging) { actor.X=originalX; actor.Y=originalY; } if (!actor.Dragging) actor.Start("stand"); }
+    }
+    public bool Matches(SaveData s) => s.SceneId == scene && s.Settings.FreeMode == memoryFree;
+    public bool EnsureValid(SaveData s)
+    {
+        if(!Active || Matches(s) && !actor.Dragging)return true;
+        Cancel();return false;
     }
     // false only while ordinary locomotion carries Rin to the correct anchor.
     public bool Tick(double dt,SaveData s) {
-        if (s.SceneId != scene || s.Settings.FreeMode != memoryFree) { Cancel(); return true; }
+        if (!EnsureValid(s)) return true;
         if (Phase == "approach") { if (actor.Current.Id != "ropeHold") return false; Enter("hold"); return true; }
         // Consume the overshoot in the next phase. Discarding it at every
         // boundary made 30 Hz and 60 Hz memories finish at different times.
         double remaining=Math.Max(0,dt);
         for(int boundary=0;boundary<12 && Active;boundary++) {
-        double duration=Phase switch { "hold"=>1.5,"mount"=>.65,"swing"=>20,"settle"=>2,"dismount"=>.65,"fadeOut"=>1.5,"memory"=>17,"empty"=>2,"fadeIn"=>1.5,"watch"=>3,_=>double.PositiveInfinity };
+        double duration=Phase switch { "hold"=>1.5,"releaseHold"=>reverseHoldFrom,"mount"=>.65,"swing"=>20,"settle"=>2,"dismount"=>.65,"fadeOut"=>1.5,"memory"=>17,"empty"=>2,"fadeIn"=>1.5,"watch"=>3,_=>double.PositiveInfinity };
         double step=Math.Min(remaining,Math.Max(0,duration-Elapsed));
         Elapsed+=step; remaining-=step; if(IsMemory) RecallTime+=step;
         if(Phase == "swing") Angle=8*Math.Sin(Elapsed*2*Math.PI/SwingPeriod)*MotionClip.Ease(Elapsed/3);
@@ -190,14 +220,18 @@ public sealed class LifeSequence
         Elapsed=duration;
         switch (Phase) {
             case "hold": if (Elapsed >= 1.5) { if (MemoryRequested) { IsMemory=true; Enter("fadeOut"); } else Enter("mount"); } break;
-            case "mount": Enter(MemoryRequested ? "settle" : "swing"); break;
+            case "mount": Enter(MemoryRequested || Recovering ? "settle" : "swing"); break;
             case "swing": Enter("settle"); break;
             case "settle": Angle=settleAngle*(1-MotionClip.Ease(Elapsed/2)); if (Elapsed >= 2) { Angle=0; if (MemoryRequested) { IsMemory=true; Enter("fadeOut"); } else Enter("dismount"); } break;
             case "dismount":
                 actor.Y=HomeY(s);
                 if(MemoryRequested) Enter("hold");
+                else if(Recovering) { Phase="none"; Elapsed=0; Recovering=false; actor.CompleteActionRecovery(s); return true; }
                 else { Phase="none"; actor.Start("walk",SeatX-80,HomeY(s)); }
                 break;
+            case "releaseHold":
+                Phase="none"; Elapsed=0; Angle=0; Recovering=false; actor.Y=HomeY(s);
+                actor.CompleteActionRecovery(s); return true;
             case "fadeOut": if (Elapsed >= 1.5) Enter("memory"); break;
             case "memory": if (Elapsed >= 17) Enter("empty"); break;
             case "empty": Angle=0; Enter("fadeIn"); break;

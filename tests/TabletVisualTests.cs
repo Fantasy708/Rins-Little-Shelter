@@ -127,7 +127,8 @@ internal static class TabletVisualTests
             byte[] data=new byte[bitmap.PixelWidth*bitmap.PixelHeight*4]; bitmap.CopyPixels(data,bitmap.PixelWidth*4,0);
             int ground=-1;
             for(int y=235;y<262;y++) for(int x=340;x<390;x++) if (data[(y*bitmap.PixelWidth+x)*4+3]>=240) ground=Math.Max(ground,y);
-            Check(ground>=250 && ground<=253,"专用姿势凉鞋落点保持平台高度");
+            if(ground<250 || ground>253)SavePng(bitmap,Path.Combine(output,"tablet-sole-failure-"+i.ToString("D2")+".png"));
+            Check(ground>=250 && ground<=253,"专用姿势凉鞋落点保持平台高度，ground="+ground+" phase="+actor.Tablet.Phase+" elapsed="+actor.Tablet.Elapsed.ToString("F3",CultureInfo.InvariantCulture)+" transition="+scene.ActorTransitionActive+" progress="+scene.ActorTransitionProgress.ToString("F3",CultureInfo.InvariantCulture));
         }
         Until("ready"); Render(); var expired=scene.TabletButtons.ToArray(); actor.Tablet.Close(save);
         foreach(var button in expired) Check(scene.Hit(Center(button.Value))!="tablet:"+button.Key,"关闭立即使旧按钮命中失效");

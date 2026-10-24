@@ -26,6 +26,12 @@ public sealed partial class Scene
     private Atlas.Sprite? recallSprite;
     private Rect recallRect;
     private bool wasFadingOut;
+    private static readonly RadialGradientBrush indoorMemoryLight=CreateIndoorMemoryLight();
+    private static RadialGradientBrush CreateIndoorMemoryLight()
+    {
+        var light=new RadialGradientBrush(Color.FromArgb(35,255,222,155),Color.FromArgb(0,255,222,155));
+        light.Freeze();return light;
+    }
     private void LoadLifeAssets(string root)
     {
         environments=new Atlas(Path.Combine(root,manifest.ScenesAtlas),manifest.SceneRegions);
@@ -50,9 +56,9 @@ public sealed partial class Scene
         "window"=>bedroom.Sprites[2], "desk"=>bedroom.Sprites[3], "cabinet"=>bedroom.Sprites[4],
         _=>Scenes.ExtraObjects.Any(e=>e.Id == d.Id) ? environments.Sprites[d.Tile] : world.Sprites[d.Tile]
     };
-    public void ResetLifeVisuals()
+    public void ResetLifeVisuals(bool preserveActor=false)
     {
-        lastDrawKey=null; lastDrawSprite=null; oldDrawSprite=null;
+        if(!preserveActor)ResetActorTransition();
         births.Clear(); actorHits.Clear(); lifeHits.Clear(); hits.Clear();
         ClearCreationEffects();
         blurredPoses.Clear();
@@ -92,14 +98,17 @@ public sealed partial class Scene
         if (life.IsMemory)
         {
             double warmth=life.Atmosphere;
-            dc.DrawEllipse(Brush((byte)(35*warmth),255,222,155),null,new Point(240,205),185,90);
             if (save.SceneId == "indoor") {
+                // Keep the bedroom's wall colour and let the memory warmth
+                // disappear at the edge rather than paint a hard oval on it.
+                dc.PushOpacity(warmth);dc.DrawEllipse(indoorMemoryLight,null,new Point(240,205),185,90);dc.Pop();
                 // Pink toy bag visible in the original hair-bow scene. This
                 // temporary prop is never a Placement and cannot enter saves.
                 dc.PushOpacity(warmth);
                 dc.DrawRoundedRectangle(Brush(245,215,155,173),new Pen(Brush(210,176,121,145),.8),new Rect(193,242,20,26),3,3);
                 dc.DrawEllipse(null,new Pen(Brush(235,217,154,177),2),new Point(203,242),6,6); dc.Pop();
             }
+            else dc.DrawEllipse(Brush((byte)(35*warmth),255,222,155),null,new Point(240,205),185,90);
         }
         if (save.SceneId == "swingTree")
         {
@@ -148,37 +157,52 @@ public sealed partial class Scene
     }
     private void DrawAttached(DrawingContext dc,LifePoseFrames frames,ClipSample sample,Point seat,Point pivot,double angle,bool interactive)
     {
+        if(interactive) {
+            string key="life:"+behavior.Life.Phase+":"+behavior.ActionRevision;
+            // Hold ends and mount starts on the same authored pose. Freezing
+            // that pose for a new long blend would leave its standing head
+            // behind while the actual body already bends to sit down.
+            if(behavior.Life.Phase is "mount" or "releaseHold" && lastDrawKey?.StartsWith("life:hold:",StringComparison.Ordinal)==true)
+                lastDrawKey=key;
+            PrepareActorTransition(key);
+        }
         bool rig=!interactive || behavior.Life.Phase is "swing" or "settle";
         double rigTime=behavior.Life.RigTime;
         var sprite=rig ? frames.Articulate(sample.From,rigTime) : frames.Sample(sample);
         var rect=frames.Bounds; rect.Offset(seat.X,seat.Y);
         var transform=Pendulum(pivot,seat,angle);
-        dc.PushTransform(transform);
-        dc.DrawImage(sprite.Image,rect);
-        dc.Pop();
+        var drawing=new DrawingGroup();using(var c=drawing.Open()) {c.PushTransform(transform);c.DrawImage(sprite.Image,rect);c.Pop();}
         if (interactive) {
-            lifeHits.Add((rect,sprite,transform,double.PositiveInfinity,0)); var actorBounds=frames.VisibleBounds; actorBounds.Offset(seat.X,seat.Y); SwingActorBounds=actorBounds;
-            // The ordinary actor renderer can now continue from this complete
-            // registered body when she rises and starts walking away.
-            lastDrawKey="life:"+behavior.Life.Phase; lastDrawSprite=sprite; lastDrawRect=rect;
-            lastDrawRaw=true; lastDrawSequence=true; lastDrawSeated=false; lastDrawLeft=false; lastDrawAnchor=0;
-            if(Math.Abs(angle)>.0001) { lastDrawSprite=null; lastDrawKey=null; }
-        }
+            bool transition=ActorTransitionActive;
+            // The ground reference is shared with ordinary poses. Pendulum
+            // motion is already present in the drawing; applying it to the
+            // hand-off root would move the actor a second time during exit.
+            PresentActor(dc,drawing,rect,sprite,new Point(behavior.X,behavior.Y));
+            if(!transition)lifeHits.Add((rect,sprite,transform,double.PositiveInfinity,0));
+            var actorBounds=frames.VisibleBounds; actorBounds.Offset(seat.X,seat.Y); SwingActorBounds=actorBounds;
+        } else dc.DrawDrawing(drawing);
         var hands=frames.Hands(sample);
         SwingGrips=new[]{ transform.Transform(new Point(seat.X-26,seat.Y+hands[1])), transform.Transform(new Point(seat.X+26,seat.Y+hands[3])) };
     }
     private void DrawPresentRin(DrawingContext dc)
     {
+        actorHits.Clear();lifeHits.Clear();
         if (StartupPresentation) { actorHits.Clear(); return; }
+        if(DrawDraggedActor(dc))return;
+        if(behavior.Bridge.Active) { DrawActionBridge(dc);return; }
         var life=behavior.Life;
         if(life.Phase != "fadeOut") wasFadingOut=false;
-        if (life.PresentOpacity <= .001) { actorHits.Clear(); lastDrawSprite=null; return; }
+        if (life.PresentOpacity <= .001) {
+            var empty=new DrawingGroup();using(var c=empty.Open())c.DrawRectangle(Brushes.Transparent,null,new Rect(behavior.X-1,behavior.Y-150,2,150));
+            displayedActor=empty;displayedActorBounds=empty.Bounds;displayedActorRoot=new Point(behavior.X,behavior.Y);
+            oldDrawSprite=null;lastDrawKey="memory:hidden";lastDrawSprite=null;return;
+        }
         if (save.SceneId == "swingTree" && life.DedicatedPose)
         {
             actorHits.Clear();
             var sample=life.SwingSample;
             var (pivot,seat)=SwingGeometry();
-            if (life.Phase is "hold" or "mount" or "dismount")
+            if (life.Phase is "hold" or "releaseHold" or "mount" or "dismount")
             {
                 double footHip=swingFrames.Foot(sample);
                 double standingHip=behavior.Y-footHip;
@@ -189,9 +213,10 @@ public sealed partial class Scene
         }
         if (life.IsMemory)
         {
+            PrepareActorTransition("memory:"+life.Phase);
             int pose=life.Phase == "watch" ? 2 : 0;
-            var s=poses.Sprites[pose]; double scale=150.0/poses.Sprites[0].Height;
-            var rect=new Rect(behavior.X-s.Width*scale/2,behavior.Y-s.Height*scale,s.Width*scale,s.Height*scale);
+            var s=poses.Sprites[pose]; double scale=poseRegistration.Scale(pose);
+            var rect=poseRegistration.Bounds(pose,new Point(behavior.X,behavior.Y));
             if (life.Phase == "fadeOut" && save.SceneId == "swingTree") {
                 if(!wasFadingOut) {
                     var snapshot=ActorBitmapBlend.Snapshot(life.RecallSeated ? swingFrames.Articulate(life.RecallSample.From,life.RecallRigTime) : swingFrames.Sample(life.RecallSample));
@@ -221,7 +246,14 @@ public sealed partial class Scene
                 double sx=rect.Width/s.Width;
                 rect=new Rect(rect.X-16*sx,rect.Y-16*scale,rect.Width+32*sx,rect.Height+32*scale);
             }
-            dc.PushOpacity(life.PresentOpacity); dc.DrawImage(image,rect); dc.Pop(); return;
+            var drawing=new DrawingGroup();using(var c=drawing.Open()) {c.PushOpacity(life.PresentOpacity);c.DrawImage(image,rect);c.Pop();}
+            var shown=new Atlas.Sprite(image,0,0,image.PixelWidth,image.PixelHeight,0);
+            bool transition=ActorTransitionActive;
+            PresentActor(dc,drawing,rect,shown,new Point(behavior.X,behavior.Y));
+            // Memory controls own input during the recollection. Only the
+            // visible returning Rin participates in ordinary alpha hits.
+            if(!transition && life.Phase is "fadeIn" or "watch")actorHits.Add(new(rect,shown,false,0,double.PositiveInfinity,0,life.PresentOpacity));
+            return;
         }
         DrawRin(dc);
     }

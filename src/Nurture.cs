@@ -48,23 +48,25 @@ public sealed class NurtureSequence
     private readonly Behavior actor;
     private SaveData? context;
     private string scene="";
-    private bool free;
+    private bool free,recoveryRequested;
+    private double reverseLowerFrom;
     public NurtureSequence(Behavior actor) => this.actor=actor;
     public string Phase { get; private set; }="none";
     public double Elapsed { get; private set; }
     public GrassSite Site { get; private set; }
     public bool Active => Phase != "none";
-    public bool DedicatedPose => Phase is "lower" or "rest" or "rise";
+    public bool DedicatedPose => Phase is "lower" or "rest" or "rise" or "recoverLower";
+    public bool Recovering => recoveryRequested;
     public bool InternalScheduling { get; private set; }
     public int Generation { get; private set; }
     public const double LowerSeconds=1.2,RestSeconds=4.5,RiseSeconds=1.2;
-    public int PoseFrame => Phase switch { "lower"=>Math.Clamp((int)(Elapsed/LowerSeconds*10),0,9),"rest"=>9,"rise"=>10+Math.Clamp((int)(Elapsed/RiseSeconds*10),0,9),_=>0 };
+    public int PoseFrame => Phase switch { "lower"=>Math.Clamp((int)(Elapsed/LowerSeconds*10),0,9),"recoverLower"=>Math.Clamp((int)((reverseLowerFrom-Elapsed)/LowerSeconds*10),0,9),"rest"=>9,"rise"=>10+Math.Clamp((int)(Elapsed/RiseSeconds*10),0,9),_=>0 };
     public bool CanBegin(SaveData s) => !Active && !actor.Journey.Active && !actor.Dragging && !actor.Life.Active && actor.Current.Kind != "create" && actor.Tablet.ConfirmedTarget == null && actor.Current.Id is not ("benchSit" or "roomRest" or "ropeHold" or "swingLife") && NurtureGround.TryFind(s,actor.X,out _);
     private void Schedule(Action action) { InternalScheduling=true; try { action(); } finally { InternalScheduling=false; } }
     public bool Begin(SaveData s)
     {
         if (!CanBegin(s) || !NurtureGround.TryFind(s,actor.X,out var site)) return false;
-        context=s; scene=s.SceneId; free=s.Settings.FreeMode; Site=site; Generation++; Elapsed=0;
+        context=s; scene=s.SceneId; free=s.Settings.FreeMode; Site=site; Generation++; Elapsed=0; recoveryRequested=false;
         if (actor.Tablet.Active) { Phase="waitingTablet"; Schedule(()=>actor.Tablet.Close(s)); }
         else Approach();
         return true;
@@ -79,19 +81,35 @@ public sealed class NurtureSequence
         if (Phase != "turning" || actor.Current.Id != "turn") return false;
         Stow(s); return true;
     }
+    internal void RequestRecovery()
+    {
+        if(!DedicatedPose || recoveryRequested) return;
+        recoveryRequested=true;
+        if(Phase == "lower") {
+            // Reverse the exact authored lower frame currently on screen.
+            // Switching directly to the independent rise atlas would jump.
+            reverseLowerFrom=Elapsed; Phase="recoverLower"; Elapsed=0;
+        }
+        // Keep the displayed rest pose at the request instant. The next
+        // supplied time step begins the authored rise, rather than cutting
+        // to its separate first frame during a zero-time repaint.
+        // An already rising body keeps its elapsed time and current frame.
+    }
     public void Cancel(SaveData? s=null)
     {
         if (!Active) return;
+        actor.CancelActionRecovery(); recoveryRequested=false;
         bool ownsTablet=Phase is "waitingTablet" or "stowing";
         s ??=context; Phase="none"; Elapsed=0; Generation++;
         if (ownsTablet && s != null) actor.Tablet.Cancel(s);
         if (!actor.Dragging && s != null) { actor.Y=Scenes.Home(s).Y; Schedule(()=>actor.Start("stand")); }
         context=null;
     }
+    public bool Matches(SaveData s) => s.SceneId == scene && s.Settings.FreeMode == free;
     public bool EnsureValid(SaveData s)
     {
         if (!Active) return true;
-        bool valid=!actor.Dragging && s.SceneId == scene && s.Settings.FreeMode == free && !actor.Life.Active && NurtureGround.StillClear(s,Site);
+        bool valid=!actor.Dragging && Matches(s) && !actor.Life.Active && NurtureGround.StillClear(s,Site);
         if (!valid) Cancel(s); return valid;
     }
     public bool Tick(double dt,SaveData s)
@@ -113,15 +131,20 @@ public sealed class NurtureSequence
             Phase="none"; context=null; return true;
         }
         if (!double.IsFinite(dt) || dt<0) return true;
+        if(dt>0 && recoveryRequested && Phase == "rest") Enter("rise");
         // Consume actual supplied time, including a slow composition frame,
         // rather than incrementing an animation frame counter.
         double remaining=dt;
         while(remaining>0 && DedicatedPose) {
-            double duration=Phase == "lower" ? LowerSeconds : Phase == "rest" ? RestSeconds : RiseSeconds;
+            double duration=Phase == "recoverLower" ? reverseLowerFrom : Phase == "lower" ? LowerSeconds : Phase == "rest" ? RestSeconds : RiseSeconds;
             double step=Math.Min(remaining,Math.Max(0,duration-Elapsed)); Elapsed+=step; remaining-=step;
             if (Elapsed+1e-9<duration) break;
             if (Phase == "lower") Enter("rest");
             else if (Phase == "rest") Enter("rise");
+            else if(recoveryRequested) {
+                Phase="none"; Elapsed=0; recoveryRequested=false; context=null;
+                actor.CompleteActionRecovery(s); return true;
+            }
             else { Phase="returning"; Elapsed=0; var home=Scenes.Home(s); Schedule(()=>actor.Visit("stand",home.X,home.Y)); }
         }
         return true;

@@ -1,20 +1,549 @@
 {
-  "Version": 8,
+  "Version": 13,
+  "ActionBridges": {
+    "Source": "src/ActionBridge.cs",
+    "Renderer": "src/SceneActionBridge.cs",
+    "RasterSource": "src/ActorPoseWarp.cs",
+    "PoseLandmarks": "rin/pose-bridges.json",
+    "ArtRegistration": "rin/action-bridge-art.json",
+    "CanonicalStandingPose": 0,
+    "ArtSheets": [
+      {
+        "Id": "ground",
+        "Path": "rin/bridge-ground-v1.png",
+        "Frames": 12,
+        "Regions": [
+          [
+            0.08268880208333333,
+            0.044931640625,
+            0.12175130208333333,
+            0.347666015625
+          ],
+          [
+            0.30990234375,
+            0.097666015625,
+            0.13607421875,
+            0.292001953125
+          ],
+          [
+            0.5533919270833333,
+            0.143564453125,
+            0.15104817708333332,
+            0.251962890625
+          ],
+          [
+            0.80794921875,
+            0.148447265625,
+            0.13802734375,
+            0.244150390625
+          ],
+          [
+            0.06250651041666667,
+            0.446298828125,
+            0.16081380208333332,
+            0.227548828125
+          ],
+          [
+            0.30860026041666666,
+            0.447275390625,
+            0.15300130208333332,
+            0.246103515625
+          ],
+          [
+            0.56380859375,
+            0.451181640625,
+            0.14909505208333332,
+            0.242197265625
+          ],
+          [
+            0.8222721354166667,
+            0.469736328125,
+            0.14844401041666666,
+            0.220712890625
+          ],
+          [
+            0.04753255208333334,
+            0.727548828125,
+            0.16927734375,
+            0.233408203125
+          ],
+          [
+            0.26693359375,
+            0.762705078125,
+            0.21224609375,
+            0.194345703125
+          ],
+          [
+            0.49805338541666666,
+            0.819345703125,
+            0.22787109375,
+            0.136728515625
+          ],
+          [
+            0.7558658854166667,
+            0.827158203125,
+            0.23438151041666666,
+            0.128916015625
+          ]
+        ]
+      },
+      {
+        "Id": "seat",
+        "Path": "rin/bridge-seat-v1.png",
+        "Frames": 8,
+        "Regions": [
+          [
+            0.05078776041666667,
+            0.068369140625,
+            0.14974609375,
+            0.445322265625
+          ],
+          [
+            0.31120442708333335,
+            0.071298828125,
+            0.15495442708333332,
+            0.433603515625
+          ],
+          [
+            0.5449283854166667,
+            0.109384765625,
+            0.16472005208333332,
+            0.394541015625
+          ],
+          [
+            0.80013671875,
+            0.129892578125,
+            0.16797526041666666,
+            0.374033203125
+          ],
+          [
+            0.04883463541666667,
+            0.563486328125,
+            0.17123046875,
+            0.376962890625
+          ],
+          [
+            0.29948567708333335,
+            0.544931640625,
+            0.16341796875,
+            0.401376953125
+          ],
+          [
+            0.5514388020833333,
+            0.545908203125,
+            0.15886067708333332,
+            0.398447265625
+          ],
+          [
+            0.8014388020833333,
+            0.544931640625,
+            0.16211588541666666,
+            0.397470703125
+          ]
+        ]
+      },
+      {
+        "Id": "upper",
+        "Path": "rin/bridge-upper-v1.png",
+        "Frames": 12,
+        "Regions": [
+          [
+            0.08464192708333333,
+            0.017587890625,
+            0.11849609374999999,
+            0.338876953125
+          ],
+          [
+            0.32748046875,
+            0.018564453125,
+            0.11914713541666666,
+            0.337900390625
+          ],
+          [
+            0.5664127604166667,
+            0.018564453125,
+            0.11784505208333333,
+            0.338876953125
+          ],
+          [
+            0.80990234375,
+            0.019541015625,
+            0.11784505208333333,
+            0.336923828125
+          ],
+          [
+            0.08659505208333333,
+            0.367197265625,
+            0.12630859375,
+            0.327158203125
+          ],
+          [
+            0.33073567708333335,
+            0.374033203125,
+            0.12305338541666666,
+            0.320322265625
+          ],
+          [
+            0.5742252604166667,
+            0.371103515625,
+            0.12110026041666666,
+            0.323251953125
+          ],
+          [
+            0.8164127604166667,
+            0.370126953125,
+            0.11914713541666666,
+            0.324228515625
+          ],
+          [
+            0.09440755208333333,
+            0.699228515625,
+            0.12305338541666666,
+            0.290048828125
+          ],
+          [
+            0.32748046875,
+            0.699228515625,
+            0.13672526041666666,
+            0.290048828125
+          ],
+          [
+            0.5488346354166667,
+            0.699228515625,
+            0.14649088541666666,
+            0.290048828125
+          ],
+          [
+            0.7936263020833333,
+            0.699228515625,
+            0.14779296875,
+            0.290048828125
+          ]
+        ]
+      }
+    ],
+    "CatalogActionIds": [
+      "stand",
+      "knees",
+      "swing",
+      "gaze",
+      "sky",
+      "dress",
+      "tablet",
+      "catch",
+      "lie",
+      "nap",
+      "benchSit",
+      "treeGaze",
+      "touchFlower",
+      "watchBird",
+      "touchLight",
+      "homeVisit",
+      "walk",
+      "trot",
+      "hop",
+      "turn",
+      "visit",
+      "createTap",
+      "createSwipe",
+      "createRaise",
+      "createPlace",
+      "createMusic",
+      "smile",
+      "retreat",
+      "invite",
+      "ropeHold",
+      "swingLife",
+      "windowWatch",
+      "deskTablet",
+      "roomRest",
+      "nurtureHug",
+      "mountainClimb",
+      "auroraWatch",
+      "snowTouch"
+    ],
+    "PoseRoute": "ordinary poses recover through canonical 0 before the next entry; knees via 11; lying via 11 and 6",
+    "OrdinarySegmentSeconds": 0.42,
+    "SupportedSegmentSeconds": 0.58,
+    "LyingSegmentSeconds": 0.62,
+    "LocomotionPreparationSeconds": 0.26,
+    "Playback": "complete authored intermediate poses from ground/seat/upper sheets; continuous opaque articulation only between adjacent registered keys; exact existing action endpoints",
+    "ActionClock": "frozen during entry and recovery; the original hold clock and 58% creation event begin after entry",
+    "DedicatedOwners": [
+      "MotionClips/MotionExit",
+      "NurtureSequence",
+      "LifeSequence",
+      "TabletSession",
+      "OutdoorJourney"
+    ],
+    "Requests": "latest transient request wins; repeating current action does not restart; hard context/drag cancellation clears stale work",
+    "Persistent": false,
+    "AddsCatalogActions": false,
+    "LocalOutput": "dist/local/action-bridges/RinsLittleShelter"
+  },
+  "MotionExits": {
+    "Source": "src/MotionExit.cs",
+    "Renderer": "src/SceneMotionExit.cs",
+    "Atlas": "rin/motion-exits-v1.png",
+    "Regions": [
+      [
+        0.038417968749999996,
+        0.015634765625,
+        0.11914713541666666,
+        0.254892578125
+      ],
+      [
+        0.19792317708333332,
+        0.014658203125,
+        0.11849609374999999,
+        0.255869140625
+      ],
+      [
+        0.35156901041666666,
+        0.013681640625,
+        0.10873046874999999,
+        0.255869140625
+      ],
+      [
+        0.5039127604166667,
+        0.010751953125,
+        0.11393880208333333,
+        0.259775390625
+      ],
+      [
+        0.6764388020833333,
+        0.012705078125,
+        0.11589192708333333,
+        0.257822265625
+      ],
+      [
+        0.84115234375,
+        0.008798828125,
+        0.11003255208333333,
+        0.261728515625
+      ],
+      [
+        0.03581380208333333,
+        0.268564453125,
+        0.12044921874999999,
+        0.256845703125
+      ],
+      [
+        0.19206380208333332,
+        0.269541015625,
+        0.12305338541666666,
+        0.256845703125
+      ],
+      [
+        0.34570963541666666,
+        0.268564453125,
+        0.11589192708333333,
+        0.256845703125
+      ],
+      [
+        0.5039127604166667,
+        0.268564453125,
+        0.11524088541666666,
+        0.256845703125
+      ],
+      [
+        0.6725325520833333,
+        0.269541015625,
+        0.12500651041666666,
+        0.255869140625
+      ],
+      [
+        0.84115234375,
+        0.266611328125,
+        0.11003255208333333,
+        0.257822265625
+      ],
+      [
+        0.04102213541666667,
+        0.521494140625,
+        0.12565755208333332,
+        0.244150390625
+      ],
+      [
+        0.19076171875,
+        0.524423828125,
+        0.12370442708333333,
+        0.241220703125
+      ],
+      [
+        0.34570963541666666,
+        0.519541015625,
+        0.11784505208333333,
+        0.246103515625
+      ],
+      [
+        0.5065169270833333,
+        0.522470703125,
+        0.11849609374999999,
+        0.243173828125
+      ],
+      [
+        0.67904296875,
+        0.521494140625,
+        0.12891276041666666,
+        0.244150390625
+      ],
+      [
+        0.84115234375,
+        0.520517578125,
+        0.11003255208333333,
+        0.246103515625
+      ],
+      [
+        0.07422526041666667,
+        0.762705078125,
+        0.12826171875,
+        0.235361328125
+      ],
+      [
+        0.22917317708333332,
+        0.763681640625,
+        0.12500651041666666,
+        0.234384765625
+      ],
+      [
+        0.38347005208333335,
+        0.763681640625,
+        0.12110026041666666,
+        0.231455078125
+      ],
+      [
+        0.5377669270833333,
+        0.761728515625,
+        0.12370442708333333,
+        0.235361328125
+      ],
+      [
+        0.6822981770833333,
+        0.762705078125,
+        0.12891276041666666,
+        0.234384765625
+      ],
+      [
+        0.83724609375,
+        0.761728515625,
+        0.11589192708333333,
+        0.235361328125
+      ]
+    ],
+    "RegistrationSource": "rin/motion-registration.json",
+    "RegistrationKey": "Stops",
+    "Frames": 24,
+    "Rows": [
+      "trot contact variant A",
+      "trot contact variant B",
+      "hop settle",
+      "turn settle"
+    ],
+    "FramesPerRow": 6,
+    "TrotStopSeconds": 0.3,
+    "TurnSettleSeconds": 0.3,
+    "HopSettleSeconds": 0.22,
+    "NeutralHoldSeconds": 0.07,
+    "RequestedTrotBrakeSeconds": 0.16,
+    "FirstKey": "previous actual displayed actor; cold rendering reconstructs the frozen source clip key",
+    "MiddleKeys": "complete authored poses with connected-raster anatomy registration; no internal crossfade",
+    "FinalKey": "canonical basic standing pose 0 with the same root, facing and breathing as ordinary standing",
+    "Scheduling": "one Behavior clock; latest transient request wins; repeated active action is a no-op; drag and context cancellation take priority",
+    "Persistent": false,
+    "AddsCatalogActions": false
+  },
   "CreationParticles": {
     "Source": "src/SceneCreation.cs",
-    "HitTest": false,
-    "MaterializeSeconds": 1.15,
-    "TabletOrbit": false,
-    "GatherSeconds": 0.65,
-    "Persistent": false,
     "FixedPool": 384,
+    "GatherSeconds": 0.65,
+    "MaterializeSeconds": 1.15,
     "ShapeHoldSeconds": 0.18,
-    "ShapeFirst": true,
     "RevealSeconds": 0.7,
-    "ActualEvent": "PetWindow ObjectCreated -> World.Create -> Scene.Born"
+    "ShapeFirst": true,
+    "TabletOrbit": false,
+    "ActualEvent": "PetWindow ObjectCreated -> World.Create -> Scene.Born",
+    "HitTest": false,
+    "Persistent": false
   },
   "Outdoor": {
+    "Source": "src/OutdoorJourney.cs",
+    "Renderer": "src/SceneOutdoor.cs",
+    "ClimbRigAtlas": "rin/climb-body-v2.png",
+    "ClimbFrames": 1,
+    "ClimbRigRegion": [
+      0.04557942708333334,
+      0.084970703125,
+      0.15495442708333332,
+      0.403330078125
+    ],
+    "ClimbRegistration": "rin/climb-registration.json",
+    "TemporalPhases": 16,
     "ClimbOrigins": [
+      [
+        136.5,
+        410
+      ]
+    ],
+    "RigJoints": [
+      [
+        [
+          145,
+          258
+        ],
+        [
+          156,
+          323
+        ],
+        [
+          177,
+          372
+        ],
+        [
+          213,
+          390
+        ]
+      ],
+      [
+        [
+          128,
+          258
+        ],
+        [
+          123,
+          295
+        ],
+        [
+          74,
+          357
+        ],
+        [
+          87,
+          392
+        ]
+      ]
+    ],
+    "RigSoles": [
+      [
+        190,
+        410
+      ],
+      [
+        73,
+        408
+      ]
+    ],
+    "ClimbHalfStepSeconds": 0.6,
+    "ClimbPrepareSeconds": 0.48,
+    "ClimbSettleSeconds": 0.56,
+    "CanonicalStandSeconds": 0.2,
+    "SummitLookSeconds": 8.0,
+    "ClimbEntryExitPlayback": "opaque connected-raster bridge between the exact standing drawing and the current climb body; no pose crossfade",
+    "JourneyWalkFrames": 8,
+    "JourneySkyFrames": 1,
+    "GaitPlayback": "continuous two-leg hip/knee/ankle skinning with planted support and swinging other leg, shared Journey clock",
+    "LegacyClimbAtlas": "rin/mountain-life.png",
+    "LegacyClimbOrigins": [
       [
         141.68,
         256.49
@@ -112,218 +641,7 @@
         244.78
       ]
     ],
-    "Source": "src/OutdoorJourney.cs",
-    "Renderer": "src/SceneOutdoor.cs",
-    "ClimbFrames": 24,
-    "TemporalPolicy": "single Behavior clock, complete opaque frames; cancel on explicit interactions",
-    "PolarAtlas": "rin/polar-life.png",
-    "ClimbContacts": [
-      [
-        [
-          122.55,
-          257
-        ]
-      ],
-      [
-        [
-          117.14,
-          259
-        ],
-        [
-          170.31,
-          256
-        ]
-      ],
-      [
-        [
-          121.62,
-          260
-        ],
-        [
-          177.5,
-          241
-        ]
-      ],
-      [
-        [
-          122.33,
-          259
-        ],
-        [
-          185.98,
-          251
-        ]
-      ],
-      [
-        [
-          121.78,
-          257
-        ],
-        [
-          170.38,
-          239
-        ]
-      ],
-      [
-        [
-          163.86,
-          257
-        ]
-      ],
-      [
-        [
-          139.21,
-          245
-        ]
-      ],
-      [
-        [
-          126.43,
-          247
-        ],
-        [
-          179.34,
-          246
-        ]
-      ],
-      [
-        [
-          124.19,
-          249
-        ],
-        [
-          178.21,
-          237
-        ]
-      ],
-      [
-        [
-          130.02,
-          249
-        ],
-        [
-          174.2,
-          246
-        ]
-      ],
-      [
-        [
-          177.35,
-          248
-        ],
-        [
-          130.21,
-          243
-        ]
-      ],
-      [
-        [
-          123.37,
-          249
-        ],
-        [
-          165.05,
-          239
-        ]
-      ],
-      [
-        [
-          139.03,
-          241
-        ]
-      ],
-      [
-        [
-          112.6,
-          247
-        ],
-        [
-          175.67,
-          238
-        ]
-      ],
-      [
-        [
-          110.15,
-          247
-        ],
-        [
-          175.67,
-          242
-        ]
-      ],
-      [
-        [
-          108.31,
-          247
-        ]
-      ],
-      [
-        [
-          109.37,
-          248
-        ],
-        [
-          173.88,
-          243
-        ]
-      ],
-      [
-        [
-          128.57,
-          243
-        ]
-      ],
-      [
-        [
-          148.72,
-          245
-        ]
-      ],
-      [
-        [
-          163.47,
-          245
-        ]
-      ],
-      [
-        [
-          160.63,
-          245
-        ]
-      ],
-      [
-        [
-          133.08,
-          245
-        ],
-        [
-          181.26,
-          244
-        ]
-      ],
-      [
-        [
-          128.09,
-          246
-        ],
-        [
-          180.18,
-          236
-        ]
-      ],
-      [
-        [
-          128.58,
-          245
-        ],
-        [
-          172.82,
-          241
-        ]
-      ]
-    ],
-    "ClimbReferences": [
+    "LegacyClimbReferences": [
       245,
       245,
       245,
@@ -349,7 +667,9 @@
       245,
       245
     ],
-    "Silent": true,
+    "LegacyClimbPlayback": false,
+    "PolarAtlas": "rin/polar-life.png",
+    "PolarFrames": 12,
     "PolarOrigins": [
       [
         183.3,
@@ -400,7 +720,6 @@
         359
       ]
     ],
-    "AuroraImage": "world/polar-aurora.png",
     "PolarReferences": [
       360,
       360,
@@ -415,12 +734,102 @@
       360,
       360
     ],
-    "PolarFrames": 12,
     "MountainImage": "world/mountain.png",
-    "ClimbAtlas": "rin/mountain-life.png",
-    "PolarImage": "world/polar.png"
+    "PolarImage": "world/polar.png",
+    "AuroraImage": "world/polar-aurora.png",
+    "Silent": true,
+    "TemporalPolicy": "single Behavior clock; continuous route phase; ordinary stop/action/tablet requests recover along the route before latest request dispatch",
+    "SoftReturn": "finish the current ascent route, turn and visibly descend; an active descent continues; drag/context/support invalidation remains a hard cancellation"
   },
   "Nurture": {
+    "Source": "src/Nurture.cs",
+    "ManualOnly": true,
+    "Silent": true,
+    "LowerSeconds": 1.2,
+    "RestSeconds": 4.5,
+    "RiseSeconds": 1.2,
+    "FrameOrigins": [
+      [
+        114,
+        289
+      ],
+      [
+        120,
+        282
+      ],
+      [
+        112,
+        233
+      ],
+      [
+        98,
+        188
+      ],
+      [
+        110,
+        159
+      ],
+      [
+        141,
+        188
+      ],
+      [
+        150,
+        178
+      ],
+      [
+        148,
+        159
+      ],
+      [
+        165,
+        170
+      ],
+      [
+        118,
+        211
+      ],
+      [
+        133,
+        223
+      ],
+      [
+        124,
+        231
+      ],
+      [
+        149,
+        243
+      ],
+      [
+        128,
+        227
+      ],
+      [
+        79,
+        219
+      ],
+      [
+        93,
+        250
+      ],
+      [
+        119,
+        238
+      ],
+      [
+        102,
+        246
+      ],
+      [
+        101,
+        288
+      ],
+      [
+        104,
+        297
+      ]
+    ],
     "StandingReferences": [
       289,
       289,
@@ -442,22 +851,6 @@
       289,
       288,
       297
-    ],
-    "GrassAtlas": "world/nurture-grass.png",
-    "Source": "src/Nurture.cs",
-    "GrassRegions": [
-      [
-        0,
-        0,
-        1,
-        0.625
-      ],
-      [
-        0,
-        0.625,
-        1,
-        0.375
-      ]
     ],
     "Contacts": [
       [
@@ -685,94 +1078,22 @@
         ]
       ]
     ],
-    "Silent": true,
-    "RiseSeconds": 1.2,
-    "RestSeconds": 4.5,
-    "LowerSeconds": 1.2,
-    "ClipOrigin": "start of lowering; variable footsteps and tablet stow are outside clip",
-    "ManualOnly": true,
-    "FrameOrigins": [
+    "GrassAtlas": "world/nurture-grass.png",
+    "GrassRegions": [
       [
-        114,
-        289
+        0,
+        0,
+        1,
+        0.625
       ],
       [
-        120,
-        282
-      ],
-      [
-        112,
-        233
-      ],
-      [
-        98,
-        188
-      ],
-      [
-        110,
-        159
-      ],
-      [
-        141,
-        188
-      ],
-      [
-        150,
-        178
-      ],
-      [
-        148,
-        159
-      ],
-      [
-        165,
-        170
-      ],
-      [
-        118,
-        211
-      ],
-      [
-        133,
-        223
-      ],
-      [
-        124,
-        231
-      ],
-      [
-        149,
-        243
-      ],
-      [
-        128,
-        227
-      ],
-      [
-        79,
-        219
-      ],
-      [
-        93,
-        250
-      ],
-      [
-        119,
-        238
-      ],
-      [
-        102,
-        246
-      ],
-      [
-        101,
-        288
-      ],
-      [
-        104,
-        297
+        0,
+        0.625,
+        1,
+        0.375
       ]
-    ]
+    ],
+    "ClipOrigin": "start of lowering; variable footsteps and tablet stow are outside clip"
   },
   "Scenes": [
     {
@@ -812,6 +1133,98 @@
     }
   ],
   "Swing": {
+    "BoardingFrames": 20,
+    "LoopFrames": 18,
+    "LegacyLoopKeys": 34,
+    "CycleSeconds": 4.6,
+    "BoardingSeconds": 0.65,
+    "Playback": "continuous articulation of one opaque registered swing pose",
+    "LoopPose": 0,
+    "MemoryChildPose": 8,
+    "MemoryFatherPose": 1,
+    "BodyScale": "uniform 150/305; local arm registration only",
+    "HipAnchors": [
+      [
+        188,
+        211
+      ],
+      [
+        128,
+        213
+      ],
+      [
+        115,
+        214
+      ],
+      [
+        115,
+        211
+      ],
+      [
+        180,
+        175
+      ],
+      [
+        127,
+        190
+      ],
+      [
+        114,
+        179
+      ],
+      [
+        128,
+        181
+      ],
+      [
+        178,
+        177
+      ],
+      [
+        126,
+        181
+      ],
+      [
+        119,
+        175
+      ],
+      [
+        127,
+        180
+      ],
+      [
+        179,
+        173
+      ],
+      [
+        127,
+        174
+      ],
+      [
+        119,
+        175
+      ],
+      [
+        122,
+        174
+      ],
+      [
+        180,
+        149
+      ],
+      [
+        125,
+        143
+      ],
+      [
+        118,
+        149
+      ],
+      [
+        131,
+        155
+      ]
+    ],
     "Hands": [
       [
         141,
@@ -933,106 +1346,14 @@
         173,
         166
       ]
-    ],
-    "LoopFrames": 18,
-    "CycleSeconds": 4.6,
-    "BoardingFrames": 20,
-    "HipAnchors": [
-      [
-        188,
-        211
-      ],
-      [
-        128,
-        213
-      ],
-      [
-        115,
-        214
-      ],
-      [
-        115,
-        211
-      ],
-      [
-        180,
-        175
-      ],
-      [
-        127,
-        190
-      ],
-      [
-        114,
-        179
-      ],
-      [
-        128,
-        181
-      ],
-      [
-        178,
-        177
-      ],
-      [
-        126,
-        181
-      ],
-      [
-        119,
-        175
-      ],
-      [
-        127,
-        180
-      ],
-      [
-        179,
-        173
-      ],
-      [
-        127,
-        174
-      ],
-      [
-        119,
-        175
-      ],
-      [
-        122,
-        174
-      ],
-      [
-        180,
-        149
-      ],
-      [
-        125,
-        143
-      ],
-      [
-        118,
-        149
-      ],
-      [
-        131,
-        155
-      ]
-    ],
-    "LoopPose": 0,
-    "Playback": "continuous articulation of one opaque registered swing pose",
-    "LegacyLoopKeys": 34,
-    "BodyScale": "uniform 150/305; local arm registration only",
-    "MemoryChildPose": 8,
-    "BoardingSeconds": 0.65,
-    "MemoryFatherPose": 1
+    ]
   },
   "Memory": {
-    "FadeSeconds": 1.5,
     "StorySeconds": 25,
+    "FadeSeconds": 1.5,
+    "TemporaryLayout": true,
     "Silent": true,
-    "UserTriggered": true,
-    "TemporaryLayout": true
+    "UserTriggered": true
   },
   "Source": "src/Models.cs",
   "ClipSource": "src/MotionClips.cs",
@@ -1051,11 +1372,29 @@
     0.5,
     0.625
   ],
-  "MotionRegistration": "walking head/per-row ground; hop and turn individual sandal anchors in manifest",
+  "MotionRegistration": "walk retains row ground; trot/hop/turn use complete connected-raster anatomy registration; legacy Hop/TurnStandingHeights are not the playback scale",
+  "MotionAnatomySource": "rin/motion-registration.json",
+  "MotionRegistrationSource": "src/MotionPoseFrames.cs",
   "MovementTiming": "distance-based steps, eased approach, .35-second settle before context; hop airborne-only travel, turn in place",
-  "PoseCrossfadeSeconds": 0.25,
-  "SequenceCrossfadeSeconds": 0.08,
-  "SequenceInterpolation": "single opaque registered pose frame; continuous root and lift; premultiplied RGBA action transitions",
+  "ActorRegistrationSource": "src/ActorPoseRegistration.cs",
+  "BasicPoseRegistration": "upright 0-5/9/10 use own standing height; bent 6/7/8/11 retain pose-0 height; measured alpha support overrides legacy FeetAnchor",
+  "TransitionSource": "src/SceneActionBridge.cs",
+  "LegacyTransitionSource": "src/SceneActorTransition.cs",
+  "PoseCrossfadeSeconds": 0,
+  "LegacyPoseCrossfadeSeconds": 0.24,
+  "RapidClipEntryCrossfadeSeconds": 0,
+  "RapidClipEntryHandoffSeconds": 0.06,
+  "RapidClips": [
+    "hop",
+    "turn"
+  ],
+  "SequenceCrossfadeSeconds": 0,
+  "SequenceHandoffSeconds": 0.24,
+  "MaxPositionHandoffSeconds": 0.36,
+  "PositionHandoffRule": ".24 + min(.12, root distance / 600)",
+  "DragPlayback": "frozen actual grab pose; immediate pointer displacement",
+  "GracefulExit": "all ordinary postures physically recover through standing; authored trot/hop/turn/Nurture/swing/tablet exits; mountain visible return; one latest transient request",
+  "SequenceInterpolation": "complete authored opaque poses; connected-raster interpolation between adjacent real keys; continuous root and lift; exact canonical standing endpoints",
   "CreationEventFraction": 0.58,
   "CreationFadeSeconds": 0.7,
   "LegacyCreationFadeSeconds": 2.5,
@@ -1077,7 +1416,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "knees",
@@ -1096,7 +1436,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "swing",
@@ -1115,7 +1456,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "gaze",
@@ -1134,7 +1476,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "sky",
@@ -1153,7 +1496,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "dress",
@@ -1172,7 +1516,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "tablet",
@@ -1191,7 +1536,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "catch",
@@ -1210,7 +1556,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "lie",
@@ -1229,7 +1576,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "nap",
@@ -1248,7 +1596,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "benchSit",
@@ -1267,7 +1616,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "treeGaze",
@@ -1286,7 +1636,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "touchFlower",
@@ -1305,7 +1656,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "watchBird",
@@ -1324,7 +1676,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "touchLight",
@@ -1343,7 +1696,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "homeVisit",
@@ -1362,7 +1716,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "walk",
@@ -1390,7 +1745,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": "rin/walk.png"
+      "MotionAtlas": "rin/walk.png",
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "trot",
@@ -1418,7 +1774,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": "rin/trot-v2.png"
+      "MotionAtlas": "rin/trot-v2.png",
+      "EntryExitOwner": "ActionBridgeState entry; MotionClips/MotionExit authored completion"
     },
     {
       "Id": "hop",
@@ -1463,7 +1820,8 @@
         0.85,
         1.0
       ],
-      "MotionAtlas": "rin/hop.png"
+      "MotionAtlas": "rin/hop.png",
+      "EntryExitOwner": "ActionBridgeState entry; MotionClips/MotionExit authored completion"
     },
     {
       "Id": "turn",
@@ -1508,7 +1866,8 @@
         0.91,
         1.0
       ],
-      "MotionAtlas": "rin/turn.png"
+      "MotionAtlas": "rin/turn.png",
+      "EntryExitOwner": "ActionBridgeState entry; MotionClips/MotionExit authored completion"
     },
     {
       "Id": "visit",
@@ -1536,7 +1895,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": "rin/walk.png"
+      "MotionAtlas": "rin/walk.png",
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "createTap",
@@ -1555,7 +1915,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "createSwipe",
@@ -1574,7 +1935,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "createRaise",
@@ -1593,7 +1955,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "createPlace",
@@ -1612,7 +1975,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "createMusic",
@@ -1631,7 +1995,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "smile",
@@ -1650,7 +2015,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "retreat",
@@ -1669,7 +2035,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "invite",
@@ -1688,7 +2055,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState for direct pose; TabletSession for interactive presentation/stow"
     },
     {
       "Id": "ropeHold",
@@ -1707,7 +2075,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "LifeSequence authored hold/mount/settle/dismount"
     },
     {
       "Id": "swingLife",
@@ -1726,7 +2095,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "LifeSequence authored hold/mount/settle/dismount"
     },
     {
       "Id": "windowWatch",
@@ -1745,7 +2115,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "deskTablet",
@@ -1764,7 +2135,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "roomRest",
@@ -1783,7 +2155,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "ActionBridgeState; canonical standing is reused for an identical pose"
     },
     {
       "Id": "nurtureHug",
@@ -1844,7 +2217,8 @@
         6.66,
         6.78
       ],
-      "MotionAtlas": "rin/nurture-life.png"
+      "MotionAtlas": "rin/nurture-life.png",
+      "EntryExitOwner": "NurtureSequence authored lower/rise"
     },
     {
       "Id": "mountainClimb",
@@ -1860,35 +2234,13 @@
       "Hit": "visible alpha times opacity > 48",
       "WalkFrames": null,
       "JogFrames": null,
-      "PoseFrames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        12,
-        13,
-        14,
-        15,
-        16,
-        17,
-        18,
-        19,
-        20,
-        21,
-        22,
-        23
-      ],
+      "PoseFrames": [],
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": "rin/mountain-life.png"
+      "MotionAtlas": "rin/climb-body-v2.png",
+      "MotionRegistration": "rin/climb-registration.json",
+      "TemporalPhases": 16,
+      "EntryExitOwner": "OutdoorJourney prepare/stand mesh and visible descent"
     },
     {
       "Id": "auroraWatch",
@@ -1907,7 +2259,8 @@
       "PoseFrames": null,
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": null
+      "MotionAtlas": null,
+      "EntryExitOwner": "OutdoorJourney with ActionBridgeState look entry/exit"
     },
     {
       "Id": "snowTouch",
@@ -1939,7 +2292,8 @@
       ],
       "ClipSeconds": null,
       "FrameKeys": null,
-      "MotionAtlas": "rin/polar-life.png"
+      "MotionAtlas": "rin/polar-life.png",
+      "EntryExitOwner": "OutdoorJourney dedicated raise/hold/retract"
     }
   ],
   "Objects": [

@@ -6,14 +6,22 @@
 
 这里有一个正在成长的小世界。
 
-**v1.0.2 · Creation Visual Update**<br>
+**v1.1.0 · Motion & Memory Update**<br>
 《Shelter》十周年纪念 · 2026.10.18
 
 [下载与发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases) · [快速开始](#快速开始) · [使用指南](#日常操作) · [问题反馈](https://github.com/Fantasy708/Rins-Little-Shelter/issues)
 
 </div>
 
-> **v1.0.2 正式维护版**：[白色创造过渡更新](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.2)。景物从连续白色形体与细碎粒中凝结，再原位逐区域显出颜色，保留原存档。首个正式版v1.0.0已于10月16日提前提供，10月18日的《Shelter》十周年纪念主题继续保留；项目仍会持续更新。
+> **v1.1.0 正式版**：[动作与记忆更新发行入口](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.1.0)。整合近期的动作起止、人物比例、山径往返和屋内记忆修订，保留原存档与旧版本。10月18日的《Shelter》十周年纪念主题继续保留，项目仍会持续更新。
+
+本版补齐38组动作的开始和回站过程，并统一人物比例与落脚：普通动作使用新制作的贴地、坐姿和上身中间姿态，小跑、轻跃和转身增加专用收尾；秋千、草地和平板保留各自的身体过程。登山双腿连续交替迈步，普通点击、结束观景或新请求后沿山径实际下山，回到山脚站稳再接下一项；拖动、场景/模式改变仍立即让位。实现和范围见[动作起止过渡](docs/动作起止过渡.md)与[38组检查表](docs/动作过渡检查表.md)。
+
+屋内父女记忆沿用现在的粉色卧室，保留窗、床、圆几、柜子、已保存的布置和窗外昼夜天气。平板、拖动与记忆进出从当前实际画面接续；趴卧或秋千时选择新动作，会先起身或离座。此前`indoor-memory`、`action-bridges`、`climb-continuity`、`motion-exit`等本地包保留为开发历史，其更新统一纳入v1.1.0。完整内容见[发行说明](docs/releases/v1.1.0.md)，实际检查和待人工验收范围见[验证记录](docs/验证记录.md)。
+
+| 贴地与坐姿起落 | 上身动作 | 山径往返 |
+| --- | --- | --- |
+| ![动作起落](docs/screenshots/action-bridges-ground.gif) | ![上身动作](docs/screenshots/action-bridges-upper.gif) | ![登山往返](docs/screenshots/mountain-roundtrip.gif) |
 
 ![Rin 的小世界](docs/screenshots/bench-seat-on-white.png)
 
@@ -27,7 +35,7 @@
 
 ## 在这个小世界里
 
-v1.0.2（2026-10-21）：细化日常手动与自主创造，连续白色形体保留景物的透明轮廓与空隙，搭配更细的碎粒和局部显色；生成前后使用相同层级和昼夜照明。v1.0.1的秋千连贯与人物比例修正继续保留。旧版本与附件保留，实际检查见[验证记录](docs/验证记录.md)。
+v1.1.0将近期动作与记忆修订整合为一个正式版本。此前v1.0.2的连续白色创造和v1.0.1的秋千修复继续保留；旧版本、附件及各轮本地记录均保留，实际检查见[验证记录](docs/验证记录.md)。
 
 | 内容 | 你可以体验到什么 |
 | --- | --- |
@@ -48,11 +56,11 @@ v1.0.2（2026-10-21）：细化日常手动与自主创造，连续白色形体�
 
 支持 **Windows 10（19041 及以上）与 Windows 11 x64**。便携程序自带 .NET 运行环境，无须安装开发工具。
 
-1. 打开 [v1.0.2 正式发行页](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.2)，下载正式版；[历史发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases)继续保留。
+1. 打开 [v1.1.0 发行入口](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.1.0)；[v1.0.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.2)及[历史发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases)继续保留。
 2. 下载该版本的 Windows x64 便携 ZIP，并使用同一发行中的 `SHA256.txt` 核对文件。`source.zip` 是完整源码素材包，供开发和研究使用。
 3. 完整解压 ZIP，打开 `RinsLittleShelter.exe`。请让 EXE 与旁边的 `assets` 文件夹保持在一起。
 
-正式版便携包名为 `RinsLittleShelter-v1.0.2-win-x64.zip`，完整源码素材包为 `RinsLittleShelter-v1.0.2-source.zip`；校验值见同一发行的 `SHA256.txt`。历史版本仍可从发行列表获取。
+本版便携包名为 `RinsLittleShelter-v1.1.0-win-x64.zip`，完整源码素材包为 `RinsLittleShelter-v1.1.0-source.zip`；校验值见同一发行的 `SHA256.txt`。须完整解压，让EXE、图集、登记JSON和manifest配套使用。
 
 升级前先退出旧版，再解压并运行新版。当前版本兼容既有存档，继续读取陪伴进度、来信状态和两种模式的场景布置；升级前也可按下文方法备份。
 
@@ -145,7 +153,7 @@ v1.0.2（2026-10-21）：细化日常手动与自主创造，连续白色形体�
 
 细碎粒在景物即将出现的位置汇聚，连续白色形体逐渐凝结，短暂停留后在原位逐区域显出素材颜色。形体沿用景物真实的透明轮廓与内部空隙，生成前后保持同一层级和昼夜照明。Rin 自主创造使用同样的效果。候选遵守当前场景与模式的解锁规则，每页最多四项；已显示的景物不会重复生成，收起的景物重新展示时保留保存位置。
 
-本次表现参考用户提供的 MV，并针对桌面尺寸适配；原有创造时点、布局和存档保持。此前独立本地试作保留为开发历史，本轮将这一视觉修订纳入 v1.0.2。具体参考与验证边界见[白色创造设计](docs/白色粒子创造设计.md)和[验证记录](docs/验证记录.md)。
+本次表现参考用户提供的 MV，并针对桌面尺寸适配；原有创造时点、布局和存档保持。这一视觉修订已纳入历史v1.0.2，并在本版保留。具体参考与验证边界见[白色创造设计](docs/白色粒子创造设计.md)和[验证记录](docs/验证记录.md)。
 
 预览、切页和关闭不会改变布置。生成前中断不补生成，生成后中断保留已产生的景物。拖动、整理、切换场景或模式、隐藏等操作优先，恢复后不会自动重开平板。
 
@@ -158,6 +166,10 @@ v1.0.2（2026-10-21）：细化日常手动与自主创造，连续白色形体�
 成长模式第 20 个陪伴日开放父女记忆。在屋内或树下点击“查看记忆”，也可从右键、托盘或世界图鉴进入：屋内是父亲替小 Rin 整理发饰，树下是父亲陪她荡秋千。故事段约 25 秒，走近与停稳另计，默认静音，仅由你主动播放，不添加对白。
 
 记忆可以重复观看，也可随时结束。临时人物、光线和陈设不会写入布局，结束后恢复现在的 Rin 与原有场景。
+
+屋内记忆沿用日常同一间粉色卧室及当前的家具位置、隐藏状态，窗外天空和天气继续显示。暖光与父女片段区分回忆氛围，不再覆盖旧木屋；提前结束也不会重置布置。
+
+![统一后的屋内记忆，实际程序绘制](docs/screenshots/indoor-memory-unified.png)
 
 成长模式的消息页最初显示 **“No messages in 2593 days.”**。2593 是固定故事数字，与安装时间或实际陪伴日无关。完整看完屋内或树下任意一段记忆，等现在的 Rin 恢复后，就能在平板中打开同一封“父亲留给 Rin 的信”；提前结束不算完成，重复观看不会新增信件。
 
@@ -223,25 +235,27 @@ pwsh -File scripts/bootstrap.ps1
 
 脚本从微软下载指定 SDK，核对 SHA512 后解压到项目的 `.tools`，不更改系统 SDK。也可以安装[微软 .NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)。首次下载 SDK 与恢复 NuGet 依赖需要联网。
 
-正式版构建到独立目录，保留旧版程序；程序版本由项目文件定义：
+v1.1.0默认构建到`dist/local/v1.1.0/RinsLittleShelter`；直接执行`pwsh -File scripts/build.ps1`即可使用此路径。默认检查包含38组动作时序、相邻姿态变形和生产绘图；实际结果以[验证记录](docs/验证记录.md)为准。产品版本为1.1.0，程序集、文件及应用清单版本为1.1.0.0。
+
+显式指定本轮独立路径的等价命令如下，旧本地及公开版本目录保留：
 
 ```powershell
-pwsh -File scripts/build.ps1 -OutputDirectory dist/local/v1.0.2/RinsLittleShelter
+pwsh -File scripts/build.ps1 -OutputDirectory dist/local/v1.1.0/RinsLittleShelter
 ```
 
 构建前请退出正在运行的发布版本。脚本执行核心与画面等检查，再生成自包含程序和压缩包。若需整理成发行附件，使用：
 
 ```powershell
-pwsh -File scripts/package-release.ps1 -Version v1.0.2 -ProgramDirectory dist/local/v1.0.2/RinsLittleShelter -ReleaseDirectory dist/local/v1.0.2/release
+pwsh -File scripts/package-release.ps1 -Version v1.1.0 -ProgramDirectory dist/local/v1.1.0/RinsLittleShelter -ReleaseDirectory dist/local/v1.1.0/release -ReleaseNotes docs/releases/v1.1.0.md
 ```
 
-打包脚本复用已构建的 EXE，生成便携 ZIP、完整源码素材 ZIP 与 SHA256 清单，不重新编译，也不上传 GitHub。正式版必须另外确认程序版本、对应发行说明和最终验证记录，不能仅修改包名。
+打包脚本复用已构建的 EXE，生成便携 ZIP、完整源码素材 ZIP 与 SHA256 清单，不重新编译，也不上传 GitHub。默认程序、附件目录和说明对应v1.1.0；GitHub发布沿用main创建新Tag与独立发行，旧标签和附件保留。本版说明见[发行说明](docs/releases/v1.1.0.md)。
 
 个人存档、本机工具链、原始测试日志、用户参考截图和宣传视频不纳入公开源码包。架构与诊断参数见[开发说明](docs/开发说明.md)；参与修改前请阅读[设计文档](design.md)与[开发指引](AGENTS.md)。
 
 ## 发布状态与问题反馈
 
-v1.0.2 的内容见[维护版发行说明](docs/releases/v1.0.2.md)，实际检查与已知边界见[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。本版细化日常白色创造过渡，新版程序的构建、短运行和附件核验独立登记；尚未重新执行一小时稳定性测试。v1.0.0的62.13分钟观察属于旧EXE，保留为历史。原生 Windows 键鼠、真实系统缩放、多屏及真实播放器识别仍有待人工实测。
+v1.1.0 的内容见[发行说明](docs/releases/v1.1.0.md)，构建、当前EXE短运行、附件及GitHub发布核验在[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)单独登记。此前本地包和v1.0.0的62.13分钟观察均保留为历史，不代替本版新EXE验收。原生 Windows 键鼠、真实系统缩放、多屏、真实播放器识别及一小时稳定性仍有待人工实测。
 
 遇到问题，请使用 [GitHub Issues](https://github.com/Fantasy708/Rins-Little-Shelter/issues) 中的反馈模板，提供版本、Windows 环境、触发动作与复现步骤；涉及显示问题时，也请说明缩放比例和显示器情况。
 

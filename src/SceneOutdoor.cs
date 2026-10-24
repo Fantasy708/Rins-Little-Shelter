@@ -6,8 +6,14 @@ namespace LittleShelter;
 public sealed partial class Scene
 {
     private Atlas.Sprite mountainLandscape=null!,polarLandscape=null!,auroraLight=null!;
-    private RegisteredPoseFrames climbFrames=null!;
-    private Atlas climbSource=null!;
+    private MotionPoseFrames climbFrames=null!;
+    private MotionPoseFrames journeyWalkFrames=null!,journeySkyFrames=null!;
+    private ClimbLegRig climbRig=null!;
+    private Point[][] climbJoints=null!,climbTargets=null!;
+    private Point[] climbUpperControls=null!;
+    private readonly Point[] climbSoles=new Point[2],climbAnkles=new Point[2];
+    private readonly double[] climbFootAngles=new double[2];
+    private double climbDrop;
     private RegisteredPoseFrames polarFrames=null!;
     public Rect OutdoorBodyBounds { get; private set; }=Rect.Empty;
     public Point[] OutdoorContacts { get; private set; }=Array.Empty<Point>();
@@ -36,11 +42,21 @@ public sealed partial class Scene
         mountainLandscape=Landscape(Path.Combine(root,manifest.MountainImage));
         polarLandscape=Landscape(Path.Combine(root,manifest.PolarImage));
         auroraLight=Landscape(Path.Combine(root,manifest.AuroraImage));
-        var atlas=new Atlas(Path.Combine(root,manifest.ClimbAtlas),manifest.ClimbRegions,true);
-        climbSource=atlas;
-        if(atlas.Sprites.Length!=24 || manifest.ClimbAnchors.Length!=24 || manifest.ClimbHeights.Length!=24 || manifest.ClimbContacts.Length!=24)
+        if(manifest.ClimbRigRegion.Length!=4)
             throw new InvalidDataException("登山姿势、落脚与比例登记不完整");
-        climbFrames=new RegisteredPoseFrames(atlas,manifest.ClimbAnchors,manifest.ClimbHeights);
+        var source=new Atlas(Path.Combine(root,manifest.ClimbRigAtlas),new[]{manifest.ClimbRigRegion},true);
+        var anatomy=MotionAnatomy.Load(Path.Combine(root,manifest.ClimbRegistration));
+        if(anatomy.Climb.Length!=1 || anatomy.RigJoints.Length!=2 || anatomy.RigJoints.Any(leg=>leg.Length!=4) || anatomy.RigSoles.Length!=2)
+            throw new InvalidDataException("登山连续关节或双脚登记不完整");
+        climbFrames=new MotionPoseFrames(source,anatomy.Climb,anatomy);
+        climbUpperControls=climbFrames.Controls(0);
+        if(anatomy.JourneyWalk.Length!=walking.Sprites.Length || anatomy.JourneySky.Length!=1)
+            throw new InvalidDataException("山径步行与眺望体型登记不完整");
+        journeyWalkFrames=new MotionPoseFrames(walking,anatomy.JourneyWalk,anatomy);
+        journeySkyFrames=new MotionPoseFrames(new[]{poses.Sprites[2]},anatomy.JourneySky,anatomy);
+        climbJoints=anatomy.RigJoints.Select(leg=>leg.Select(p=>climbFrames.MapPoint(0,p)).ToArray()).ToArray();
+        climbTargets=new[]{new Point[4],new Point[4]};
+        climbRig=new ClimbLegRig(climbFrames.Frame(0),climbFrames.Bounds,climbJoints);
         var polarAtlas=new Atlas(Path.Combine(root,manifest.PolarPoseAtlas),manifest.PolarPoseRegions,true);
         if(polarAtlas.Sprites.Length!=12 || manifest.PolarPoseAnchors.Length!=12 || manifest.PolarPoseHeights.Length!=12) throw new InvalidDataException("接雪姿势与落脚登记不完整");
         polarFrames=new RegisteredPoseFrames(polarAtlas,manifest.PolarPoseAnchors,manifest.PolarPoseHeights);
@@ -98,10 +114,43 @@ public sealed partial class Scene
         OutdoorBodyBounds=Rect.Empty;OutdoorContacts=Array.Empty<Point>();ClimbFrame=-1;
         if(!climbing)return;
         int frame=behavior.Journey.PoseFrame;ClimbFrame=frame;
-        double k=150/manifest.ClimbHeights[frame];var anchor=manifest.ClimbAnchors[frame];
-        var source=climbSource.Sprites[frame];var actual=new Rect(behavior.X+(source.CropLeft-anchor[0])*k,behavior.Y+(source.CropTop-anchor[1])*k,source.Width*k,source.Height*k);
+        var actual=climbRig.VisibleBounds;actual.Offset(behavior.X,behavior.Y+climbDrop);
         OutdoorBodyBounds=left?new Rect(2*behavior.X-actual.Right,actual.Y,actual.Width,actual.Height):actual;
-        OutdoorContacts=manifest.ClimbContacts[frame].Select(point=>new Point(behavior.X+(point[0]-anchor[0])*k*(left?-1:1),behavior.Y+(point[1]-anchor[1])*k)).ToArray();
+        OutdoorContacts=climbSoles;
+    }
+    private Atlas.Sprite DrawClimbFrame(IReadOnlyList<OutdoorPoint>? feet=null)
+    {
+        var journey=behavior.Journey;bool left=journey.Direction<0;
+        climbDrop=0;
+        for(int leg=0;leg<2;leg++) {
+            var foot=(feet ?? journey.FootContacts)[leg];climbSoles[leg]=new Point(foot.X,foot.Y);
+            double angle=leg==journey.SupportFoot ? 0 : -.10*Math.Sin(Math.PI*journey.StepPhase);
+            climbFootAngles[leg]=angle;
+            var offset=climbRig.SoleOffset(leg,angle);
+            var ankle=new Point((foot.X-behavior.X)*(left ? -1 : 1)-offset.X,foot.Y-behavior.Y-offset.Y);
+            climbAnkles[leg]=ankle;
+            var chain=climbJoints[leg];double max=(chain[1]-chain[0]).Length+(chain[2]-chain[1]).Length;
+            double dx=ankle.X-chain[0].X;
+            double reach=Math.Sqrt(Math.Max(1,max*max*.99*.99-dx*dx));
+            climbDrop=Math.Max(climbDrop,ankle.Y-chain[0].Y-reach);
+        }
+        for(int leg=0;leg<2;leg++) {
+            var chain=climbJoints[leg];var target=climbTargets[leg];
+            target[0]=chain[0];target[2]=new Point(climbAnkles[leg].X,climbAnkles[leg].Y-climbDrop);
+            target[1]=ClimbKnee(target[0],target[2],(chain[1]-chain[0]).Length,(chain[2]-chain[1]).Length);
+            double length=(chain[3]-chain[2]).Length,angle=climbFootAngles[leg];
+            target[3]=new Point(target[2].X+length*Math.Cos(angle),target[2].Y+length*Math.Sin(angle));
+        }
+        return climbRig.Frame(climbTargets);
+    }
+    private static Point ClimbKnee(Point hip,Point ankle,double thigh,double calf)
+    {
+        var delta=ankle-hip;double length=Math.Max(.01,delta.Length);
+        double along=(thigh*thigh-calf*calf+length*length)/(2*length);
+        along=Math.Clamp(along,-thigh,thigh);
+        double bend=Math.Sqrt(Math.Max(0,thigh*thigh-along*along));
+        return new Point(hip.X+delta.X/length*along+delta.Y/length*bend,
+            hip.Y+delta.Y/length*along-delta.X/length*bend);
     }
     private void DrawOutdoorContactEffects(DrawingContext dc)
     {

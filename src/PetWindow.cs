@@ -66,6 +66,9 @@ public sealed partial class PetWindow : Window
         Behavior.ObjectCreated += id => { bool wasShown = Save.Layout.Any(p => p.Id == id && !p.Hidden); World.Create(Save, id); if (!wasShown && Save.Layout.Any(p=>p.Id==id && !p.Hidden)) Scene.Born(id); Scene.Bubble = "这里又多了" + ObjectDef.Get(id).Name + "。"; Scene.BubbleUntil = runtime + 5; PlaySoftSound(); Persist(); CompanionChanged?.Invoke(); };
         Behavior.Tablet.StoryChanged += () => { Persist(); CompanionChanged?.Invoke(); };
         Behavior.Life.MemoryCompleted += () => { Persist(); CompanionChanged?.Invoke(); };
+        Behavior.RecoveryActionReady += PreviewAction;
+        Behavior.RecoveryMemoryReady += ViewMemory;
+        Behavior.RecoveryTabletReady += (page,preselect)=>OpenTablet(page,preselect);
         Audio.ShelterFinished += () => Dispatcher.Invoke(ShelterPlaybackCompleted);
         SystemEvents.SessionSwitch += SessionSwitch;
         SystemEvents.PowerModeChanged += PowerChanged;
@@ -125,7 +128,8 @@ public sealed partial class PetWindow : Window
         var theme = World.Theme(Save.Settings, DateTime.Now.Hour);
         // Hold the quiet seated pose throughout the temporary ideal world;
         // explicit interactions still run through the same state machine.
-        if (runtime >= Scene.IdealUntil || Behavior.Current.Kind != "idle") Behavior.Tick(dt, Save, theme is "夜晚" or "深夜");
+        if (runtime >= Scene.IdealUntil || Behavior.Current.Kind != "idle" || Behavior.Bridge.Active || Behavior.MotionExit.Active || Behavior.PendingRecoveryAction!=null)
+            Behavior.Tick(dt, Save, theme is "夜晚" or "深夜");
         if (Native.GetCursorPos(out var cursor))
         {
             var point = Scene.PointFromScreen(new Point(cursor.X, cursor.Y));
@@ -177,9 +181,10 @@ public sealed partial class PetWindow : Window
     private void UpdateVisibility() { if (manualHidden || fullscreen || locked) { CancelTablet(); Hide(); } else { Show(); lastFrame = watch.Elapsed.TotalSeconds; } }
     public void ToggleHidden() { manualHidden = !manualHidden; UpdateVisibility(); }
     public void TogglePause() { paused = !paused; if (paused) CancelTablet(); clock.Reset(); _ = Audio.Poll(Save.Settings.Music && !paused); CompanionChanged?.Invoke(); }
-    private void CancelTablet() { SkipStartup(); Behavior.Tablet.Cancel(Save); Scene.ClearTabletHits(); Scene.ClearCreationEffects(); Scene.InvalidateVisual(); }
+    private void CancelTablet() { SkipStartup(); Behavior.CancelTabletRecovery(); Behavior.Tablet.Cancel(Save); Scene.ClearTabletHits(); Scene.ClearCreationEffects(); Scene.InvalidateVisual(); }
     public void SwitchMode()
     {
+        Behavior.CancelActionRecovery();
         Behavior.Journey.Cancel(Save);
         Behavior.Nurture.Cancel(Save);
         CancelTablet();
@@ -189,10 +194,11 @@ public sealed partial class PetWindow : Window
         Behavior.Start("smile"); Scene.Bubble = Save.Settings.FreeMode ? "一起创造新的世界吧。" : "慢慢长成我们的小世界。"; Scene.BubbleUntil = runtime + 5;
         Persist(); CompanionChanged?.Invoke();
     }
-    public void ToggleEditing() { Behavior.Journey.Cancel(Save); Behavior.Nurture.Cancel(Save); CancelTablet(); Behavior.Life.Cancel(); Scene.Editing = !Scene.Editing; Scene.ResetLifeVisuals(); }
+    public void ToggleEditing() { Behavior.CancelActionRecovery(); Behavior.Journey.Cancel(Save); Behavior.Nurture.Cancel(Save); CancelTablet(); Behavior.Life.Cancel(); Scene.Editing = !Scene.Editing; Scene.ResetLifeVisuals(true); }
     public bool SwitchScene(string id)
     {
         if (!Scenes.Unlocked(Save,id)) return false;
+        Behavior.CancelActionRecovery();
         Behavior.Journey.Cancel(Save);
         Behavior.Nurture.Cancel(Save);
         CancelTablet();
@@ -200,10 +206,14 @@ public sealed partial class PetWindow : Window
         Scenes.Switch(Save,id); Scene.Editing=false; Scenes.PlaceActor(Save,Behavior); Behavior.Start("stand"); Scene.ResetLifeVisuals();
         Persist(); CompanionChanged?.Invoke(); return true;
     }
-    public void ViewMemory() { Behavior.Journey.Cancel(Save); Behavior.Nurture.Cancel(Save); CancelTablet(); if (Scene.Editing) ToggleEditing(); if (Behavior.Life.BeginMemory(Save)) { Scene.BubbleUntil=0; Scene.IdealUntil=0; } }
+    public void ViewMemory() { if(Behavior.RecoverBeforeMemory(Save))return;Behavior.Journey.Cancel(Save); Behavior.Nurture.Cancel(Save); CancelTablet(); if (Scene.Editing) ToggleEditing(); if (Behavior.Life.BeginMemory(Save)) { Scene.BubbleUntil=0; Scene.IdealUntil=0; } }
     public void EndMemory() { Behavior.Life.RequestStop(); Scene.InvalidateVisual(); }
-    public void Swing() { if (Save.SceneId == "swingTree") { CancelTablet(); Scene.Editing=false; Behavior.Life.BeginSwing(Save); } }
-    public void Recover() { SkipStartup(); Behavior.Journey.Cancel(Save); Save.Settings.ClickThrough = false; pointerThrough = false; manualHidden = false; Native.KeepOnScreen(this, true); Native.Configure(this, false); UpdateVisibility(); Persist(); }
+    public void Swing() {
+        if(Save.SceneId!="swingTree" || Behavior.Dragging)return;
+        if(Behavior.RecoverBeforeAction(Save,"swingLife"))return;
+        CancelTablet(); Scene.Editing=false; Behavior.Life.BeginSwing(Save);
+    }
+    public void Recover() { SkipStartup(); if(Behavior.Journey.Active && !Behavior.Journey.RequestReturn(Save))Behavior.Journey.Cancel(Save); Save.Settings.ClickThrough = false; pointerThrough = false; manualHidden = false; Native.KeepOnScreen(this, true); Native.Configure(this, false); UpdateVisibility(); Persist(); }
     public void OpenSettings()
     {
         SkipStartup();
@@ -228,10 +238,13 @@ public sealed partial class PetWindow : Window
     }
     public bool OpenTablet(string page="create",string? preselect=null,bool automatic=false)
     {
+        if(automatic && Behavior.Bridge.Active)return false;
+        if(automatic && Behavior.CanExitMotion) return false;
         if(automatic && Recall.Active) return false;
         if (automatic && Opening.Active) return false;
         if (!automatic) SkipStartup();
         if (paused || manualHidden || fullscreen || locked || Save.Settings.ClickThrough || Scene.Editing || !IsVisible) return false;
+        if (!automatic && Behavior.RecoverBeforeTablet(Save,page,preselect)) { Scene.ClearTabletButtons();Scene.InvalidateVisual();return true; }
         if (!Behavior.Tablet.Open(Save,automatic,page,preselect)) return false;
         lastOffer=runtime; Scene.IdealUntil=0; Scene.BubbleUntil=0; Scene.ClearTabletHits(); Scene.InvalidateVisual(); return true;
     }
@@ -240,25 +253,32 @@ public sealed partial class PetWindow : Window
     {
         OpenTablet("create",id);
     }
-    public void ShowIdeal() { SkipStartup(); if (Behavior.Journey.Active || Behavior.Nurture.Active || Behavior.Tablet.Active || Behavior.Life.Active || Save.SceneId is not "outdoor" and not "cloud") return; Scene.IdealUntil = runtime + 45; Scene.ShelterUntil = runtime + 55; Behavior.Start("knees"); Scene.Bubble = "这里有我们的天空。"; Scene.BubbleUntil = runtime + 6; }
-    public bool CanHugGrass => !Opening.Active && !paused && !manualHidden && !fullscreen && !locked && !Scene.Editing && !Save.Settings.ClickThrough && Behavior.Nurture.CanBegin(Save);
+    public void ShowIdeal() { SkipStartup(); if (Behavior.Journey.Active || Behavior.Nurture.Active || Behavior.Tablet.Active || Behavior.Life.Active || Save.SceneId is not "outdoor" and not "cloud") return; Scene.IdealUntil = runtime + 45; Scene.ShelterUntil = runtime + 55; if(!Behavior.RecoverBeforeAction(Save,"knees"))Behavior.Start("knees"); Scene.Bubble = "这里有我们的天空。"; Scene.BubbleUntil = runtime + 6; }
+    public bool CanHugGrass => !Opening.Active && !paused && !manualHidden && !fullscreen && !locked && !Scene.Editing && !Save.Settings.ClickThrough
+        && (Behavior.Nurture.CanBegin(Save) || Behavior.Tablet.Active && !Behavior.Dragging && !Behavior.Life.Active && !Behavior.Journey.Active && NurtureGround.TryFind(Save,Behavior.X,out _));
     public bool HugGrass()
     {
         SkipStartup();
-        if (!CanHugGrass || !IsVisible || !Behavior.Nurture.Begin(Save)) return false;
+        if (!CanHugGrass || !IsVisible) return false;
+        if(Behavior.RecoverBeforeAction(Save,"nurtureHug"))return true;
+        if(!Behavior.Nurture.Begin(Save))return false;
         Scene.IdealUntil=0; Scene.BubbleUntil=0; Scene.ClearTabletButtons(); Scene.InvalidateVisual(); return true;
     }
-    public bool CanExplore(string id) => !Opening.Active && !paused && !manualHidden && !fullscreen && !locked && !Scene.Editing && !Save.Settings.ClickThrough && Behavior.Journey.CanBegin(Save,id);
+    public bool CanExplore(string id) => !Opening.Active && !paused && !manualHidden && !fullscreen && !locked && !Scene.Editing && !Save.Settings.ClickThrough
+        && (Behavior.Journey.CanBegin(Save,id) || Behavior.Tablet.Active && !Behavior.Dragging && !Behavior.Life.Active && !Behavior.Nurture.Active && OutdoorGround.Available(Save,id));
     public bool Explore(string id)
     {
         SkipStartup();
-        if (!CanExplore(id) || !IsVisible || !Behavior.Journey.Begin(Save,id)) return false;
+        if (!CanExplore(id) || !IsVisible) return false;
+        if(Behavior.RecoverBeforeAction(Save,id))return true;
+        if(!Behavior.Journey.Begin(Save,id))return false;
         Scene.IdealUntil=0; Scene.BubbleUntil=0; Scene.ClearTabletHits(); Scene.InvalidateVisual(); CompanionChanged?.Invoke(); return true;
     }
-    public void EndExploration() { Behavior.Journey.Cancel(Save); Scene.InvalidateVisual(); CompanionChanged?.Invoke(); }
+    public void EndExploration() { if(!Behavior.Journey.RequestReturn(Save))Behavior.Journey.Cancel(Save); Scene.InvalidateVisual(); CompanionChanged?.Invoke(); }
     public void PreviewAction(string id)
     {
         var a = Actions.Get(id); if (!Scenes.ActionAvailable(Save,a)) return;
+        if(Behavior.RecoverBeforeAction(Save,id)) return;
         if (id == "nurtureHug") { HugGrass(); return; }
         if (id is "mountainClimb" or "auroraWatch" or "snowTouch") { Explore(id); return; }
         if (a.Kind == "create") { var d=World.Available(Save).LastOrDefault(d=>!Scenes.Foundation(d.Id)); OpenTablet("create",d?.Id); return; }
@@ -275,8 +295,8 @@ public sealed partial class PetWindow : Window
         else Behavior.Start(id);
         Scene.Bubble = a.Name; Scene.BubbleUntil = runtime + 3;
     }
-    public void HideObject(string id) { Behavior.Journey.Cancel(Save); Behavior.Nurture.Cancel(Save); CancelTablet(); Behavior.Life.Cancel(); var p = Save.Layout.FirstOrDefault(p => p.Id == id); if (p != null && !Scenes.Foundation(id)) { if (Behavior.Current.ObjectId == id) { Behavior.RiseFromBed(Save); Behavior.Start("stand"); } p.Hidden = true; } Persist(); CompanionChanged?.Invoke(); }
-    public void RestoreLayout() { Behavior.Journey.Cancel(Save); Behavior.Nurture.Cancel(Save); CancelTablet(); Behavior.Life.Cancel(); Save.Layout.Clear(); Save.Layout.AddRange(Save.SceneId == "outdoor" ? World.Available(Save).Select(World.Default) : Scenes.Defaults(Save.SceneId)); Scenes.PlaceActor(Save,Behavior); Behavior.Start("stand"); Scene.ResetLifeVisuals(); Persist(); CompanionChanged?.Invoke(); }
+    public void HideObject(string id) { if(Scenes.Foundation(id))Behavior.Journey.Cancel(Save); Behavior.Nurture.Cancel(Save); CancelTablet(); Behavior.Life.Cancel(); var p = Save.Layout.FirstOrDefault(p => p.Id == id); if (p != null && !Scenes.Foundation(id)) { if (Behavior.Current.ObjectId == id) { Behavior.RiseFromBed(Save); Behavior.Start("stand"); } p.Hidden = true; } Persist(); CompanionChanged?.Invoke(); }
+    public void RestoreLayout() { Behavior.CancelActionRecovery(); Behavior.Journey.Cancel(Save); Behavior.Nurture.Cancel(Save); CancelTablet(); Behavior.Life.Cancel(); Save.Layout.Clear(); Save.Layout.AddRange(Save.SceneId == "outdoor" ? World.Available(Save).Select(World.Default) : Scenes.Defaults(Save.SceneId)); Scenes.PlaceActor(Save,Behavior); Behavior.Start("stand"); Scene.ResetLifeVisuals(); Persist(); CompanionChanged?.Invoke(); }
     private void OnSceneMouseDown(object sender, MouseButtonEventArgs e)
     {
         var point = e.GetPosition(Scene); pressedTarget = Scene.Hit(point);
@@ -333,15 +353,14 @@ public sealed partial class PetWindow : Window
             if (Behavior.Life.Active && pressedTarget is not "rin" and not "swingSeat") Behavior.Life.Cancel();
             if (pressedTarget == "rin") Behavior.Click(Save);
             else {
-                Behavior.Journey.Cancel(Save);
-                CancelTablet();
                 Scene.FeedbackObject = pressedTarget; Scene.FeedbackUntil = runtime + 3;
-                if (pressedTarget == "bench") { var p = Save.Layout.First(o => o.Id == "bench"); Behavior.Visit("benchSit", p.X, p.Y); }
-                if (pressedTarget == "bird") Behavior.Start("watchBird");
-                if (pressedTarget == "swingSeat") Swing();
-                if (pressedTarget == "chair") Behavior.PreviewVisit(Save,"roomRest");
-                if (pressedTarget == "window") Behavior.PreviewVisit(Save,"windowWatch");
-                if (pressedTarget == "desk") Behavior.PreviewVisit(Save,"deskTablet");
+                if (pressedTarget == "bench") PreviewAction("benchSit");
+                else if (pressedTarget == "bird") PreviewAction("watchBird");
+                else if (pressedTarget == "swingSeat") Swing();
+                else if (pressedTarget == "chair") PreviewAction("roomRest");
+                else if (pressedTarget == "window") PreviewAction("windowWatch");
+                else if (pressedTarget == "desk") PreviewAction("deskTablet");
+                else if(Behavior.Tablet.Active)Behavior.Tablet.Close(Save);
             }
         }
         FinishDrag(); Scene.ReleaseMouseCapture(); e.Handled = true;
@@ -376,7 +395,8 @@ public sealed partial class PetWindow : Window
         foreach(string id in Save.SceneId == "mountain" ? new[]{"mountainClimb"} : Save.SceneId == "polar" ? new[]{"auroraWatch","snowTouch"} : Array.Empty<string>()) {
             var entry=new MenuItem { Header=Actions.Get(id).Name,IsEnabled=CanExplore(id) }; entry.Click+=(_,_)=>Explore(id); menu.Items.Add(entry);
         }
-        if (Behavior.Journey.Active) Add("结束观景",EndExploration);
+        if (Behavior.Journey.AtSummit) Add("沿山径下山",()=> { Behavior.Journey.RequestDescent(Save); Scene.InvalidateVisual(); });
+        if (Behavior.Journey.Active) Add(Save.SceneId=="mountain" ? "沿山径返回" : "结束观景",EndExploration);
         Add(Scene.Editing ? "完成整理" : "整理小世界", ToggleEditing); Add("请 Rin 创造…", () => OfferChoice(false));
         Add("查看平板消息",OpenMessages);
         var nurtureEntry=new MenuItem { Header="Nurture·拥抱草地",IsEnabled=CanHugGrass }; nurtureEntry.Click+=(_,_)=>HugGrass(); menu.Items.Add(nurtureEntry);

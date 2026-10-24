@@ -106,7 +106,14 @@ internal static class CreationMaterialTests
                 Check(actor.Tablet.Phase=="ready"&&actor.Tablet.Confirm(save),"真实平板确认");
                 for(int n=0;n<1000&&actor.Tablet.Phase!="tap";n++)Step(.02);
                 Check(actor.Tablet.Phase=="tap","真实点触阶段");
-            } else actor.Create(target);
+            } else {
+                actor.Create(target);
+                // Step() subdivides at120Hz. Check the boundary after EACH
+                // one of those ticks, so a second substep cannot advance the
+                // creation clock after the bridge has just released it.
+                for(int n=0;n<1200&&actor.Bridge.Active;n++)Step(1.0/120);
+                Check(!actor.Bridge.Active&&actor.Time==0&&events==0,"真实身体准备结束后才开始自主创造主体与58%计时");
+            }
             RefreshNow();
         }
         void ToAge(double age)

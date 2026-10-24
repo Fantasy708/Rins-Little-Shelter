@@ -78,9 +78,12 @@ internal static class TabletWindowTests
                 if (phase=="tap") { Until("ready"); Render(); pet.HandleTabletInput("confirm"); }
                 Until(phase); Render(); var buttons=pet.Scene.TabletButtons.ToArray();
                 pet.ViewMemory();
-                Check(!pet.Behavior.Tablet.Active && pet.Scene.TabletButtons.Count==0,"直接记忆入口关闭室内平板 "+phase);
-                Check(pet.Behavior.Life.Active,"直接记忆入口启动原记忆状态机 "+phase);
+                Check(pet.Behavior.Tablet.Active && pet.Behavior.Tablet.Recovering && !pet.Behavior.Tablet.Interactive && !pet.Behavior.Life.Active,"直接记忆入口先收起室内平板，旧输入立即失效 "+phase);
                 foreach(var button in buttons) Check(pet.Scene.Hit(Center(button.Value))!="tablet:"+button.Key,"直接记忆入口清除旧命中");
+                for(int i=0;i<16000 && pet.Behavior.Tablet.Active;i++)Step(.01);
+                Render();
+                Check(!pet.Behavior.Tablet.Active && pet.Scene.TabletButtons.Count==0,"直接记忆入口完成实际收纳后关闭室内平板 "+phase);
+                Check(pet.Behavior.Life.Active,"平板收纳完成才启动原记忆状态机 "+phase);
                 pet.Behavior.Life.Cancel();
             }
             OpenAt("ready"); var confirm=pet.Scene.TabletButtons["confirm"]; pet.HandleTabletInput("confirm");

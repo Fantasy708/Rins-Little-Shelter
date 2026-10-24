@@ -142,10 +142,14 @@ internal static class OutdoorVisualTests
             var seen=new HashSet<int>();
             while(actor.Journey.Active)
             {
-                if(actor.Journey.DedicatedPose) {
+                // Preparation and foot gathering now also have dedicated
+                // physical bodies. The stride-contact diagnostic applies to
+                // the actual ascending/descending gait; their exact standing
+                // endpoints are covered separately by ClimbContinuityTests.
+                if(actor.Journey.Phase is "ascend" or "descend") {
                     int frame=actor.Journey.PoseFrame;
-                    if(actor.Journey.Elapsed/.1%1>=.45 && seen.Add(frame)) {
-                        Render(); time+=.1; Render(); // Finish the authored 80 ms action-entry handoff before a held-pose comparison.
+                    if(seen.Add(frame)) {
+                        Render(); time+=.4; Render(); // Settle the shared action handoff before checking a held authored pose for alpha pulses.
                         foreach(double dpi in new[]{1.0,1.5,2.0}) {
                         string label="攀登 "+fromRight+"/"+frame+"/"+dpi;
                         var full=Render(null,dpi); var bounds=scene.OutdoorBodyBounds; var contacts=scene.OutdoorContacts.ToArray(); var route=scene.MountainRoute.ToArray();
@@ -173,7 +177,7 @@ internal static class OutdoorVisualTests
                 }
                 Step(.025); Render();
             }
-            Check(seen.SetEquals(Enumerable.Range(0,24)),"真实升降时间轴遍历全部24个独立姿势 "+fromRight);
+            Check(seen.SetEquals(Enumerable.Range(0,32)),"真实升降时间轴遍历连续腿部运动的32个诊断相位 "+fromRight);
             Render(); Check(scene.ClimbFrame<0 && scene.OutdoorContacts.Length==0,"结束后清除旧专用姿势与接触锚点");
             Check(JsonSerializer.Serialize(save)==before,"绘图与登山时间轴不修改存档 "+fromRight);
         }
@@ -186,7 +190,7 @@ internal static class OutdoorVisualTests
                     int frame=scene.PolarSnowFrame;
                     double middle=frame<6 ? frame*.2+.1 : 5.8+(frame-6)*.2+.1;
                     if(actor.Journey.Elapsed>=middle && seen.Add(frame)) {
-                        Render(); time+=.1; Render();
+                        Render(); time+=.4; Render();
                         foreach(double dpi in new[]{1.0,1.5,2.0}) {
                         var full=Render("polar-snow-pose-"+fromRight+"-"+frame.ToString("D2")+"-"+dpi.ToString("0.0",CultureInfo.InvariantCulture),dpi);
                         CornerChecks(full,dpi,"接雪帧 "+frame);

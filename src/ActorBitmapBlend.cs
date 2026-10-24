@@ -48,7 +48,8 @@ internal sealed class RegisteredPoseFrames
 {
     public Rect Bounds { get; }
     private readonly Atlas.Sprite[] frames;
-    public RegisteredPoseFrames(Atlas atlas, double[][] anchors, double[] heights)
+    private readonly Point[][] controls;
+    public RegisteredPoseFrames(Atlas atlas, double[][] anchors, double[] heights,bool upright=false)
     {
         var rects=atlas.Sprites.Select((s,i)=>
         {
@@ -59,16 +60,23 @@ internal sealed class RegisteredPoseFrames
         Bounds=ActorBitmapBlend.PixelBounds(bounds);
         int width=(int)Math.Round(Bounds.Width*ActorBitmapBlend.Scale), height=(int)Math.Round(Bounds.Height*ActorBitmapBlend.Scale);
         frames=new Atlas.Sprite[atlas.Sprites.Length];
+        controls=new Point[frames.Length][];
         for(int i=0;i<frames.Length;i++)
         {
             int frame=i; var raster=ActorBitmapBlend.Render(Bounds,dc=>dc.DrawImage(atlas.Sprites[frame].Image,rects[frame]));
             frames[i]=new Atlas.Sprite(raster,0,0,width,height,0);
+            if(upright) {
+                var visible=rects[i];double center=visible.X+visible.Width*.5;
+                var head=new Rect(center-visible.Height*.24,visible.Top,visible.Height*.48,visible.Height*.34);
+                controls[i]=ActorPoseBridgeRegistration.EstimateControls(frames[i],Bounds,head);
+            }
         }
     }
     public Atlas.Sprite Sample(ClipSample sample)
     {
         return frames[sample.Blend < .5 ? sample.From : sample.To];
     }
+    public Point[] Controls(int frame)=>controls[frame] ??=ActorPoseBridgeRegistration.EstimateControls(frames[frame],Bounds);
 }
 
 // Short action changes may also contain an already blended pose. Rasterize

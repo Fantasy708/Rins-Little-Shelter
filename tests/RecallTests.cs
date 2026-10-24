@@ -35,10 +35,18 @@ internal static class RecallTests
         var storage=new Storage(Path.Combine(output,"data")); var pet=new PetWindow(storage,save,true); app.MainWindow=pet;
         void Field(string name,bool value) => typeof(PetWindow).GetField(name,BindingFlags.Instance|BindingFlags.NonPublic)!.SetValue(pet,value);
         void Invoke(string name,params object[] values) => typeof(PetWindow).GetMethod(name,BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(pet,values);
+        void FinishBridge() {
+            bool frozen=true; int steps=0;
+            while(pet.Behavior.Bridge.Active && steps++<1000) {
+                double time=pet.Behavior.Time; pet.Behavior.Tick(.01,save,false);
+                frozen&=Math.Abs(pet.Behavior.Time-time)<1e-9;
+            }
+            Check(!pet.Behavior.Bridge.Active && frozen,"测试准备先完成身体过渡，原动作时钟保持冻结");
+        }
         void Reset(string scene="outdoor",bool free=false) {
             pet.SkipStartup(); pet.Behavior.Tablet.Cancel(save); pet.Behavior.Life.Cancel(); pet.Behavior.Journey.Cancel(save); pet.Behavior.Nurture.Cancel(save);
             foreach(string field in new[]{"paused","manualHidden","fullscreen","sessionLocked","suspended"}) Field(field,false);
-            save.Settings.FreeMode=free; save.Settings.ClickThrough=false; Scenes.Switch(save,scene); Scenes.PlaceActor(save,pet.Behavior); pet.Behavior.Start("stand"); pet.Scene.Editing=false; Invoke("UpdateVisibility");
+            save.Settings.FreeMode=free; save.Settings.ClickThrough=false; Scenes.Switch(save,scene); Scenes.PlaceActor(save,pet.Behavior); pet.Behavior.Start("stand"); pet.Scene.Editing=false; Invoke("UpdateVisibility"); FinishBridge();
         }
         string State() => JsonSerializer.Serialize(new {save.CompanionDates,save.Created,save.ChoiceCounts,save.GrowthLayout,save.FreeLayout,save.GrowthSceneLayouts,save.FreeSceneLayouts,save.GrowthStory,save.FreeStory,save.Interactions,save.HasSeenStartup});
         void Render(double dpi=1,string? name=null) {
@@ -46,6 +54,21 @@ internal static class RecallTests
             b.Render((System.Windows.Controls.Grid)pet.Content); renders++;
             var pixel=new byte[4]; b.CopyPixels(new Int32Rect(0,0,1,1),pixel,4,0); Check(pixel[3]==0,"外部透明空白");
             if(name!=null) {using var f=File.Create(Path.Combine(output,name+".png"));var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(b));png.Save(f);}
+        }
+        var drawSceneActor=typeof(Scene).GetMethod("DrawPresentRin",BindingFlags.NonPublic|BindingFlags.Instance)!;
+        var drawRecallActor=typeof(CreationRecallCanvas).GetMethod("Actor",BindingFlags.NonPublic|BindingFlags.Instance)!;
+        BitmapSource ActorImage(Action<DrawingContext> draw,double dpi) {
+            var visual=new DrawingVisual();RenderOptions.SetBitmapScalingMode(visual,BitmapScalingMode.HighQuality);using(var dc=visual.RenderOpen())draw(dc);
+            var image=new RenderTargetBitmap((int)(480*dpi),(int)(340*dpi),96*dpi,96*dpi,PixelFormats.Pbgra32);image.Render(visual);image.Freeze();return image;
+        }
+        void SameActor(BitmapSource from,BitmapSource to,string label) {
+            var a=new byte[from.PixelWidth*from.PixelHeight*4];var b=new byte[a.Length];from.CopyPixels(a,from.PixelWidth*4,0);to.CopyPixels(b,to.PixelWidth*4,0);
+            long error=0;int occupied=0,changed=0;
+            for(int p=0;p<a.Length;p+=4) {
+                if(a[p+3]==0 && b[p+3]==0)continue;occupied++;int peak=0;
+                for(int c=0;c<4;c++) {int d=Math.Abs(a[p+c]-b[p+c]);error+=d;peak=Math.Max(peak,d);}if(peak>4)changed++;
+            }
+            Check(occupied>0 && error/(double)(occupied*4)<=.5 && changed/(double)occupied<=.04,label);
         }
         try {
             pet.Show();
@@ -69,6 +92,23 @@ internal static class RecallTests
                 }
                 pet.AdvanceRecall(1); Check(!pet.Recall.Active && pet.Scene.Visibility==Visibility.Visible && !pet.Scene.StartupPresentation,"自然恢复原场景"); Check(State()==state,"结束保存状态一致");
                 storage.Write(save); var loaded=storage.Load(); Check(loaded.Created.SetEquals(save.Created) && JsonSerializer.Serialize(loaded.GrowthStory)==JsonSerializer.Serialize(save.GrowthStory),"重启无故事副作用");
+            }
+            foreach(double dpi in new[]{1.0,1.5,2.0}) foreach(var entry in new[]{(23.95,true),(.9,false),(3.2,false),(19.0,false),(23.6,false)}) {
+                Reset("indoor",true);pet.Behavior.Start("nap");FinishBridge();pet.Scene.ResetLifeVisuals();ActorImage(c=>drawSceneActor.Invoke(pet.Scene,new object[]{c}),dpi);
+                Check(pet.BeginRecall(),"角色交接前回顾");pet.AdvanceRecall(entry.Item1);Render(dpi);
+                var shown=(DrawingGroup)typeof(CreationRecallCanvas).GetProperty("DisplayedActor",BindingFlags.NonPublic|BindingFlags.Instance)!.GetValue(pet.RecallCanvas)!;
+                var snapshot=shown.CloneCurrentValue();snapshot.Freeze();var source=ActorImage(c=>c.DrawDrawing(snapshot),dpi);
+                double t=pet.Recall.Elapsed;double veil=CreationRecall.Ease(t,0,.6)*(1-CreationRecall.Ease(t,23.2,24));
+                var expected=ActorImage(c=> {
+                    c.PushOpacity(veil);c.PushOpacity(CreationRecall.Ease(t,.6,1.2));drawRecallActor.Invoke(pet.RecallCanvas,new object[]{c,t});c.Pop();c.Pop();
+                },dpi);
+                string label=$"{entry.Item1}/{dpi}";
+                SameActor(expected,source,"回顾角色快照包含实际veil/出现透明度/实体平板且没有景物 "+label);
+                if(entry.Item2)pet.AdvanceRecall(.1);else pet.EndRecall();
+                Check(!pet.Recall.Active,"角色交接结束回顾 "+label);
+                var first=ActorImage(c=>drawSceneActor.Invoke(pet.Scene,new object[]{c}),dpi);
+                SameActor(source,first,"回顾自然结束或中途结束首帧继续实际角色 "+label);
+                SameActor(first,ActorImage(c=>drawSceneActor.Invoke(pet.Scene,new object[]{c}),dpi),"回顾交接零时刻重复绘图幂等 "+label);
             }
             Action[] interrupts={pet.TogglePause,pet.ToggleHidden,pet.SwitchMode,pet.ToggleEditing,()=>pet.SwitchScene("meadow"),pet.ViewMemory,()=>pet.OpenTablet("messages"),pet.Recover,()=> { Field("fullscreen",true);Invoke("UpdateVisibility"); },()=> { Field("sessionLocked",true);Invoke("UpdateVisibility"); },()=> {save.Settings.ClickThrough=true;pet.ApplySettings();},()=>pet.PreviewAction("smile")};
             foreach(var interrupt in interrupts) foreach(double time in new[]{.3,3.2,10.5,20.5}) {

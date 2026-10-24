@@ -40,6 +40,8 @@ public sealed class CreationRecallCanvas : FrameworkElement
     private StartupPose? lastPose,oldPose;
     private string lastFamily="";
     private double changedAt;
+    internal DrawingGroup? DisplayedActor { get; private set; }
+    internal Point DisplayedActorRoot => new(295,277);
     private readonly SolidColorBrush white=new(Color.FromRgb(255,254,247));
     private readonly SolidColorBrush ink=new(Color.FromRgb(71,96,108));
     private readonly SolidColorBrush button=new(Color.FromArgb(225,237,248,246));
@@ -65,7 +67,7 @@ public sealed class CreationRecallCanvas : FrameworkElement
         }).ToArray();
         RenderOptions.SetBitmapScalingMode(this,BitmapScalingMode.HighQuality);
     }
-    public void Reset() { lastPose=oldPose=null; lastFamily=""; changedAt=0; InvalidateVisual(); }
+    public void Reset() { lastPose=oldPose=null; lastFamily=""; changedAt=0; DisplayedActor=null; InvalidateVisual(); }
     // The recollection and its light never turn transparent desktop into a
     // mouse target. Only this explicit end control intercepts input.
     public string? Hit(Point p) => Controller.Active && EndBounds.Contains(p) ? "recall:end" : null;
@@ -120,7 +122,15 @@ public sealed class CreationRecallCanvas : FrameworkElement
                 dc.Pop();
             }
         }
-        lights.Draw(dc,t,.22); dc.PushOpacity(CreationRecall.Ease(t,.6,1.2)); Actor(dc,t); dc.Pop();
+        lights.Draw(dc,t,.22);
+        var actor=new DrawingGroup();
+        using(var c=actor.Open()) { c.PushOpacity(CreationRecall.Ease(t,.6,1.2)); Actor(c,t); c.Pop(); }
+        dc.DrawDrawing(actor);
+        // The scene resumes from what was actually visible, including the
+        // recollection veil, attached tablet and restored fingers. Temporary
+        // scenery and controls never become part of this actor snapshot.
+        DisplayedActor=new DrawingGroup { Opacity=veil };
+        DisplayedActor.Children.Add(actor);
         Text(dc,"Shelter · 创造回顾",18,16);
         Text(dc,t<19.4 ? "从一小片空地，慢慢成为一个世界。" : "这里有一个正在成长的小世界。",43,12);
         dc.DrawRoundedRectangle(button,null,EndBounds,7,7);

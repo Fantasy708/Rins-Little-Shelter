@@ -73,7 +73,11 @@ internal static class CreationVisualTests
         string StoryAndProgress()=>JsonSerializer.Serialize(new{save.GrowthStory,save.FreeStory,save.CompanionDates,save.DailySeconds,save.ChoiceCounts});
         static byte[] Pixels(BitmapSource image){var pixels=new byte[image.PixelWidth*image.PixelHeight*4];image.CopyPixels(pixels,image.PixelWidth*4,0);return pixels;}
         void BeginManual(string target="flower") { Check(pet.OpenTablet("create",target),"生产手动创造入口打开");Until("ready");pet.HandleTabletInput("confirm");Until("tap"); }
-        void BeginAuto(string target="flower") { actor.Create(target);Render(); }
+        void BeginAuto(string target="flower") {
+            actor.Create(target);Render();
+            for(int i=0;i<1200 && actor.Bridge.Active;i++)Step(.01);
+            Check(!actor.Bridge.Active && actor.Time==0 && events==0,"自主创造先完成真实身体准备，主体时钟与创建事件仍未开始");
+        }
         double EventTime(bool manual)=>manual?1.4*.58:actor.Current.Duration*.58;
         double Elapsed(bool manual)=>manual?actor.Tablet.Elapsed:actor.Time;
         void BeforeEvent(bool manual,double until=.25)

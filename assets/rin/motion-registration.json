@@ -1,0 +1,694 @@
+{
+  "HeadHeight": 31.06508875739645,
+  "TorsoLength": 57.248520710059175,
+  "LegLength": 61.68639053254438,
+  "Trot": [
+    {
+      "HeadX": 282.08,
+      "Crown": 91,
+      "Chin": 173,
+      "Hip": 300,
+      "TorsoLength": 128,
+      "LegLength": 139,
+      "Root": [
+        282.08,
+        434
+      ]
+    },
+    {
+      "HeadX": 249.14,
+      "Crown": 90,
+      "Chin": 172,
+      "Hip": 301,
+      "TorsoLength": 128,
+      "LegLength": 139,
+      "Root": [
+        249.14,
+        434
+      ]
+    },
+    {
+      "HeadX": 236.6,
+      "Crown": 91,
+      "Chin": 173,
+      "Hip": 298,
+      "TorsoLength": 128,
+      "LegLength": 139,
+      "Root": [
+        236.6,
+        434
+      ]
+    },
+    {
+      "HeadX": 206.52,
+      "Crown": 92,
+      "Chin": 174,
+      "Hip": 303,
+      "TorsoLength": 128,
+      "LegLength": 139,
+      "Root": [
+        206.52,
+        434
+      ]
+    },
+    {
+      "HeadX": 279.05,
+      "Crown": 71,
+      "Chin": 152,
+      "Hip": 279,
+      "TorsoLength": 128,
+      "LegLength": 139,
+      "Root": [
+        279.05,
+        399
+      ]
+    },
+    {
+      "HeadX": 253.8,
+      "Crown": 76,
+      "Chin": 156,
+      "Hip": 280,
+      "TorsoLength": 128,
+      "LegLength": 139,
+      "Root": [
+        253.8,
+        399
+      ]
+    },
+    {
+      "HeadX": 234.9,
+      "Crown": 75,
+      "Chin": 156,
+      "Hip": 277,
+      "TorsoLength": 128,
+      "LegLength": 139,
+      "Root": [
+        234.9,
+        399
+      ]
+    },
+    {
+      "HeadX": 215.51,
+      "Crown": 71,
+      "Chin": 153,
+      "Hip": 279,
+      "TorsoLength": 128,
+      "LegLength": 139,
+      "Root": [
+        215.51,
+        399
+      ]
+    }
+  ],
+  "Hop": [
+    {
+      "HeadX": 202.78,
+      "Crown": 29,
+      "Chin": 118,
+      "Hip": 260,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        202.78,
+        381
+      ]
+    },
+    {
+      "HeadX": 216.69,
+      "Crown": 49,
+      "Chin": 136,
+      "Hip": 275,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        216.69,
+        379
+      ]
+    },
+    {
+      "HeadX": 214.16,
+      "Crown": 84,
+      "Chin": 173,
+      "Hip": 287,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        214.16,
+        370
+      ]
+    },
+    {
+      "HeadX": 222.93,
+      "Crown": 45,
+      "Chin": 134,
+      "Hip": 260,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        222.93,
+        377
+      ]
+    },
+    {
+      "HeadX": 240.02,
+      "Crown": 22,
+      "Chin": 108,
+      "Hip": 221,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        240.02,
+        310
+      ]
+    },
+    {
+      "HeadX": 233.07,
+      "Crown": 13,
+      "Chin": 101,
+      "Hip": 212,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        233.07,
+        297
+      ]
+    },
+    {
+      "HeadX": 213.17,
+      "Crown": 7,
+      "Chin": 94,
+      "Hip": 204,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        213.17,
+        278
+      ]
+    },
+    {
+      "HeadX": 225.65,
+      "Crown": 19,
+      "Chin": 109,
+      "Hip": 232,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        225.65,
+        338
+      ]
+    },
+    {
+      "HeadX": 235.63,
+      "Crown": 23,
+      "Chin": 110,
+      "Hip": 218,
+      "TorsoLength": 141,
+      "LegLength": 123,
+      "Root": [
+        235.63,
+        320
+      ]
+    },
+    {
+      "HeadX": 229.62,
+      "Crown": 36,
+      "Chin": 125,
+      "Hip": 226,
+      "TorsoLength": 141,
+      "LegLength": 115,
+      "Root": [
+        229.62,
+        329
+      ]
+    },
+    {
+      "HeadX": 225.18,
+      "Crown": 7,
+      "Chin": 95,
+      "Hip": 222,
+      "TorsoLength": 141,
+      "LegLength": 110,
+      "Root": [
+        225.18,
+        329
+      ]
+    },
+    {
+      "HeadX": 210.19,
+      "Crown": 6,
+      "Chin": 92,
+      "Hip": 236,
+      "TorsoLength": 141,
+      "LegLength": 109,
+      "Root": [
+        210.19,
+        343
+      ]
+    }
+  ],
+  "Turn": [
+    {
+      "HeadX": 212.35,
+      "Crown": 33,
+      "Chin": 117,
+      "Hip": 259,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        212.35,
+        372
+      ]
+    },
+    {
+      "HeadX": 211.62,
+      "Crown": 33,
+      "Chin": 117,
+      "Hip": 259,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        211.62,
+        374
+      ]
+    },
+    {
+      "HeadX": 183.15,
+      "Crown": 32,
+      "Chin": 116,
+      "Hip": 259,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        183.15,
+        374
+      ]
+    },
+    {
+      "HeadX": 173.79,
+      "Crown": 33,
+      "Chin": 122,
+      "Hip": 260,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        173.79,
+        376
+      ]
+    },
+    {
+      "HeadX": 208.95,
+      "Crown": 6,
+      "Chin": 91,
+      "Hip": 234,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        208.95,
+        347
+      ]
+    },
+    {
+      "HeadX": 189.01,
+      "Crown": 7,
+      "Chin": 92,
+      "Hip": 234,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        189.01,
+        343
+      ]
+    },
+    {
+      "HeadX": 172.71,
+      "Crown": 7,
+      "Chin": 92,
+      "Hip": 235,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        172.71,
+        344
+      ]
+    },
+    {
+      "HeadX": 157.01,
+      "Crown": 7,
+      "Chin": 91,
+      "Hip": 236,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        157.01,
+        343
+      ]
+    },
+    {
+      "HeadX": 194.52,
+      "Crown": 6,
+      "Chin": 92,
+      "Hip": 234,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        194.52,
+        336
+      ]
+    },
+    {
+      "HeadX": 178.12,
+      "Crown": 6,
+      "Chin": 94,
+      "Hip": 233,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        178.12,
+        337
+      ]
+    },
+    {
+      "HeadX": 172.82,
+      "Crown": 6,
+      "Chin": 94,
+      "Hip": 234,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        172.82,
+        337
+      ]
+    },
+    {
+      "HeadX": 169.77,
+      "Crown": 7,
+      "Chin": 94,
+      "Hip": 237,
+      "TorsoLength": 141,
+      "LegLength": 114,
+      "Root": [
+        169.77,
+        338
+      ]
+    }
+  ],
+  "Version": 1,
+  "CoordinateSystem": "untrimmed atlas cell; integer crop origin exactly as Atlas; source PNGs unchanged",
+  "SourceSha256": {
+    "poses.png": "AD43C7C48C69E40ACF868B8329336DFDD65E623F7455F9E223E001174693D961",
+    "trot-v2.png": "209B9CC3FADB3A0F7C78623EFD235CBF55AAC7A4D2E66481FFC693CCD7D40004",
+    "hop.png": "3981AB6C2F126C298FE73AEB067F489DEE63FA9089CC2900FC8D3877136A9677",
+    "turn.png": "B5499CE65C232C52E48FBF2919BB7FE18FADDE8DE8A741B30E72394C00A027C9",
+    "motion-exits-v1.png": "7C9F9A30B57DF9AE837B27928F4350B3148DCC86765AAB590BB3F919E4396D38"
+  },
+  "Stops": [
+    {
+      "HeadX": 132.436,
+      "Crown": 3,
+      "Chin": 76,
+      "Hip": 172,
+      "TorsoLength": 96,
+      "LegLength": 90,
+      "Root": [
+        132.436,
+        258
+      ]
+    },
+    {
+      "HeadX": 124.51,
+      "Crown": 3,
+      "Chin": 77,
+      "Hip": 173,
+      "TorsoLength": 96,
+      "LegLength": 91,
+      "Root": [
+        124.51,
+        259
+      ]
+    },
+    {
+      "HeadX": 112.149,
+      "Crown": 3,
+      "Chin": 78,
+      "Hip": 178,
+      "TorsoLength": 100,
+      "LegLength": 95,
+      "Root": [
+        112.149,
+        259
+      ]
+    },
+    {
+      "HeadX": 116.461,
+      "Crown": 3,
+      "Chin": 80,
+      "Hip": 186,
+      "TorsoLength": 106,
+      "LegLength": 79,
+      "Root": [
+        116.461,
+        263
+      ]
+    },
+    {
+      "HeadX": 103.718,
+      "Crown": 3,
+      "Chin": 78,
+      "Hip": 185,
+      "TorsoLength": 107,
+      "LegLength": 77,
+      "Root": [
+        103.718,
+        261
+      ]
+    },
+    {
+      "HeadX": 85.767,
+      "Crown": 3,
+      "Chin": 83,
+      "Hip": 190,
+      "TorsoLength": 107,
+      "LegLength": 75,
+      "Root": [
+        85.767,
+        265
+      ]
+    },
+    {
+      "HeadX": 134.503,
+      "Crown": 3,
+      "Chin": 79,
+      "Hip": 174,
+      "TorsoLength": 95,
+      "LegLength": 90,
+      "Root": [
+        134.503,
+        260
+      ]
+    },
+    {
+      "HeadX": 134.165,
+      "Crown": 3,
+      "Chin": 78,
+      "Hip": 173,
+      "TorsoLength": 95,
+      "LegLength": 91,
+      "Root": [
+        134.165,
+        260
+      ]
+    },
+    {
+      "HeadX": 123.032,
+      "Crown": 3,
+      "Chin": 78,
+      "Hip": 178,
+      "TorsoLength": 100,
+      "LegLength": 96,
+      "Root": [
+        123.032,
+        260
+      ]
+    },
+    {
+      "HeadX": 120.587,
+      "Crown": 3,
+      "Chin": 79,
+      "Hip": 184,
+      "TorsoLength": 105,
+      "LegLength": 79,
+      "Root": [
+        120.587,
+        260
+      ]
+    },
+    {
+      "HeadX": 112.161,
+      "Crown": 3,
+      "Chin": 78,
+      "Hip": 184,
+      "TorsoLength": 106,
+      "LegLength": 77,
+      "Root": [
+        112.161,
+        259
+      ]
+    },
+    {
+      "HeadX": 85.992,
+      "Crown": 3,
+      "Chin": 81,
+      "Hip": 188,
+      "TorsoLength": 107,
+      "LegLength": 73,
+      "Root": [
+        85.992,
+        261
+      ]
+    },
+    {
+      "HeadX": 136.401,
+      "Crown": 3,
+      "Chin": 76,
+      "Hip": 165,
+      "TorsoLength": 89,
+      "LegLength": 95,
+      "Root": [
+        136.401,
+        247
+      ]
+    },
+    {
+      "HeadX": 138.916,
+      "Crown": 3,
+      "Chin": 74,
+      "Hip": 165,
+      "TorsoLength": 91,
+      "LegLength": 93,
+      "Root": [
+        138.916,
+        244
+      ]
+    },
+    {
+      "HeadX": 122.825,
+      "Crown": 3,
+      "Chin": 78,
+      "Hip": 172,
+      "TorsoLength": 94,
+      "LegLength": 89,
+      "Root": [
+        122.825,
+        249
+      ]
+    },
+    {
+      "HeadX": 115.174,
+      "Crown": 3,
+      "Chin": 77,
+      "Hip": 172,
+      "TorsoLength": 95,
+      "LegLength": 79,
+      "Root": [
+        115.174,
+        246
+      ]
+    },
+    {
+      "HeadX": 102.636,
+      "Crown": 3,
+      "Chin": 78,
+      "Hip": 177,
+      "TorsoLength": 99,
+      "LegLength": 72,
+      "Root": [
+        102.636,
+        247
+      ]
+    },
+    {
+      "HeadX": 86.132,
+      "Crown": 3,
+      "Chin": 79,
+      "Hip": 179,
+      "TorsoLength": 100,
+      "LegLength": 70,
+      "Root": [
+        86.132,
+        249
+      ]
+    },
+    {
+      "HeadX": 56.234,
+      "Crown": 3,
+      "Chin": 76,
+      "Hip": 167,
+      "TorsoLength": 91,
+      "LegLength": 82,
+      "Root": [
+        56.234,
+        238
+      ]
+    },
+    {
+      "HeadX": 55.721,
+      "Crown": 3,
+      "Chin": 76,
+      "Hip": 167,
+      "TorsoLength": 91,
+      "LegLength": 81,
+      "Root": [
+        55.721,
+        237
+      ]
+    },
+    {
+      "HeadX": 55.895,
+      "Crown": 3,
+      "Chin": 76,
+      "Hip": 169,
+      "TorsoLength": 93,
+      "LegLength": 76,
+      "Root": [
+        55.895,
+        234
+      ]
+    },
+    {
+      "HeadX": 66.358,
+      "Crown": 3,
+      "Chin": 79,
+      "Hip": 174,
+      "TorsoLength": 95,
+      "LegLength": 67,
+      "Root": [
+        66.358,
+        238
+      ]
+    },
+    {
+      "HeadX": 93.999,
+      "Crown": 3,
+      "Chin": 78,
+      "Hip": 176,
+      "TorsoLength": 98,
+      "LegLength": 62,
+      "Root": [
+        93.999,
+        237
+      ]
+    },
+    {
+      "HeadX": 97.027,
+      "Crown": 3,
+      "Chin": 79,
+      "Hip": 179,
+      "TorsoLength": 100,
+      "LegLength": 59,
+      "Root": [
+        97.027,
+        238
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
-param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.0.2/RinsLittleShelter')
+param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.1.0/RinsLittleShelter')
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+. (Join-Path $PSScriptRoot 'release-files.ps1')
 Push-Location -LiteralPath $projectRoot
 try {
     $dotnetPath = Join-Path $projectRoot '.tools\dotnet\dotnet.exe'
@@ -21,10 +22,30 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '多场景和记忆检查失败。' }
         & $dotnetPath run --project tests/OutdoorTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '山脉/极地成长和动作逻辑检查失败。' }
+        & $dotnetPath run --project tests/ClimbContinuityTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/climb-continuity-qa
+        if ($LASTEXITCODE -ne 0) { throw '登山交替步态/体型/连续移动检查失败。' }
         & $dotnetPath run --project tests/TabletTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '平板/来信逻辑检查失败。' }
         & $dotnetPath run --project tests/NurtureTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw 'Nurture草地彩蛋逻辑检查失败。' }
+        & $dotnetPath run --project tests/ActionRecoveryTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
+        if ($LASTEXITCODE -ne 0) { throw '动作恢复和最新请求调度检查失败。' }
+        & $dotnetPath run --project tests/AllActionBridgeTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/all-action-bridge-qa
+        if ($LASTEXITCODE -ne 0) { throw '38组动作进入/回站/时钟/最新请求检查失败。' }
+        & $dotnetPath run --project tests/ActorPoseWarpTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/actor-pose-warp-qa
+        if ($LASTEXITCODE -ne 0) { throw '完整人物相邻姿态变形/透明轮廓检查失败。' }
+        & $dotnetPath run --project tests/ActionBridgeVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/action-bridge-visual-qa
+        if ($LASTEXITCODE -ne 0) { throw '动作起止专用姿态/生产绘图/离屏缩放检查失败。' }
+        & $dotnetPath run --project tests/ActionTransitionTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/action-transition-qa
+        if ($LASTEXITCODE -ne 0) { throw '动作交接/实际像素/三档DPI检查失败。' }
+        & $dotnetPath run --project tests/MotionScaleTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/motion-scale-qa
+        if ($LASTEXITCODE -ne 0) { throw '小跑/轻跃/转身体型和落脚检查失败。' }
+        & $dotnetPath run --project tests/MotionExitTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
+        if ($LASTEXITCODE -ne 0) { throw '动作收尾/请求替换/中断检查失败。' }
+        & $dotnetPath run --project tests/MotionExitVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/motion-exit-qa
+        if ($LASTEXITCODE -ne 0) { throw '动作收尾完整姿势/落脚/三档DPI检查失败。' }
+        & $dotnetPath run --project tests/ActionRecoveryWindowTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/action-recovery-window-qa
+        if ($LASTEXITCODE -ne 0) { throw '窗口冻结/恢复与动作接续检查失败。' }
         & $dotnetPath run --project tests/VisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/visual-qa
         if ($LASTEXITCODE -ne 0) { throw '画面检查失败。' }
         & $dotnetPath run --project tests/SceneVisualTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/scene-qa
@@ -55,6 +76,20 @@ try {
     & $dotnetPath publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true "-p:BaseOutputPath=$buildOutput" -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '发布失败。请先退出正在运行的发布版本。' }
     Copy-Item -LiteralPath assets/catalog.json -Destination (Join-Path $OutputDirectory 'assets/catalog.json')
+    if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory 'assets/rin/motion-registration.json'))) { throw '发布包缺少动作体型登记。' }
+    $runtimeManifest = Get-Content -LiteralPath (Join-Path $OutputDirectory 'assets/manifest.json') -Raw | ConvertFrom-Json
+    if ([string]::IsNullOrWhiteSpace($runtimeManifest.MotionExitAtlas)) { throw '发布清单缺少动作收尾图集路径。' }
+    $exitAsset = 'assets/' + $runtimeManifest.MotionExitAtlas
+    if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $exitAsset))) { throw "发布包缺少动作收尾图集：$exitAsset" }
+    if ([string]::IsNullOrWhiteSpace($runtimeManifest.ClimbRigAtlas)) { throw '发布清单缺少登山蒙皮源图路径。' }
+    if ([string]::IsNullOrWhiteSpace($runtimeManifest.ClimbRegistration)) { throw '发布清单缺少登山体型登记路径。' }
+    foreach ($relative in @($runtimeManifest.ClimbRigAtlas,$runtimeManifest.ClimbRegistration)) {
+        $climbAsset = 'assets/' + $relative
+        if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $climbAsset))) { throw "发布包缺少登山动作素材：$climbAsset" }
+    }
+    foreach ($relative in @('assets/rin/pose-bridges.json','assets/rin/action-bridge-art.json','assets/rin/bridge-ground-v1.png','assets/rin/bridge-seat-v1.png','assets/rin/bridge-upper-v1.png')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $relative))) { throw "发布包缺少动作起止素材或登记：$relative" }
+    }
     foreach ($icon in @('assets/app/rin-shelter.png','assets/app/rin-shelter.ico')) {
         if (-not (Test-Path -LiteralPath (Join-Path $OutputDirectory $icon))) { throw "发布包缺少应用图标：$icon" }
     }
@@ -70,13 +105,21 @@ try {
     Copy-Item -LiteralPath LICENSES -Destination $OutputDirectory -Recurse -Force
     $docsDirectory = Join-Path $OutputDirectory 'docs'
     New-Item -ItemType Directory -Path $docsDirectory -Force | Out-Null
-    foreach ($document in @('开发说明.md','开发日志.md','素材制作.md','验证记录.md','发布状态.md','多场景素材制作.md','平板创造交互设计.md','平板消息界面设计.md','Nurture素材制作.md','开场动画设计.md')) {
+    foreach ($document in @('开发说明.md','开发日志.md','素材制作.md','验证记录.md','发布状态.md','多场景素材制作.md','平板创造交互设计.md','平板消息界面设计.md','Nurture素材制作.md','开场动画设计.md','动作收尾过渡.md','登山动作修复.md','动作起止过渡.md','动作过渡检查表.md','动作过渡素材制作记录.md')) {
         Copy-Item -LiteralPath (Join-Path 'docs' $document) -Destination $docsDirectory
     }
     if (Test-Path -LiteralPath 'docs/平板参考核对.md') { Copy-Item -LiteralPath 'docs/平板参考核对.md' -Destination $docsDirectory }
     Copy-Item -LiteralPath 'docs/户外探索素材制作.md' -Destination $docsDirectory
     Copy-Item -LiteralPath 'docs/白色粒子创造设计.md' -Destination $docsDirectory
     Copy-Item -LiteralPath 'docs/Shelter创造回顾设计.md' -Destination $docsDirectory
+    $localNotesDirectory = Join-Path $docsDirectory 'releases'
+    New-Item -ItemType Directory -Path $localNotesDirectory -Force | Out-Null
+    Copy-Item -LiteralPath 'docs/releases/v1.1.0.md' -Destination $localNotesDirectory
+    $localPreviewDirectory = Join-Path $docsDirectory 'screenshots'
+    New-Item -ItemType Directory -Path $localPreviewDirectory -Force | Out-Null
+    Get-ShelterPublicFiles $projectRoot |
+        Where-Object { $_.DirectoryName -eq (Join-Path $projectRoot 'docs/screenshots') } |
+        Copy-Item -Destination $localPreviewDirectory
     Compress-Archive -LiteralPath $OutputDirectory -DestinationPath "$OutputDirectory-win-x64.zip" -Force
     Write-Output "完成：$OutputDirectory/RinsLittleShelter.exe"
 } finally { Pop-Location }

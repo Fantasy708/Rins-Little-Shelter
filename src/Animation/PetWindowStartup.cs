@@ -30,6 +30,7 @@ public sealed partial class PetWindow
     public void SkipStartup() { Opening.Stop(); EndRecall(); }
     private void FinishStartup()
     {
+        if(OpeningCanvas.DisplayedActor is { } actor) Scene.ContinueActorFrom(actor,OpeningCanvas.DisplayedActorRoot);
         OpeningCanvas.Visibility=Visibility.Collapsed; Scene.SetStartupPresentation(false); OpeningCanvas.Reset();
         Scenes.PlaceActor(Save,Behavior); Behavior.Welcome(); Save.HasSeenStartup=true;
         lastOffer=lastReminder=runtime; clock.Reset(); Persist();

@@ -10,7 +10,7 @@ public sealed partial class Scene
     internal StartupArt OpeningArt() => new(meadowGrass,world.Sprites[4],world.Sprites[2],OpeningPose);
     public void SetStartupPresentation(bool active)
     {
-        StartupPresentation=active; actorHits.Clear(); ClearTabletHits(); ResetLifeVisuals(); InvalidateVisual();
+        StartupPresentation=active; actorHits.Clear(); ClearTabletHits(); ResetLifeVisuals(true); InvalidateVisual();
     }
     private StartupPose OpeningPose(string family,int frame)
     {
@@ -21,8 +21,8 @@ public sealed partial class Scene
             return new(image,tabletFrames.Bounds,new Rect(Math.Min(l.X,r.X)+1,(l.Y+r.Y)/2-10,Math.Max(18,Math.Abs(r.X-l.X)-2),21),new[]{l,r});
         }
         if(family=="ground") return new(nurtureFrames.Sample(new ClipSample(frame,frame,0,0)),nurtureFrames.Bounds,Rect.Empty,Array.Empty<Point>());
-        var sprite=poses.Sprites[frame]; double scale=150.0/poses.Sprites[0].Height;
-        return new(sprite,new Rect(-sprite.Width*scale/2,-sprite.Height*scale,sprite.Width*scale,sprite.Height*scale),Rect.Empty,Array.Empty<Point>());
+        var sprite=poses.Sprites[frame];
+        return new(sprite,poseRegistration.Bounds(frame,new Point()),Rect.Empty,Array.Empty<Point>());
     }
     public StartupAnimationCanvas CreateOpeningCanvas(StartupAnimationController controller) => new(controller,OpeningArt());
 }

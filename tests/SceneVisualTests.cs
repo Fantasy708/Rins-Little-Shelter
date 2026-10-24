@@ -11,7 +11,7 @@ internal static class SceneVisualTests
 {
     [STAThread] static void Main(string[] args)
     {
-        var output=Path.GetFullPath(args.Length>0 ? args[0] : "output/scene-qa"); Directory.CreateDirectory(output);
+        var output=Path.GetFullPath(args.FirstOrDefault(a=>!a.StartsWith("--",StringComparison.Ordinal)) ?? "output/scene-qa"); Directory.CreateDirectory(output);
         int checks=0;
         void Check(bool c,string name) { if (!c) throw new Exception(name); checks++; }
         var save=new SaveData(); save.Settings.FreeMode=true; save.Settings.Music=false; save.Settings.Theme="白天"; World.Initialize(save);
@@ -52,6 +52,127 @@ internal static class SceneVisualTests
         }
         void Step(double seconds) { for(double t=0;t<seconds;t+=.02) { actor.Tick(Math.Min(.02,seconds-t),save,false); time+=Math.Min(.02,seconds-t); } }
         void Until(string phase) { for(int i=0;i<10000 && actor.Life.Phase != phase;i++) Step(.02); Check(actor.Life.Phase == phase,"missing phase "+phase); }
+        void CheckIndoorMemory()
+        {
+            var resource=System.Text.Json.JsonSerializer.Deserialize<ResourceManifest>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"assets/manifest.json")))!;
+            var bedroomArt=new Atlas(Path.Combine(AppContext.BaseDirectory,"assets",resource.BedroomAtlas),resource.BedroomRegions);
+            foreach(bool freeMode in new[]{false,true}) {
+                var fixture=new SaveData();
+                fixture.CompanionDates=Enumerable.Range(0,20).Select(i=>new DateTime(2026,1,1).AddDays(i).ToString("yyyy-MM-dd")).ToList();
+                fixture.Settings.FreeMode=freeMode; fixture.Settings.Music=false; fixture.Settings.Theme="白天"; fixture.Settings.Weather="晴"; World.Initialize(fixture); Scenes.Switch(fixture,"indoor");
+                var subject=new Behavior(411); var canvas=new Scene(fixture,subject,audio) { Width=480,Height=340 };
+                canvas.Measure(new Size(480,340)); canvas.Arrange(new Rect(0,0,480,340));
+                Placement Place(string id)=>fixture.Layout.First(p=>p.Id==id);
+                double offset=freeMode ? 8 : -8;
+                Place("chair").X=142+offset; Place("chair").Y=287;
+                Place("cabinet").X=398-offset; Place("cabinet").Y=281;
+                Place("desk").X=62+offset; Place("desk").Y=302; Place("desk").Hidden=true;
+                Place("window").X=114+offset; Place("window").Y=187;
+                subject.X=472; subject.Y=Scenes.Home(fixture).Y; subject.Start("stand"); canvas.ResetLifeVisuals();
+                string Layouts()=>System.Text.Json.JsonSerializer.Serialize(new { fixture.GrowthLayout,fixture.FreeLayout,fixture.GrowthSceneLayouts,fixture.FreeSceneLayouts });
+                string layoutBefore=Layouts(); double originX=subject.X,originY=subject.Y;
+                string mode=freeMode ? "free" : "growth";
+                BitmapSource Frame(string? name=null,double dpi=1) {
+                    // Freeze scenery time for every comparison: otherwise the
+                    // ordinary light particles and clouds would add false deltas.
+                    canvas.Time=23.125; canvas.InvalidateVisual(); canvas.UpdateLayout();
+                    var image=new RenderTargetBitmap((int)(480*dpi),(int)(340*dpi),96*dpi,96*dpi,PixelFormats.Pbgra32); image.Render(canvas); image.Freeze();
+                    if(name!=null) { using var file=File.Create(Path.Combine(output,"indoor-memory-"+mode+"-"+name+".png")); var png=new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(image)); png.Save(file); }
+                    return image;
+                }
+                byte[] Pixels(BitmapSource image) { var bytes=new byte[image.PixelWidth*image.PixelHeight*4]; image.CopyPixels(bytes,image.PixelWidth*4,0); return bytes; }
+                void Advance(double seconds) { for(double elapsed=0;elapsed<seconds;elapsed+=.02) subject.Tick(Math.Min(.02,seconds-elapsed),fixture,false); }
+                void Reach(string phase) { for(int i=0;i<10000 && subject.Life.Phase!=phase;i++) Advance(.02); Check(subject.Life.Phase==phase,"indoor memory reaches "+phase+"/"+mode); }
+                double RegionDifference(byte[] first,byte[] second,Rect area,double dpi=1) {
+                    int width=(int)(480*dpi),count=0; long delta=0;
+                    for(int y=Math.Max(0,(int)Math.Ceiling(area.Top*dpi));y<Math.Min((int)(340*dpi),(int)(area.Bottom*dpi));y++)
+                        for(int x=Math.Max(0,(int)Math.Ceiling(area.Left*dpi));x<Math.Min(width,(int)(area.Right*dpi));x++) for(int c=0;c<4;c++) { int p=(y*width+x)*4+c; delta+=Math.Abs(first[p]-second[p]); count++; }
+                    Check(count>0,"pixel comparison has a nonempty region"); return delta/(double)count;
+                }
+                Rect FurnitureRegion(string id) {
+                    var p=Place(id); var d=ObjectDef.Get(id); var area=new Rect(p.X-d.Width/2-2,p.Y-d.Height-2,d.Width+4,d.Height+4);
+                    // Keep the paired characters out of the samples. The warm
+                    // recollection light may still tint these furniture pixels.
+                    if(id=="chair") area.Intersect(new Rect(0,0,160,306));
+                    if(id=="cabinet") area.Intersect(new Rect(383,0,37,306));
+                    if(id=="window") area.Intersect(new Rect(0,0,480,112));
+                    return area;
+                }
+                (byte[] Shown,byte[] Hidden) Contribution(string id,double dpi=1) {
+                    var p=Place(id); bool hidden=p.Hidden;
+                    try { p.Hidden=false; var shown=Pixels(Frame(null,dpi)); p.Hidden=true; return(shown,Pixels(Frame(null,dpi))); }
+                    finally { p.Hidden=hidden; }
+                }
+                void SameContribution((byte[] Shown,byte[] Hidden) expected,(byte[] Shown,byte[] Hidden) actual,Rect area,string label,double tolerance) {
+                    int count=0; long signal=0,current=0,residual=0;
+                    for(int y=Math.Max(0,(int)area.Top);y<Math.Min(340,(int)area.Bottom);y++) for(int x=Math.Max(0,(int)area.Left);x<Math.Min(480,(int)area.Right);x++) for(int c=0;c<4;c++) {
+                        int p=(y*480+x)*4+c, before=expected.Shown[p]-expected.Hidden[p],after=actual.Shown[p]-actual.Hidden[p];
+                        signal+=Math.Abs(before); current+=Math.Abs(after); residual+=Math.Abs(after-before); count++;
+                    }
+                    Check(count>0 && signal>count*.5,"daily furnishing contributes visible pixels: "+label);
+                    Check(current>=signal*(1-tolerance) && residual<=signal*tolerance+count*.02,"memory retains the actual furnishing raster: "+label+" signal="+signal+" current="+current+" residual="+residual);
+                }
+                Rect WindowBounds() {
+                    var p=Place("window"); var d=ObjectDef.Get("window"); var sprite=bedroomArt.Sprites[2]; double scale=Math.Min(d.Width/sprite.Width,d.Height/sprite.Height);
+                    return new Rect(p.X-sprite.Width*scale/2,p.Y-sprite.Height*scale,sprite.Width*scale,sprite.Height*scale);
+                }
+                void CheckWeather(double dpi,string position) {
+                    fixture.Settings.Theme="白天"; fixture.Settings.Weather="晴"; var clear=Pixels(Frame(null,dpi)); var window=WindowBounds();
+                    var panes=resource.BedroomGlassRegions.Select(r=>new Rect(window.X+r[0]*window.Width,window.Y+r[1]*window.Height,r[2]*window.Width,r[3]*window.Height)).ToArray();
+                    // A one-pixel allowance includes WPF's clipped antialias edge.
+                    foreach(var pane in panes.Select((r,i)=>(r,i))) { var bounds=pane.r; bounds.Inflate(1/dpi,1/dpi); panes[pane.i]=bounds; }
+                    foreach(string weather in new[]{"雨","雪","风"}) {
+                        fixture.Settings.Weather=weather; var wet=Pixels(Frame(null,dpi)); int changed=0,width=(int)(480*dpi);
+                        for(int y=0;y<(int)(340*dpi);y++) for(int x=0;x<width;x++) {
+                            int p=(y*width+x)*4; if(clear[p]==wet[p] && clear[p+1]==wet[p+1] && clear[p+2]==wet[p+2] && clear[p+3]==wet[p+3])continue;
+                            changed++; Check(panes.Any(r=>r.Contains(new Point((x+.5)/dpi,(y+.5)/dpi))),"memory weather remains within current glass: "+mode+"/"+position+"/"+weather+"/"+dpi);
+                        }
+                        Check(changed>0,"memory weather changes rendered glass pixels: "+mode+"/"+position+"/"+weather+"/"+dpi);
+                    }
+                    fixture.Settings.Weather="晴";
+                }
+                var wall=new Rect(184,42,170,54);
+                var baseline=Pixels(Frame("daily"));
+                var expectedFurniture=new Dictionary<string,(byte[] Shown,byte[] Hidden)>();
+                foreach(string id in new[]{"chair","cabinet","desk","window"}) expectedFurniture[id]=Contribution(id);
+                Check(subject.Life.BeginMemory(fixture),"begin indoor memory with custom layout/"+mode); Reach("memory"); Advance(3);
+                var remembered=Pixels(Frame("family"));
+                Check(RegionDifference(baseline,remembered,wall)<.1,"memory keeps the same upper pink wall instead of the old wooden room/"+mode);
+                foreach(var item in expectedFurniture) SameContribution(item.Value,Contribution(item.Key),FurnitureRegion(item.Key),mode+"/"+item.Key,.35);
+                Check(canvas.Hit(new Point(220,321))=="endMemory","unified bedroom keeps the memory stop target/"+mode);
+                foreach(double dpi in new[]{1.0,1.5,2.0}) {
+                    var colors=new Dictionary<string,byte[]>();
+                    foreach(string theme in new[]{"白天","深夜"}) {
+                        fixture.Settings.Theme=theme; var image=Frame("sky-"+theme+"-"+dpi.ToString("0.0",System.Globalization.CultureInfo.InvariantCulture),dpi);
+                        var sample=canvas.BedroomGlassCenters[6]; byte[] color=new byte[4]; image.CopyPixels(new Int32Rect((int)(sample.X*dpi),(int)(sample.Y*dpi),1,1),color,4,0); colors[theme]=color;
+                        Check(color[3]>=240 && canvas.Hit(sample)=="window","memory glass is filled and interactive/"+mode+"/"+theme+"/"+dpi);
+                    }
+                    Check(colors["白天"][0]>colors["深夜"][0]+60,"memory glass retains day/night sky colors/"+mode+"/"+dpi);
+                    CheckWeather(dpi,"custom");
+                }
+                var oldGlass=canvas.BedroomGlassCenters.ToArray(); var win=Place("window"); win.X+=29; win.Y+=17; Frame("window-moved");
+                Check(canvas.BedroomGlassCenters.Zip(oldGlass).All(pair=>(pair.First-pair.Second-new Vector(29,17)).Length<.001),"memory sky follows the saved window position/"+mode);
+                foreach(double dpi in new[]{1.0,1.5,2.0}) CheckWeather(dpi,"moved");
+                win.Hidden=true; fixture.Settings.Weather="晴"; var hidden=Pixels(Frame("window-hidden"));
+                foreach(string weather in new[]{"雨","雪","风"}) { fixture.Settings.Weather=weather; Check(RegionDifference(hidden,Pixels(Frame()),new Rect(0,0,480,340))==0,"hidden memory window leaves no weather pixels/"+mode+"/"+weather); }
+                Check(canvas.Hit(canvas.BedroomGlassCenters[6])!="window","hidden memory window leaves no sky hit region/"+mode);
+                win.Hidden=false; win.X-=29; win.Y-=17; fixture.Settings.Weather="晴"; fixture.Settings.Theme="白天";
+                Check(Layouts()==layoutBefore,"render probes restore the custom hidden/moved placements/"+mode);
+                Reach("watch"); Advance(3.1); Frame("completed");
+                Check(!subject.Life.Active && subject.X==originX && subject.Y==originY && Layouts()==layoutBefore,"complete indoor memory restores the original actor and both mode layouts/"+mode);
+                Check(RegionDifference(baseline,Pixels(Frame()),wall)<.1,"completed memory restores the same bedroom wall/"+mode);
+                foreach(var item in expectedFurniture) SameContribution(item.Value,Contribution(item.Key),FurnitureRegion(item.Key),mode+"/complete/"+item.Key,.005);
+                foreach(string phase in new[]{"fadeOut","memory","empty","fadeIn"}) {
+                    Check(subject.Life.BeginMemory(fixture),"repeat indoor memory before cancellation/"+mode+"/"+phase); Reach(phase); Advance(.4); Frame(); subject.Life.RequestStop(); var restored=Pixels(Frame("cancel-"+phase));
+                    Check(!subject.Life.Active && subject.X==originX && subject.Y==originY && Layouts()==layoutBefore,"early memory exit preserves custom layout and original floor/"+mode+"/"+phase);
+                    Check(RegionDifference(baseline,restored,wall)<.1,"early memory exit leaves no old-room wall/"+mode+"/"+phase);
+                    foreach(var item in expectedFurniture) SameContribution(item.Value,Contribution(item.Key),FurnitureRegion(item.Key),mode+"/cancel-"+phase+"/"+item.Key,.005);
+                }
+            }
+        }
+        if(args.Contains("--indoor-memory-only")) { CheckIndoorMemory(); Console.WriteLine("PASS: "+checks+" focused indoor memory production pixel/layout/sky/cancel checks. "+output); return; }
+        bool mountOnly=args.Contains("--mount-only");
+        if(!mountOnly) {
         foreach(var id in Scenes.All.Select(d=>d.Id)) {
             Scenes.Switch(save,id); scene.ResetLifeVisuals(); actor.Life.Cancel(); Scenes.PlaceActor(save,actor); actor.Start("stand");
             Render(); Step(.4);
@@ -148,6 +269,8 @@ internal static class SceneVisualTests
         }
         CheckContinuity(false); CheckContinuity(true);
         File.WriteAllText(Path.Combine(output,"swing-continuity.json"),System.Text.Json.JsonSerializer.Serialize(continuity,new System.Text.Json.JsonSerializerOptions { WriteIndented=true }));
+        }
+        Scenes.Switch(save,"swingTree");
         var mounting=new List<object>();
         foreach(double dpi in new[]{1.0,1.5,2.0}) {
             actor.Life.Cancel(); scene.ResetLifeVisuals(); Scenes.PlaceActor(save,actor); actor.Start("stand"); actor.Life.BeginSwing(save); Until("hold");
@@ -186,6 +309,7 @@ internal static class SceneVisualTests
             actor.Life.Cancel();
         }
         File.WriteAllText(Path.Combine(output,"swing-mounting.json"),System.Text.Json.JsonSerializer.Serialize(mounting,new System.Text.Json.JsonSerializerOptions { WriteIndented=true }));
+        if(mountOnly) {Console.WriteLine("PASS: "+checks+" focused production mounting/crown/registration checks.");return;}
         foreach(var id in new[]{"swingTree","indoor"}) {
             actor.Life.Cancel(); Scenes.Switch(save,id); scene.ResetLifeVisuals(); Scenes.PlaceActor(save,actor); var home=Scenes.Home(save);
             Check(actor.Life.BeginMemory(save),"memory begin"); Until("fadeOut"); Step(.7); Render(id+"-fade-out");
@@ -258,6 +382,7 @@ internal static class SceneVisualTests
         win.X-=23; win.Y-=11; actor.X=chair.X; actor.Y=chair.Y; actor.Start("roomRest"); scene.ResetLifeVisuals(); Render(); Step(.5);
         Backdrop("bedroom-bright-on-white",Brushes.White); Backdrop("bedroom-bright-on-dark",Brushes.Black);
         save.Settings.Theme="深夜"; Backdrop("bedroom-night-on-white",Brushes.White);
+        CheckIndoorMemory();
         Console.WriteLine("PASS: "+checks+" production scene render/rope/contact/cancel/DPI checks. "+output);
     }
 }

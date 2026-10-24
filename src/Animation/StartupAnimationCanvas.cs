@@ -18,12 +18,14 @@ public sealed class StartupAnimationCanvas : FrameworkElement
     private StartupPose? lastPose,oldPose;
     private string lastKey="";
     private double changedAt;
+    internal DrawingGroup? DisplayedActor { get; private set; }
+    internal Point DisplayedActorRoot { get; private set; }
     internal StartupAnimationCanvas(StartupAnimationController controller,StartupArt art)
     {
         Controller=controller; this.art=art; Width=480; Height=340; Focusable=false; sky.Freeze();
         RenderOptions.SetBitmapScalingMode(this,BitmapScalingMode.HighQuality);
     }
-    public void Reset() { lastPose=oldPose=null; lastKey=""; changedAt=0; InvalidateVisual(); }
+    public void Reset() { lastPose=oldPose=null; lastKey=""; changedAt=0; DisplayedActor=null; InvalidateVisual(); }
     public string? Hit(Point p) => !Controller.Active || !new RectangleGeometry(new Rect(0,0,480,340),14,14).FillContains(p) ? null : SkipBounds.Contains(p) ? "startup:skip" : "startup:surface";
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) { if(Hit(e.GetPosition(this))=="startup:skip") SkipRequested?.Invoke(); e.Handled=true; }
     protected override void OnMouseRightButtonUp(MouseButtonEventArgs e) { SkipRequested?.Invoke(); e.Handled=true; }
@@ -124,7 +126,20 @@ public sealed class StartupAnimationCanvas : FrameworkElement
         particles.Draw(dc,t,veil*(brief ? .28 : 1-StartupAnimationController.Ease(t,5.0,7.0)));
         // All temporary world layers share the small camera transform. The actor
         // is drawn once and remains opaque during the final desktop hand-off.
-        Actor(dc,t,brief ? StartupAnimationController.Ease(t,0,.3) : StartupAnimationController.Ease(t,4.9,5.6),new Point(240,277));
+        var actor=new DrawingGroup();
+        using(var c=actor.Open()) Actor(c,t,brief ? StartupAnimationController.Ease(t,0,.3) : StartupAnimationController.Ease(t,4.9,5.6),new Point(240,277));
+        dc.DrawDrawing(actor);
+        // Keep the complete last displayed actor in window coordinates. The
+        // hand-off also needs the camera, root travel, appearance and tablet;
+        // reconstructing a guessed final pose loses an interrupted frame.
+        var displayed=new DrawingGroup();
+        using(var c=displayed.Open()) {
+            c.PushClip(new RectangleGeometry(new Rect(0,0,480,340),14,14));
+            c.PushTransform(new TranslateTransform(root.X-240,root.Y-277));
+            c.PushTransform(new ScaleTransform(camera,camera,240,277));
+            c.DrawDrawing(actor); c.Pop(); c.Pop(); c.Pop();
+        }
+        DisplayedActor=displayed; DisplayedActorRoot=root;
         dc.Pop(); dc.Pop();
         double title=(brief ? StartupAnimationController.Ease(t,0,.35) : StartupAnimationController.Ease(t,11.15,11.85))*veil;
         dc.PushOpacity(title); Text(dc,"Rin's Little Shelter",32,24,Ink(255,68,90,106)); Text(dc,"A little world that grows with you.",75,12,Ink(255,101,126,137)); Text(dc,"这里有一个正在成长的小世界。",98,14,Ink(255,80,107,118)); dc.Pop();

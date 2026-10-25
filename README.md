@@ -58,6 +58,8 @@ v1.1.0将近期动作与记忆修订整合为一个正式版本。此前v1.0.2�
 
 **想使用安装脚本：** 在[正式发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases/latest)下载 `RinsLittleShelter-Setup.zip`，完整解压后双击 `Install-RinsLittleShelter.cmd`。它会下载并校验最新正式便携包，安装到个人程序目录、创建快捷方式；无需管理员权限，保留现有存档。升级时再次运行，卸载可使用安装目录内的 `Uninstall-RinsLittleShelter.cmd`。自选目录、离线安装与更多说明见[安装说明](docs/安装说明.md)。
 
+**一键卸载更新（2026-10-25）：** 便携包和Setup包均带`Uninstall-RinsLittleShelter.cmd`。先从托盘退出Rin，再双击卸载：便携包清理当前文件夹内未修改的程序文件，Setup包中的入口处理默认安装位置；两者均保留存档与自己添加/修改的文件。便携文件夹移动或改名后也可使用。请完整保留入口旁的PS1及支持文件。此次GitHub更新沿用v1.1.0，应用EXE不变，旧附件以`before-uninstall-20261025`后缀归档供回退；发行切换与校验结果见[发布状态](docs/发布状态.md)。本地更新包在`dist/local/v1.1.0-uninstall/release`。
+
 **继续使用便携包：**
 
 1. 打开 [v1.1.0 发行入口](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.1.0)；[v1.0.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.2)及[历史发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases)继续保留。

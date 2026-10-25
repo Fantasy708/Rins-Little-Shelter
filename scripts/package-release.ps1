@@ -7,6 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 . (Join-Path $PSScriptRoot 'release-files.ps1')
+. (Join-Path $PSScriptRoot 'portable-uninstall.ps1')
 if ($Version -notmatch '^[A-Za-z0-9][A-Za-z0-9.\-]*$') { throw '版本号只能含英文字母、数字、点和连字符。' }
 $programRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $ProgramDirectory))
 $stage = Join-Path $projectRoot ('output/release-package-' + [Guid]::NewGuid().ToString('N'))
@@ -76,6 +77,7 @@ Get-ShelterPublicFiles $projectRoot | Where-Object { $_.DirectoryName -eq (Join-
 
 $portableZip = Join-Path $releaseRoot "RinsLittleShelter-$Version-win-x64.zip"
 $sourceZip = Join-Path $releaseRoot "RinsLittleShelter-$Version-source.zip"
+Add-ShelterPortableUninstaller -Directory $portableRoot -ProjectRoot $projectRoot -Version $Version
 Write-ShelterZip $portableRoot $portableZip
 & (Join-Path $PSScriptRoot 'package-source.ps1') -Destination ([System.IO.Path]::GetRelativePath($projectRoot, $sourceZip))
 $hashLines = @(

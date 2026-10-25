@@ -8,6 +8,8 @@ Add-Type -AssemblyName System.IO.Compression
 $files=@(
  @{Source='scripts/Install-RinsLittleShelter.ps1';Name='Install-RinsLittleShelter.ps1'},
  @{Source='scripts/Install-RinsLittleShelter.cmd';Name='Install-RinsLittleShelter.cmd'},
+ @{Source='scripts/Uninstall-RinsLittleShelter.ps1';Name='Uninstall-RinsLittleShelter.ps1'},
+ @{Source='scripts/Uninstall-RinsLittleShelter.cmd';Name='Uninstall-RinsLittleShelter.cmd'},
  @{Source='docs/安装说明.md';Name='安装说明.md'}
 )
 $zipPath=Join-Path $release 'RinsLittleShelter-Setup.zip'
@@ -32,5 +34,10 @@ $scriptCopy=Join-Path $release 'Install-RinsLittleShelter.ps1'
 Copy-Item -LiteralPath (Join-Path $root 'scripts/Install-RinsLittleShelter.ps1') -Destination $scriptCopy -Force
 $sums=@(((Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash+'  RinsLittleShelter-Setup.zip'),
  ((Get-FileHash -LiteralPath $scriptCopy -Algorithm SHA256).Hash+'  Install-RinsLittleShelter.ps1'))
+foreach($name in @('Uninstall-RinsLittleShelter.ps1','Uninstall-RinsLittleShelter.cmd')){
+ $target=Join-Path $release $name
+ Copy-Item -LiteralPath (Join-Path $root ('scripts/'+$name)) -Destination $target -Force
+ $sums+=((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash+'  '+$name)
+}
 [IO.File]::WriteAllText((Join-Path $release 'SHA256-Setup.txt'),($sums -join "`n")+"`n",[Text.UTF8Encoding]::new($false))
 Write-Output "安装脚本包已准备：$zipPath"

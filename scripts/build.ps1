@@ -105,7 +105,7 @@ try {
     Copy-Item -LiteralPath LICENSES -Destination $OutputDirectory -Recurse -Force
     $docsDirectory = Join-Path $OutputDirectory 'docs'
     New-Item -ItemType Directory -Path $docsDirectory -Force | Out-Null
-    foreach ($document in @('开发说明.md','开发日志.md','素材制作.md','验证记录.md','发布状态.md','多场景素材制作.md','平板创造交互设计.md','平板消息界面设计.md','Nurture素材制作.md','开场动画设计.md','动作收尾过渡.md','登山动作修复.md','动作起止过渡.md','动作过渡检查表.md','动作过渡素材制作记录.md')) {
+    foreach ($document in @('开发说明.md','开发日志.md','素材制作.md','验证记录.md','发布状态.md','安装说明.md','多场景素材制作.md','平板创造交互设计.md','平板消息界面设计.md','Nurture素材制作.md','开场动画设计.md','动作收尾过渡.md','登山动作修复.md','动作起止过渡.md','动作过渡检查表.md','动作过渡素材制作记录.md')) {
         Copy-Item -LiteralPath (Join-Path 'docs' $document) -Destination $docsDirectory
     }
     if (Test-Path -LiteralPath 'docs/平板参考核对.md') { Copy-Item -LiteralPath 'docs/平板参考核对.md' -Destination $docsDirectory }

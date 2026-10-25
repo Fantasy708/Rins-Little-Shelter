@@ -56,6 +56,10 @@ v1.1.0将近期动作与记忆修订整合为一个正式版本。此前v1.0.2�
 
 支持 **Windows 10（19041 及以上）与 Windows 11 x64**。便携程序自带 .NET 运行环境，无须安装开发工具。
 
+**想使用安装脚本：** 在[正式发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases/latest)下载 `RinsLittleShelter-Setup.zip`，完整解压后双击 `Install-RinsLittleShelter.cmd`。它会下载并校验最新正式便携包，安装到个人程序目录、创建快捷方式；无需管理员权限，保留现有存档。升级时再次运行，卸载可使用安装目录内的 `Uninstall-RinsLittleShelter.cmd`。自选目录、离线安装与更多说明见[安装说明](docs/安装说明.md)。
+
+**继续使用便携包：**
+
 1. 打开 [v1.1.0 发行入口](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.1.0)；[v1.0.2](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.0.2)及[历史发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases)继续保留。
 2. 下载该版本的 Windows x64 便携 ZIP，并使用同一发行中的 `SHA256.txt` 核对文件。`source.zip` 是完整源码素材包，供开发和研究使用。
 3. 完整解压 ZIP，打开 `RinsLittleShelter.exe`。请让 EXE 与旁边的 `assets` 文件夹保持在一起。

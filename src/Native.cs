@@ -6,6 +6,29 @@ namespace LittleShelter;
 
 internal static class Native
 {
+    [DllImport("kernel32.dll")] private static extern bool ProcessIdToSessionId(uint processId, out uint sessionId);
+    [DllImport("wtsapi32.dll", EntryPoint="WTSQuerySessionInformationW", SetLastError=true)]
+    private static extern bool QuerySessionInformation(nint server, uint sessionId, int infoClass, out nint buffer, out int bytes);
+    [DllImport("wtsapi32.dll")] private static extern void WTSFreeMemory(nint buffer);
+    // WTSINFOEX's union is aligned to eight bytes on the supported x64 runtime.
+    // Read only its fixed prefix, never the user/domain name fields.
+    internal static bool? DecodeSessionLockState(nint buffer, int bytes, uint sessionId)
+    {
+        if (buffer == 0 || bytes < 20 || Marshal.ReadInt32(buffer) != 1
+            || unchecked((uint)Marshal.ReadInt32(buffer, 8)) != sessionId) return null;
+        return Marshal.ReadInt32(buffer, 16) switch { 0 => true, 1 => false, _ => null };
+    }
+    internal static bool? QuerySessionLocked()
+    {
+        if (!ProcessIdToSessionId((uint)Environment.ProcessId, out uint sessionId)) return null;
+        nint buffer = 0;
+        try
+        {
+            if (!QuerySessionInformation(0, sessionId, 25, out buffer, out int bytes)) return null;
+            return DecodeSessionLockState(buffer, bytes, sessionId);
+        }
+        finally { if (buffer != 0) WTSFreeMemory(buffer); }
+    }
     [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] public struct Point { public int X, Y; }
     [DllImport("user32.dll")] public static extern nint GetForegroundWindow();

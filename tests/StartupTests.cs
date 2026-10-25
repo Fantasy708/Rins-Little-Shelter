@@ -39,6 +39,10 @@ internal static class StartupTests
         save.Settings.FreeMode=false; Scenes.Switch(save,"cloud");
         var data=Path.Combine(output,"save-"+Guid.NewGuid().ToString("N")); var storage=new Storage(data);
         var app=new Application { ShutdownMode=ShutdownMode.OnExplicitShutdown }; var pet=new PetWindow(storage,save,true); app.MainWindow=pet;
+        // This fixture deliberately sends synthetic session events; the separate
+        // SessionStateTests cover native-query priority and real startup gating.
+        typeof(PetWindow).GetField("sessionLockQuery",BindingFlags.NonPublic|BindingFlags.Instance)!
+            .SetValue(pet,new Func<bool?>(()=>null));
         string Persistent() => JsonSerializer.Serialize(new{save.Version,save.CompanionDates,save.DailySeconds,save.ChoiceCounts,save.Created,save.GrowthLayout,save.FreeLayout,save.GrowthSceneLayouts,save.FreeSceneLayouts,save.GrowthStory,save.FreeStory,save.Interactions,save.MusicSeconds});
         void Field(string name,bool value) => typeof(PetWindow).GetField(name,BindingFlags.NonPublic|BindingFlags.Instance)!.SetValue(pet,value);
         void Invoke(string name,params object[] values) => typeof(PetWindow).GetMethod(name,BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(pet,values);

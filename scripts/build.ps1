@@ -1,4 +1,4 @@
-param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.1.0/RinsLittleShelter')
+param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.1.0-maintenance-20261025/RinsLittleShelter')
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 . (Join-Path $PSScriptRoot 'release-files.ps1')
@@ -72,6 +72,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Shelter创造回顾检查失败。' }
         & $dotnetPath run --project tests/WindowSettingsTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/window-settings-qa
         if ($LASTEXITCODE -ne 0) { throw '窗口置顶设置检查失败。' }
+        & $dotnetPath run --project tests/SessionStateTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/session-state-qa
+        if ($LASTEXITCODE -ne 0) { throw '启动锁屏状态、计时和恢复检查失败。' }
     }
     & $dotnetPath publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true "-p:BaseOutputPath=$buildOutput" -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '发布失败。请先退出正在运行的发布版本。' }

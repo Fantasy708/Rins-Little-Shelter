@@ -1,4 +1,4 @@
-param([string]$Destination='dist/local/v1.1.0/release')
+param([string]$Destination='dist/local/v1.1.0-maintenance-20261025/release')
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $release=[IO.Path]::GetFullPath((Join-Path $root $Destination))

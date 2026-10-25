@@ -9,8 +9,12 @@ public sealed class AudioService : IDisposable
     private WasapiRecorder? recorder;
     private string? endpoint;
     private readonly MMDeviceEnumerator devices = new();
+    private readonly object captureGate = new();
+    private const long MaximumWindowSamples = 24_576_000;
     private long packetTicks;
     private double rawLevel, rawLow, rawHigh;
+    private double windowLevelSquares, windowLowSquares, windowHighSquares;
+    private long windowSamples, windowStartTicks;
     private GlobalSystemMediaTransportControlsSessionManager? sessions;
     private readonly ShelterPlaybackTracker playback = new();
     private DateTime lastMedia = DateTime.UtcNow;
@@ -23,56 +27,128 @@ public sealed class AudioService : IDisposable
     public event Action? ShelterFinished;
     private bool busy;
     private int generation;
+    private bool disposed;
     public async Task Poll(bool enabled)
     {
-        if (busy) return; busy = true; int requestGeneration = generation;
+        // Closing capture must never wait for an outstanding media request.
+        if (!enabled) { Disable(); return; }
+        int requestGeneration;
+        lock (captureGate)
+        {
+            if (busy || disposed) return;
+            busy = true; requestGeneration = generation;
+        }
         try
         {
-            if (!enabled) { Disable(); return; }
             using var device = devices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            if (device.ID != endpoint || recorder == null)
+            bool reconnect;
+            lock (captureGate)
             {
-                Stop(); endpoint = device.ID;
+                if (disposed || requestGeneration != generation) return;
+                reconnect = device.ID != endpoint || recorder == null;
+            }
+            if (reconnect)
+            {
+                if (!ResetCapture(requestGeneration, out var old, out requestGeneration)) return;
+                ReleaseRecorder(old);
                 var fresh = new WasapiRecorderBuilder().WithDevice(device).WithLoopbackCapture().Build();
-                recorder = fresh;
-                fresh.DataAvailable += (bytes, flags, position, qpc) => OnAudio(bytes);
-                fresh.RecordingStopped += (_, _) => { if (ReferenceEquals(recorder, fresh)) endpoint = null; };
-                fresh.StartRecording(); Status = "音乐联动已开启";
+                int recorderGeneration = requestGeneration;
+                bool installed = false;
+                try
+                {
+                    lock (captureGate)
+                    {
+                        if (!disposed && requestGeneration == generation)
+                        {
+                            recorder = fresh; endpoint = device.ID; installed = true;
+                            fresh.DataAvailable += (bytes, flags, position, qpc) => OnAudio(fresh, recorderGeneration, bytes);
+                            fresh.RecordingStopped += (_, _) => {
+                                lock (captureGate)
+                                    if (recorderGeneration == generation && ReferenceEquals(recorder, fresh)) endpoint = null;
+                            };
+                            fresh.StartRecording(); Status = "音乐联动已开启";
+                        }
+                    }
+                }
+                catch
+                {
+                    if (ResetCapture(requestGeneration, out var failed, out int failureGeneration))
+                    { requestGeneration = failureGeneration; ReleaseRecorder(failed); }
+                    throw;
+                }
+                if (!installed) { fresh.Dispose(); return; }
             }
             sessions ??= await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
-            if (requestGeneration != generation) return;
+            lock (captureGate) if (disposed || requestGeneration != generation) return;
             var current = sessions.GetCurrentSession();
-            if (current == null) { playback.Disconnect(); IsShelter = false; Track = ""; lastMedia = DateTime.UtcNow; return; }
+            if (current == null)
+            {
+                lock (captureGate)
+                    if (!disposed && requestGeneration == generation)
+                    { playback.Disconnect(); IsShelter = false; Track = ""; lastMedia = DateTime.UtcNow; }
+                return;
+            }
             var info = await current.TryGetMediaPropertiesAsync();
-            if (requestGeneration != generation) return;
-            Track = string.IsNullOrWhiteSpace(info.Artist) ? info.Title : info.Artist + " · " + info.Title;
-            string key = current.SourceAppUserModelId + "|" + info.Title + "|" + info.Artist;
-            IsShelter = info.Title.Contains("shelter", StringComparison.OrdinalIgnoreCase) &&
-                (Track.Contains("Porter", StringComparison.OrdinalIgnoreCase) || Track.Contains("Madeon", StringComparison.OrdinalIgnoreCase));
-            var now = DateTime.UtcNow; double dt = Math.Max(0,(now - lastMedia).TotalSeconds); lastMedia = now;
+            lock (captureGate) if (disposed || requestGeneration != generation) return;
             var timeline = current.GetTimelineProperties();
             double duration = (timeline.EndTime - timeline.StartTime).TotalSeconds;
             bool playing = current.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
-            if (playback.Observe(key,IsShelter,playing,(timeline.Position-timeline.StartTime).TotalSeconds,duration,dt)) ShelterFinished?.Invoke();
+            bool finished;
+            lock (captureGate)
+            {
+                if (disposed || requestGeneration != generation) return;
+                Track = string.IsNullOrWhiteSpace(info.Artist) ? info.Title : info.Artist + " · " + info.Title;
+                string key = current.SourceAppUserModelId + "|" + info.Title + "|" + info.Artist;
+                IsShelter = info.Title.Contains("shelter", StringComparison.OrdinalIgnoreCase) &&
+                    (Track.Contains("Porter", StringComparison.OrdinalIgnoreCase) || Track.Contains("Madeon", StringComparison.OrdinalIgnoreCase));
+                var now = DateTime.UtcNow; double dt = Math.Max(0,(now - lastMedia).TotalSeconds); lastMedia = now;
+                finished = playback.Observe(key,IsShelter,playing,(timeline.Position-timeline.StartTime).TotalSeconds,duration,dt);
+            }
+            if (finished) ShelterFinished?.Invoke();
         }
         catch (Exception e) when (e is COMException or InvalidOperationException or UnauthorizedAccessException or NotSupportedException)
-        { playback.Disconnect(); Status = recorder == null ? "暂无可用声音设备，Rin 继续陪伴" : "音乐响应可用；播放器未提供曲目信息"; }
-        finally { busy = false; }
+        {
+            lock (captureGate)
+                if (!disposed && requestGeneration == generation)
+                { playback.Disconnect(); Status = recorder == null ? "暂无可用声音设备，Rin 继续陪伴" : "音乐响应可用；播放器未提供曲目信息"; }
+        }
+        finally { lock (captureGate) busy = false; }
     }
-    private void OnAudio(ReadOnlySpan<byte> bytes)
+    private void OnAudio(WasapiRecorder source, int sourceGeneration, ReadOnlySpan<byte> bytes)
     {
-        var active = recorder;
-        if (active == null) return;
-        var energy = AnalyzePcm(bytes, active.WaveFormat);
-        Volatile.Write(ref rawLevel, energy.Level);
-        Volatile.Write(ref rawLow, energy.Low);
-        Volatile.Write(ref rawHigh, energy.High);
-        Interlocked.Exchange(ref packetTicks, DateTime.UtcNow.Ticks);
+        WaveFormat format;
+        lock (captureGate)
+        {
+            if (disposed || sourceGeneration != generation || !ReferenceEquals(recorder, source)) return;
+            format = source.WaveFormat;
+        }
+        var energy = AnalyzePcmSquares(bytes, format);
+        if (energy.Samples == 0) return;
+        lock (captureGate)
+        {
+            // A device change or Disable may have happened while decoding.
+            if (disposed || sourceGeneration != generation || !ReferenceEquals(recorder, source)) return;
+            long now = DateTime.UtcNow.Ticks;
+            if (windowSamples == 0 || now - windowStartTicks > TimeSpan.TicksPerMillisecond * 400
+                || windowSamples > MaximumWindowSamples - Math.Min(energy.Samples, MaximumWindowSamples))
+            { ClearWindow(); windowStartTicks = now; }
+            double weight = energy.Samples > MaximumWindowSamples ? (double)MaximumWindowSamples / energy.Samples : 1;
+            windowLevelSquares += energy.Level * weight;
+            windowLowSquares += energy.Low * weight;
+            windowHighSquares += energy.High * weight;
+            windowSamples += Math.Min(energy.Samples, MaximumWindowSamples);
+            packetTicks = now;
+        }
     }
     public static (double Level, double Low, double High) AnalyzePcm(ReadOnlySpan<byte> bytes, WaveFormat format)
     {
+        var energy = AnalyzePcmSquares(bytes, format);
+        return energy.Samples == 0 ? (0, 0, 0) : Normalize(energy.Level, energy.Low, energy.High, energy.Samples);
+    }
+    private static (double Level, double Low, double High, long Samples) AnalyzePcmSquares(ReadOnlySpan<byte> bytes, WaveFormat format)
+    {
         int step = format.BitsPerSample / 8;
-        if (step is not (2 or 4) || bytes.Length < step || format.Channels is < 1 or > 128) return (0, 0, 0);
+        if (step is not (2 or 4) || bytes.Length < step || format.Channels is < 1 or > 128) return (0, 0, 0, 0);
         Span<double> filters = stackalloc double[format.Channels]; filters.Clear();
         bool floating = format.Encoding == WaveFormatEncoding.IeeeFloat || format is WaveFormatExtensible ext && ext.SubFormat == new Guid("00000003-0000-0010-8000-00aa00389b71");
         double sum = 0, lowSum = 0, highSum = 0; int count = 0;
@@ -84,24 +160,59 @@ public sealed class AudioService : IDisposable
             filters[channel] += .06 * (sample - filters[channel]); double filter = filters[channel], high = sample - filter;
             sum += sample * sample; lowSum += filter * filter; highSum += high * high; count++;
         }
-        return count == 0 ? (0, 0, 0) : (Math.Clamp(Math.Sqrt(sum / count) * 4, 0, 1), Math.Clamp(Math.Sqrt(lowSum / count) * 5, 0, 1), Math.Clamp(Math.Sqrt(highSum / count) * 3, 0, 1));
+        return (sum, lowSum, highSum, count);
     }
+    private static (double Level, double Low, double High) Normalize(double level, double low, double high, long samples)
+        => (Math.Clamp(Math.Sqrt(level / samples) * 4, 0, 1), Math.Clamp(Math.Sqrt(low / samples) * 5, 0, 1), Math.Clamp(Math.Sqrt(high / samples) * 3, 0, 1));
     public void Tick(double dt)
     {
-        bool silent = DateTime.UtcNow.Ticks - Interlocked.Read(ref packetTicks) > TimeSpan.TicksPerMillisecond * 400;
-        double smoothing = 1 - Math.Exp(-dt * 5);
-        Level += ((silent ? 0 : Volatile.Read(ref rawLevel)) - Level) * smoothing;
-        Low += ((silent ? 0 : Volatile.Read(ref rawLow)) - Low) * smoothing;
-        High += ((silent ? 0 : Volatile.Read(ref rawHigh)) - High) * smoothing;
+        if (!double.IsFinite(dt) || dt <= 0) return;
+        lock (captureGate)
+        {
+            bool silent = DateTime.UtcNow.Ticks - packetTicks > TimeSpan.TicksPerMillisecond * 400;
+            if (windowSamples > 0)
+            {
+                if (!silent) (rawLevel, rawLow, rawHigh) = Normalize(windowLevelSquares, windowLowSquares, windowHighSquares, windowSamples);
+                ClearWindow();
+            }
+            double smoothing = 1 - Math.Exp(-dt * 5);
+            Level += ((silent ? 0 : rawLevel) - Level) * smoothing;
+            Low += ((silent ? 0 : rawLow) - Low) * smoothing;
+            High += ((silent ? 0 : rawHigh) - High) * smoothing;
+        }
     }
-    public void Disable() { Stop(); playback.Reset(); Level = Low = High = 0; Status = "音乐联动已关闭"; }
-    private void Stop()
+    private void ClearWindow()
     {
-        var old = recorder; recorder = null; endpoint = null;
-        generation++;
-        playback.Disconnect();
-        if (old != null) { old.StopRecording(); old.Dispose(); }
-        rawLevel = rawLow = rawHigh = 0; IsShelter = false; Track = "";
+        windowLevelSquares = windowLowSquares = windowHighSquares = 0;
+        windowSamples = windowStartTicks = 0;
     }
-    public void Dispose() { Stop(); devices.Dispose(); }
+    private bool ResetCapture(int? expectedGeneration, out WasapiRecorder? old, out int nextGeneration, bool disable = false)
+    {
+        lock (captureGate)
+        {
+            old = null; nextGeneration = generation;
+            if (expectedGeneration.HasValue && expectedGeneration.Value != generation) return false;
+            old = recorder; recorder = null; endpoint = null; nextGeneration = ++generation;
+            ClearWindow(); packetTicks = 0; rawLevel = rawLow = rawHigh = Level = Low = High = 0;
+            IsShelter = false; Track = "";
+            if (disable) { playback.Reset(); Status = "音乐联动已关闭"; }
+            else playback.Disconnect();
+            return true;
+        }
+    }
+    private static void ReleaseRecorder(WasapiRecorder? old)
+    {
+        // Never join/dispose a capture thread while holding captureGate.
+        if (old != null) { old.StopRecording(); old.Dispose(); }
+    }
+    public void Disable()
+    {
+        ResetCapture(null, out var old, out _, true);
+        ReleaseRecorder(old);
+    }
+    public void Dispose()
+    {
+        lock (captureGate) { if (disposed) return; disposed = true; }
+        Disable(); devices.Dispose();
+    }
 }

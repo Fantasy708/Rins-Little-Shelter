@@ -25,6 +25,8 @@ public sealed partial class PetWindow : Window
     private TimeSpan lastPresentation;
     private int seconds;
     private bool sessionLocked, suspended, paused, manualHidden, fullscreen, closed, pointerThrough, dragging;
+    private bool companionStarted;
+    private Func<bool?> sessionLockQuery = Native.QuerySessionLocked;
     private bool locked => sessionLocked || suspended;
     private readonly bool diagnostics;
     private string? captureDirectory;
@@ -102,6 +104,33 @@ public sealed partial class PetWindow : Window
         Scene.Bubble = "一起待一会儿吧。"; Scene.BubbleUntil = 7;
     }
     private void AddTray(Forms.ContextMenuStrip menu, string text, Action action) => menu.Items.Add(text, null, (_, _) => Dispatcher.Invoke(action));
+    public bool StartCompanion()
+    {
+        if (companionStarted) return IsVisible;
+        companionStarted = true;
+        // app.Run(window) would unconditionally Show the window. Create only
+        // its handle, then decide whether the current session can display it.
+        sessionLocked = true;
+        new WindowInteropHelper(this).EnsureHandle();
+        sessionLocked = sessionLockQuery() ?? true;
+        fullscreen = Native.Fullscreen(this);
+        clock.Reset();
+        UpdateVisibility();
+        return IsVisible;
+    }
+    private void ApplySessionLock(bool value)
+    {
+        if (sessionLocked == value) return;
+        sessionLocked = value;
+        clock.Reset();
+        UpdateVisibility();
+    }
+    private void RefreshSessionLock()
+    {
+        // Retry an initially unknown state; a transient failed query must not
+        // turn a known locked session into an unlocked one, or vice versa.
+        if (sessionLockQuery() is bool value) ApplySessionLock(value);
+    }
     private nint Hook(nint h, int msg, nint w, nint l, ref bool handled)
     {
         if (msg == 0x21) { handled = true; return 3; }
@@ -149,6 +178,7 @@ public sealed partial class PetWindow : Window
     private async void Heartbeat(object? sender, EventArgs e)
     {
         if (closed) return;
+        if (companionStarted) RefreshSessionLock();
         clock.Tick(Save, DateTime.Now, locked, paused || Opening.Active);
         bool isFull = Native.Fullscreen(this);
         if (isFull != fullscreen) { fullscreen = isFull; UpdateVisibility(); }
@@ -175,12 +205,30 @@ public sealed partial class PetWindow : Window
             if (wall >= soakMinutes * 60) { File.WriteAllText(soakPath + ".complete", DateTime.Now.ToString("O")); Close(); }
         }
     }
-    private void SessionSwitch(object sender, SessionSwitchEventArgs e) => Dispatcher.Invoke(() => { if (e.Reason is SessionSwitchReason.SessionLock or SessionSwitchReason.SessionLogoff) sessionLocked = true; if (e.Reason is SessionSwitchReason.SessionUnlock or SessionSwitchReason.SessionLogon) sessionLocked = false; clock.Reset(); UpdateVisibility(); });
-    private void PowerChanged(object sender, PowerModeChangedEventArgs e) => Dispatcher.Invoke(() => { if (e.Mode == PowerModes.Suspend) suspended = true; if (e.Mode == PowerModes.Resume) suspended = false; clock.Reset(); UpdateVisibility(); });
+    private void SessionSwitch(object sender, SessionSwitchEventArgs e) => Dispatcher.Invoke(() => {
+        if (closed) return;
+        bool? eventState = e.Reason switch {
+            SessionSwitchReason.SessionLock or SessionSwitchReason.SessionLogoff => true,
+            SessionSwitchReason.SessionUnlock or SessionSwitchReason.SessionLogon => false,
+            _ => null
+        };
+        if ((sessionLockQuery() ?? eventState) is bool value) ApplySessionLock(value);
+        clock.Reset();
+    });
+    private void PowerChanged(object sender, PowerModeChangedEventArgs e) => Dispatcher.Invoke(() => {
+        if (e.Mode == PowerModes.Suspend) suspended = true;
+        if (e.Mode == PowerModes.Resume) {
+            suspended = false;
+            // The pre-sleep state is stale until Windows confirms this session.
+            // Keep an unknown resumed session hidden until the heartbeat retries.
+            sessionLocked = sessionLockQuery() ?? true;
+        }
+        clock.Reset(); UpdateVisibility();
+    });
     private void DisplayChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(() => { CancelTablet(); Native.KeepOnScreen(this); });
-    private void UpdateVisibility() { if (manualHidden || fullscreen || locked) { CancelTablet(); Hide(); } else { Show(); lastFrame = watch.Elapsed.TotalSeconds; } }
+    private void UpdateVisibility() { if (manualHidden || fullscreen || locked) { if (locked) Audio.Disable(); CancelTablet(); Hide(); } else { Show(); lastFrame = watch.Elapsed.TotalSeconds; } }
     public void ToggleHidden() { manualHidden = !manualHidden; UpdateVisibility(); }
-    public void TogglePause() { paused = !paused; if (paused) CancelTablet(); clock.Reset(); _ = Audio.Poll(Save.Settings.Music && !paused); CompanionChanged?.Invoke(); }
+    public void TogglePause() { paused = !paused; if (paused) { CancelTablet(); Audio.Disable(); } clock.Reset(); if (!paused) _ = Audio.Poll(Save.Settings.Music && !locked && !Opening.Active); CompanionChanged?.Invoke(); }
     private void CancelTablet() { SkipStartup(); Behavior.CancelTabletRecovery(); Behavior.Tablet.Cancel(Save); Scene.ClearTabletHits(); Scene.ClearCreationEffects(); Scene.InvalidateVisual(); }
     public void SwitchMode()
     {

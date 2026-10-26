@@ -71,7 +71,7 @@ public sealed partial class PetWindow : Window
         Behavior.RecoveryActionReady += PreviewAction;
         Behavior.RecoveryMemoryReady += ViewMemory;
         Behavior.RecoveryTabletReady += (page,preselect)=>OpenTablet(page,preselect);
-        Audio.ShelterFinished += () => Dispatcher.Invoke(ShelterPlaybackCompleted);
+        Audio.ShelterPlaybackReady += () => Dispatcher.Invoke(ShelterPlaybackReady);
         SystemEvents.SessionSwitch += SessionSwitch;
         SystemEvents.PowerModeChanged += PowerChanged;
         SystemEvents.DisplaySettingsChanged += DisplayChanged;
@@ -182,7 +182,7 @@ public sealed partial class PetWindow : Window
         clock.Tick(Save, DateTime.Now, locked, paused || Opening.Active);
         bool isFull = Native.Fullscreen(this);
         if (isFull != fullscreen) { fullscreen = isFull; UpdateVisibility(); }
-        if (++seconds % 3 == 0) await Audio.Poll(Save.Settings.Music && !locked && !paused && !Opening.Active);
+        if (++seconds % 3 == 0) await Audio.Poll(Save.Settings.Music && !locked && !paused && !Opening.Active, !manualHidden && !fullscreen && !Save.Settings.ClickThrough, resetPlaybackOnDisable:!Save.Settings.Music);
         if (closed) return;
         if (watch.Elapsed.TotalSeconds - lastSave >= 30) { lastSave = watch.Elapsed.TotalSeconds; Persist(); }
         if (!fullscreen && !manualHidden && !locked && !paused && !Opening.Active && !Recall.Active)
@@ -226,9 +226,9 @@ public sealed partial class PetWindow : Window
         clock.Reset(); UpdateVisibility();
     });
     private void DisplayChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(() => { CancelTablet(); Native.KeepOnScreen(this); });
-    private void UpdateVisibility() { if (manualHidden || fullscreen || locked) { if (locked) Audio.Disable(); CancelTablet(); Hide(); } else { Show(); lastFrame = watch.Elapsed.TotalSeconds; } }
+    private void UpdateVisibility() { if (manualHidden || fullscreen || locked) { if (locked) Audio.Suspend(); else Audio.InterruptShelterPlayback(); CancelTablet(); Hide(); } else { Show(); lastFrame = watch.Elapsed.TotalSeconds; } }
     public void ToggleHidden() { manualHidden = !manualHidden; UpdateVisibility(); }
-    public void TogglePause() { paused = !paused; if (paused) { CancelTablet(); Audio.Disable(); } clock.Reset(); if (!paused) _ = Audio.Poll(Save.Settings.Music && !locked && !Opening.Active); CompanionChanged?.Invoke(); }
+    public void TogglePause() { paused = !paused; if (paused) { CancelTablet(); Audio.Suspend(); } clock.Reset(); if (!paused) _ = Audio.Poll(Save.Settings.Music && !locked && !Opening.Active, !manualHidden && !fullscreen && !Save.Settings.ClickThrough, resetPlaybackOnDisable:!Save.Settings.Music); CompanionChanged?.Invoke(); }
     private void CancelTablet() { SkipStartup(); Behavior.CancelTabletRecovery(); Behavior.Tablet.Cancel(Save); Scene.ClearTabletHits(); Scene.ClearCreationEffects(); Scene.InvalidateVisual(); }
     public void SwitchMode()
     {
@@ -272,10 +272,11 @@ public sealed partial class PetWindow : Window
     {
         Topmost = Save.Settings.AlwaysOnTop;
         if (!Save.Settings.StartupAnimationEnabled || Save.Settings.StartupAnimationPlayback=="off") SkipStartup();
-        if (Save.Settings.ClickThrough) { Behavior.Journey.Cancel(Save); CancelTablet(); }
+        if (Save.Settings.ClickThrough) { Audio.InterruptShelterPlayback(); Behavior.Journey.Cancel(Save); CancelTablet(); }
         ApplySize(); if (IsLoaded) { Native.KeepOnScreen(this); pointerThrough = Save.Settings.ClickThrough; Native.Configure(this, pointerThrough); }
-        if (!Save.Settings.Music || Opening.Active) Audio.Disable();
-        else _ = Audio.Poll(!paused && !locked);
+        if (!Save.Settings.Music) Audio.Disable();
+        else if (Opening.Active) Audio.Suspend();
+        else _ = Audio.Poll(!paused && !locked, !manualHidden && !fullscreen && !Save.Settings.ClickThrough, resetPlaybackOnDisable:false);
         Persist(); CompanionChanged?.Invoke();
     }
     private void ApplySize() { Width = 480 * Save.Settings.Scale; Height = 340 * Save.Settings.Scale; Opacity = Save.Settings.Opacity; viewport.LayoutTransform = new ScaleTransform(Save.Settings.Scale, Save.Settings.Scale); }

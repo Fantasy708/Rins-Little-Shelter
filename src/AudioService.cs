@@ -1,6 +1,7 @@
 using NAudio.Wave;
 using NAudio.CoreAudioApi;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using Windows.Media.Control;
 namespace LittleShelter;
 
@@ -17,26 +18,27 @@ public sealed class AudioService : IDisposable
     private long windowSamples, windowStartTicks;
     private GlobalSystemMediaTransportControlsSessionManager? sessions;
     private readonly ShelterPlaybackTracker playback = new();
-    private DateTime lastMedia = DateTime.UtcNow;
+    private long lastMedia = Stopwatch.GetTimestamp();
     public double Level { get; private set; }
     public double Low { get; private set; }
     public double High { get; private set; }
     public bool IsShelter { get; private set; }
     public string Track { get; private set; } = "";
     public string Status { get; private set; } = "等待音乐";
-    public event Action? ShelterFinished;
+    public event Action? ShelterPlaybackReady;
     private bool busy;
     private int generation;
+    private int playbackEpoch;
     private bool disposed;
-    public async Task Poll(bool enabled)
+    public async Task Poll(bool enabled, bool observePlayback = true, bool resetPlaybackOnDisable = true)
     {
         // Closing capture must never wait for an outstanding media request.
-        if (!enabled) { Disable(); return; }
-        int requestGeneration;
+        if (!enabled) { if (resetPlaybackOnDisable) Disable(); else Suspend(); return; }
+        int requestGeneration, requestPlaybackEpoch;
         lock (captureGate)
         {
             if (busy || disposed) return;
-            busy = true; requestGeneration = generation;
+            busy = true; requestGeneration = generation; requestPlaybackEpoch = playbackEpoch;
         }
         try
         {
@@ -85,26 +87,35 @@ public sealed class AudioService : IDisposable
             {
                 lock (captureGate)
                     if (!disposed && requestGeneration == generation)
-                    { playback.Disconnect(); IsShelter = false; Track = ""; lastMedia = DateTime.UtcNow; }
+                    { playback.Disconnect(); IsShelter = false; Track = ""; lastMedia = Stopwatch.GetTimestamp(); }
                 return;
             }
             var info = await current.TryGetMediaPropertiesAsync();
             lock (captureGate) if (disposed || requestGeneration != generation) return;
-            var timeline = current.GetTimelineProperties();
-            double duration = (timeline.EndTime - timeline.StartTime).TotalSeconds;
             bool playing = current.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+            // Playback recognition does not require a published song timeline.
+            // A supported timeline is used only to notice an explicit replay.
+            double position = 0, duration = 0;
+            try
+            {
+                var timeline = current.GetTimelineProperties();
+                position = (timeline.Position - timeline.StartTime).TotalSeconds;
+                duration = (timeline.EndTime - timeline.StartTime).TotalSeconds;
+            }
+            catch (Exception e) when (e is COMException or InvalidOperationException or NotSupportedException) { }
             bool finished;
             lock (captureGate)
             {
-                if (disposed || requestGeneration != generation) return;
+                if (disposed || requestGeneration != generation || requestPlaybackEpoch != playbackEpoch) return;
                 Track = string.IsNullOrWhiteSpace(info.Artist) ? info.Title : info.Artist + " · " + info.Title;
                 string key = current.SourceAppUserModelId + "|" + info.Title + "|" + info.Artist;
                 IsShelter = info.Title.Contains("shelter", StringComparison.OrdinalIgnoreCase) &&
                     (Track.Contains("Porter", StringComparison.OrdinalIgnoreCase) || Track.Contains("Madeon", StringComparison.OrdinalIgnoreCase));
-                var now = DateTime.UtcNow; double dt = Math.Max(0,(now - lastMedia).TotalSeconds); lastMedia = now;
-                finished = playback.Observe(key,IsShelter,playing,(timeline.Position-timeline.StartTime).TotalSeconds,duration,dt);
+                long now = Stopwatch.GetTimestamp(); double dt = Stopwatch.GetElapsedTime(lastMedia,now).TotalSeconds; lastMedia = now;
+                finished = ObservePlayback(requestPlaybackEpoch,key,IsShelter,playing,position,duration,dt,observePlayback);
+                Status = IsShelter ? "已识别 Shelter · 连续播放10秒后回顾" : "音乐联动已开启";
             }
-            if (finished) ShelterFinished?.Invoke();
+            if (finished) ShelterPlaybackReady?.Invoke();
         }
         catch (Exception e) when (e is COMException or InvalidOperationException or UnauthorizedAccessException or NotSupportedException)
         {
@@ -113,6 +124,16 @@ public sealed class AudioService : IDisposable
                 { playback.Disconnect(); Status = recorder == null ? "暂无可用声音设备，Rin 继续陪伴" : "音乐响应可用；播放器未提供曲目信息"; }
         }
         finally { lock (captureGate) busy = false; }
+    }
+    public void InterruptShelterPlayback()
+    {
+        lock (captureGate) { playbackEpoch++; playback.Disconnect(); lastMedia = Stopwatch.GetTimestamp(); }
+    }
+    private bool ObservePlayback(int expectedEpoch,string key,bool shelter,bool playing,double position,double duration,double elapsed,bool observePlayback)
+    {
+        if (expectedEpoch != playbackEpoch) return false;
+        if (!observePlayback) { playback.Disconnect(); return false; }
+        return playback.Observe(key,shelter,playing,position,duration,elapsed);
     }
     private void OnAudio(WasapiRecorder source, int sourceGeneration, ReadOnlySpan<byte> bytes)
     {
@@ -195,7 +216,7 @@ public sealed class AudioService : IDisposable
             old = recorder; recorder = null; endpoint = null; nextGeneration = ++generation;
             ClearWindow(); packetTicks = 0; rawLevel = rawLow = rawHigh = Level = Low = High = 0;
             IsShelter = false; Track = "";
-            if (disable) { playback.Reset(); Status = "音乐联动已关闭"; }
+            if (disable) { playback.Disconnect(); Status = "音乐联动已关闭"; }
             else playback.Disconnect();
             return true;
         }
@@ -205,11 +226,20 @@ public sealed class AudioService : IDisposable
         // Never join/dispose a capture thread while holding captureGate.
         if (old != null) { old.StopRecording(); old.Dispose(); }
     }
-    public void Disable()
+    private void StopCapture(bool resetPlayback)
     {
-        ResetCapture(null, out var old, out _, true);
+        WasapiRecorder? old;
+        lock (captureGate)
+        {
+            playbackEpoch++;
+            ResetCapture(null, out old, out _, true);
+            if (resetPlayback) playback.Reset();
+            lastMedia = Stopwatch.GetTimestamp();
+        }
         ReleaseRecorder(old);
     }
+    public void Disable() => StopCapture(true);
+    public void Suspend() => StopCapture(false);
     public void Dispose()
     {
         lock (captureGate) { if (disposed) return; disposed = true; }

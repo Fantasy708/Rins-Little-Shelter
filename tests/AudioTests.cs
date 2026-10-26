@@ -40,6 +40,7 @@ internal static class AudioTests
                 using var testDevice = testDevices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
                 WindowRegression(testDevice);
                 await LifecycleRegression(testDevice);
+                await PlaybackLifecycleRegression(testDevice);
                 await ConcurrencyRegression(testDevice);
                 BoundedAllocationRegression(testDevice);
                 deviceFixturesCompleted = true;
@@ -160,6 +161,81 @@ internal static class AudioTests
         Check(f.Audio.Level == 0, "Dispose幂等且过期包不能重启采集");
     }
 
+    private static async Task PlaybackLifecycleRegression(MMDevice device)
+    {
+        byte[] positive = Packet(480, .02f);
+        void AnchorAndNine(Fixture f)
+        {
+            Check(!f.ObservePlayback(3), "播放首次快照只建锚点");
+            for (int i = 0; i < 3; i++) Check(!f.ObservePlayback(3), "连续识别未满10秒不触发");
+        }
+        void AlreadyTriggeredRound(Fixture f)
+        {
+            // The same identity must remain latched even after a fresh anchor.
+            for (int i = 0; i < 6; i++) Check(!f.ObservePlayback(3), "同曲已触发锁存跨生命周期保留");
+        }
+
+        using (var f = new Fixture(device))
+        {
+            AnchorAndNine(f); Check(f.ObservePlayback(1), "服务实际观察入口满10秒仅返回一次");
+            PacketHandler oldPackets = f.Send;
+            f.Send(positive); f.Audio.Tick(.1); Check(f.Audio.Level > 0, "暂停前存在可清理能量");
+            f.Audio.Suspend(); oldPackets(positive); f.Audio.Tick(.1);
+            Check(f.FieldOrNull("recorder") == null && f.Audio.Level == 0 && f.Audio.Low == 0 && f.Audio.High == 0
+                && (long)f.Field("windowSamples") == 0, "Suspend停止采集、清空窗口，拒绝旧代次PCM");
+            Check(f.Audio.Status == "音乐联动已关闭", "Suspend保持采集已关闭状态");
+            f.Connect(); AlreadyTriggeredRound(f);
+
+            // This is the explicit music-off path, which intentionally permits
+            // another round when the user enables music again.
+            f.Audio.Disable(); f.Connect(); AnchorAndNine(f);
+            Check(f.ObservePlayback(1), "显式Disable后重新开启允许同曲新一轮");
+            await f.Audio.Poll(false, resetPlaybackOnDisable: false);
+            Check(f.FieldOrNull("recorder") == null && f.Audio.Level == 0, "生命周期Poll(false)也立即停止采集");
+            f.Connect(); AlreadyTriggeredRound(f);
+
+            await f.Audio.Poll(false);
+            f.Connect(); AnchorAndNine(f);
+            Check(f.ObservePlayback(1), "显式Poll(false)默认重开同曲触发资格");
+        }
+        using (var f = new Fixture(device))
+        {
+            AnchorAndNine(f); f.Audio.Suspend(); f.Connect();
+            AnchorAndNine(f);
+            Check(f.ObservePlayback(1), "Suspend清除未满10秒的累计，恢复后重新计满");
+        }
+        using (var f = new Fixture(device))
+        {
+            AnchorAndNine(f);
+            int oldEpoch = (int)f.Field("playbackEpoch"), captureGeneration = (int)f.Field("generation");
+            object? recorder = f.FieldOrNull("recorder");
+            f.Audio.InterruptShelterPlayback();
+            Check((int)f.Field("playbackEpoch") != oldEpoch, "中断播放观察递增独立epoch");
+            Check((int)f.Field("generation") == captureGeneration && ReferenceEquals(recorder, f.FieldOrNull("recorder")),
+                "隐藏/穿透中断观察不破坏仍在工作的采集代次");
+            f.Send(positive); f.Audio.Tick(.1); Check(f.Audio.Level > 0, "中断Shelter观察后音乐能量仍正常");
+            Check(!f.ObservePlayback(3, expectedEpoch: oldEpoch), "中断前尚未返回的元数据不能建立新锚点");
+            Check(!f.ObservePlayback(6), "中断后的首次有效快照不补算旧请求间隔");
+            Check(!f.ObservePlayback(4), "过期请求不偷算中断后10秒门槛");
+            Check(f.ObservePlayback(6), "新epoch真实连续满10秒后才触发");
+            f.Audio.InterruptShelterPlayback(); AlreadyTriggeredRound(f);
+        }
+        using (var f = new Fixture(device))
+        {
+            AnchorAndNine(f);
+            Check(!f.ObservePlayback(3, observePlayback: false), "后台observePlayback=false拒绝触发");
+            AnchorAndNine(f); Check(f.ObservePlayback(1), "后台观察不累计，前台恢复后重计10秒");
+            Check(!f.ObservePlayback(3, observePlayback: false), "已触发时后台观察同样不返回事件");
+            AlreadyTriggeredRound(f);
+
+            int oldEpoch = (int)f.Field("playbackEpoch");
+            f.Audio.Disable(); f.Connect();
+            Check(!f.ObservePlayback(3, expectedEpoch: oldEpoch), "显式Disable使旧媒体查询epoch失效");
+            Check(!f.ObservePlayback(6) && !f.ObservePlayback(4), "关闭前旧查询不能给新一轮预建锚点");
+            Check(f.ObservePlayback(6), "显式重开仅由新epoch累计10秒触发");
+        }
+    }
+
     private static async Task ConcurrencyRegression(MMDevice device)
     {
         using var f = new Fixture(device);
@@ -232,6 +308,14 @@ internal static class AudioTests
         internal object Field(string name) => FieldOrNull(name)!;
         internal object? FieldOrNull(string name) => typeof(AudioService).GetField(name, PrivateInstance)!.GetValue(Audio);
         internal void Set(string name, object value) => typeof(AudioService).GetField(name, PrivateInstance)!.SetValue(Audio, value);
+        internal bool ObservePlayback(double elapsed, int? expectedEpoch = null, bool observePlayback = true)
+        {
+            // This is the production Poll's final observation gate. Use its
+            // documented lock and leave all actual media/capture calls idle.
+            lock (Field("captureGate"))
+                return (bool)typeof(AudioService).GetMethod("ObservePlayback", PrivateInstance)!.Invoke(Audio,
+                    new object[] { expectedEpoch ?? (int)Field("playbackEpoch"), "fixture|Shelter|Porter Robinson", true, true, 0.0, 0.0, elapsed, observePlayback })!;
+        }
         public void Dispose() => Audio.Dispose();
     }
 }

@@ -12,7 +12,7 @@ public sealed partial class PetWindow
         RecallCanvas.EndRequested+=EndRecall; Recall.Finished+=FinishRecall;
         viewport.Children.Add(RecallCanvas);
     }
-    private void ShelterPlaybackCompleted()
+    private void ShelterPlaybackReady()
     {
         // Never queue a surprise recollection behind another interaction.
         // The pre-memory ideal-world behavior remains available as before.

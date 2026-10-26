@@ -20,7 +20,7 @@ public sealed partial class PetWindow
         if(Opening.Active || playback==StartupPlayback.None || !IsLoaded || !IsVisible || paused || manualHidden || locked || Save.Settings.ClickThrough || Behavior.Dragging) return false;
         if(fullscreen || Native.Fullscreen(this)) { fullscreen=true; UpdateVisibility(); return false; }
         Behavior.Nurture.Cancel(Save); CancelTablet(); Behavior.Life.Cancel(); Scene.Editing=false;
-        Scenes.PlaceActor(Save,Behavior); Behavior.Start("stand"); Audio.Disable(); clock.Reset();
+        Scenes.PlaceActor(Save,Behavior); Behavior.Start("stand"); Audio.Suspend(); clock.Reset();
         Scene.BubbleUntil=Scene.IdealUntil=0; OpeningCanvas.Reset(); OpeningCanvas.Destination=new Point(Behavior.X,Behavior.Y);
         Scene.SetStartupPresentation(true); OpeningCanvas.Visibility=Visibility.Visible;
         Opening.Begin(playback); lastFrame=watch.Elapsed.TotalSeconds;
@@ -35,7 +35,7 @@ public sealed partial class PetWindow
         Scenes.PlaceActor(Save,Behavior); Behavior.Welcome(); Save.HasSeenStartup=true;
         lastOffer=lastReminder=runtime; clock.Reset(); Persist();
         pointerThrough=Save.Settings.ClickThrough; Native.Configure(this,pointerThrough);
-        if(!closed) { _=Audio.Poll(Save.Settings.Music && !paused && !locked && !manualHidden && !fullscreen); CompanionChanged?.Invoke(); }
+        if(!closed) { _=Audio.Poll(Save.Settings.Music && !paused && !locked, !manualHidden && !fullscreen && !Save.Settings.ClickThrough, resetPlaybackOnDisable:!Save.Settings.Music); CompanionChanged?.Invoke(); }
     }
     public void AdvanceStartup(double seconds)
     {

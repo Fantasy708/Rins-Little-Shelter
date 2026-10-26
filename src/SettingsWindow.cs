@@ -71,7 +71,7 @@ public sealed class SettingsWindow : Window
         buttons.Children.Add(Button("查看平板消息",pet.OpenMessages));
         buttons.Children.Add(Button("重看开场",pet.ReplayStartup));
         buttons.Children.Add(Button("看看理想世界", pet.ShowIdeal));
-        recallButton=Button("Shelter · 创造回顾",()=> { if(pet.Recall.Active) pet.EndRecall(); else pet.ShowRecall(); }); recallButton.IsEnabled=pet.CanRecall; recallButton.ToolTip="第20个陪伴日开放；完整播放Shelter后回顾，也可在Rin空闲时手动观看。"; buttons.Children.Add(recallButton);
+        recallButton=Button("Shelter · 创造回顾",()=> { if(pet.Recall.Active) pet.EndRecall(); else pet.ShowRecall(); }); recallButton.IsEnabled=pet.CanRecall; recallButton.ToolTip="第20个陪伴日开放；识别到Shelter并连续播放满10秒后尝试回顾，也可在Rin空闲时手动观看。"; buttons.Children.Add(recallButton);
         buttons.Children.Add(Button("恢复位置", pet.Recover));
         buttons.Children.Add(Button("暂停 / 继续", pet.TogglePause)); stack.Children.Add(buttons);
         stack.Children.Add(new TextBlock { Text = "天气在本地选择。音乐只即时分析，不保存音频。全屏时自动隐藏。", TextWrapping = TextWrapping.Wrap, Foreground = muted, FontSize = 11, Margin = new Thickness(0, 9, 0, 0) });

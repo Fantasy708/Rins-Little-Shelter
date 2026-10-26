@@ -1,0 +1,308 @@
+# Manual two-phase cloud reproduction/staging only. Never renames/deletes/edits releases or tags.
+name: Rin Shelter frozen maintenance build and pending staging
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Build artifact first; stage only after the downloaded artifact is fully verified
+        required: true
+        default: build
+        type: choice
+        options: [build, stage]
+      build_run_id:
+        description: Successful build workflow run ID, required only for stage
+        required: false
+        type: string
+      build_workflow_commit:
+        description: Reviewed build run head SHA, required only for stage
+        required: false
+        type: string
+      expected_manifest_sha256:
+        description: Raw MANIFEST.json SHA256 after local complete verification, required only for stage
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: rin-shelter-87135ce-cloud
+  cancel-in-progress: false
+env:
+  FROZEN_SOURCE: 87135ce05dacb2e0f434582187bedf48a231bef6
+  FROZEN_EXE: 73396FCCAFD449CD195C536BCAB555B0DF1F4582771DACB3E917A56D56ABFD78
+  ARTIFACT_NAME: rin-shelter-87135ce-cloud
+  DOTNET_INSTALL_DIR: 'D:\Shelter桌宠\.tools\dotnet'
+  DOTNET_CLI_HOME: 'D:\Shelter桌宠\.tools\cli-home'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+jobs:
+  build:
+    if: github.repository == 'Fantasy708/Rins-Little-Shelter' && github.ref == 'refs/heads/main' && inputs.phase == 'build'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 87135ce05dacb2e0f434582187bedf48a231bef6
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout reviewed workflow control files separately from frozen source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-control
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Restore frozen source and exact reviewed public-file bytes
+        run: |
+          $ErrorActionPreference='Stop'
+          if((& git rev-parse 'HEAD^{commit}').Trim() -cne $env:FROZEN_SOURCE){throw 'Frozen checkout mismatch'}
+          if(Test-Path -LiteralPath 'D:\Shelter桌宠\src'){throw 'Reproduction source directory already exists'}
+          $archive=Join-Path $env:RUNNER_TEMP 'rin-frozen-source.zip'
+          & git archive --format=zip -o $archive $env:FROZEN_SOURCE
+          if($LASTEXITCODE){throw 'Read-only source archive failed'}
+          Expand-Archive -LiteralPath $archive -DestinationPath 'D:\Shelter桌宠' -Force
+          $audit='D:\Shelter桌宠\output\cloud-maintenance'
+          [void](New-Item -ItemType Directory -Path $audit -Force)
+          $encoded='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'
+          $inputStream=[IO.MemoryStream]::new([Convert]::FromBase64String($encoded))
+          $gzip=[IO.Compression.GZipStream]::new($inputStream,[IO.Compression.CompressionMode]::Decompress)
+          $reader=[IO.StreamReader]::new($gzip,[Text.Encoding]::UTF8)
+          try{$json=$reader.ReadToEnd()}finally{$reader.Dispose();$gzip.Dispose();$inputStream.Dispose()}
+          [IO.File]::WriteAllText((Join-Path $audit 'frozen-files.json'),$json,[Text.UTF8Encoding]::new($false))
+          $helper=@'
+          $ErrorActionPreference='Stop'
+          $script:Frozen=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'frozen-files.json') -Raw|ConvertFrom-Json -Depth 30
+          function Assert-FrozenPublicFiles([switch]$Restore){
+            foreach($item in $script:Frozen.Files){
+              $path=Join-Path 'D:\Shelter桌宠' $item.Path
+              if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ine $item.SHA256 -and $Restore -and $item.CrlfMask){
+                $raw=[IO.File]::ReadAllBytes($path);$clean=[Collections.Generic.List[byte]]::new()
+                for($i=0;$i -lt $raw.Length;$i++){if($raw[$i] -eq 13 -and $i+1 -lt $raw.Length -and $raw[$i+1] -eq 10){continue};$clean.Add($raw[$i])}
+                $mask=[Convert]::FromBase64String($item.CrlfMask);$restored=[Collections.Generic.List[byte]]::new();$line=0
+                foreach($value in $clean){if($value -eq 10){if($mask[[int][Math]::Floor($line/8)] -band (1 -shl ($line%8))){$restored.Add(13)};$line++};$restored.Add($value)}
+                [IO.File]::WriteAllBytes($path,$restored.ToArray())
+              }
+              if((Get-Item -LiteralPath $path).Length -ne $item.Bytes -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ine $item.SHA256){throw ('Frozen public bytes differ: '+$item.Path)}
+            }
+            if(@($script:Frozen.Files).Count -ne 283 -or @($script:Frozen.Files|Where-Object Runtime).Count -ne 33){throw 'Frozen source/runtime member count mismatch'}
+          }
+          '@
+          [IO.File]::WriteAllText((Join-Path $audit 'check-frozen.ps1'),$helper,[Text.UTF8Encoding]::new($false))
+          . (Join-Path $audit 'check-frozen.ps1')
+          Assert-FrozenPublicFiles -Restore
+      - name: Install exact local SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.401
+      - name: Reproduce exact EXE with original Windows paths and bundle properties
+        id: compile
+        continue-on-error: true
+        working-directory: 'D:\Shelter桌宠'
+        run: |
+          $ErrorActionPreference='Stop'
+          $dotnet='D:\Shelter桌宠\.tools\dotnet\dotnet.exe'
+          if((& $dotnet --version).Trim() -cne '10.0.401'){throw 'Exact SDK unavailable'}
+          & $dotnet publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true -p:RestoreLockedMode=true '-p:BaseOutputPath=D:\Shelter桌宠\output\build-script\' -o dist/local/v1.1.0-shelter-compat-20261026/RinsLittleShelter
+          if($LASTEXITCODE){throw 'Frozen reproduction build failed'}
+          Copy-Item -LiteralPath assets/catalog.json -Destination dist/local/v1.1.0-shelter-compat-20261026/RinsLittleShelter/assets/catalog.json
+      - name: Use verified tested-EXE reconstruction only if compile failed or differs
+        working-directory: 'D:\Shelter桌宠'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $global:LASTEXITCODE=0
+          . ./output/cloud-maintenance/check-frozen.ps1
+          Assert-FrozenPublicFiles -Restore
+          $program='D:\Shelter桌宠\dist\local\v1.1.0-shelter-compat-20261026\RinsLittleShelter'
+          [void](New-Item -ItemType Directory -Path $program -Force)
+          $exe=Join-Path $program 'RinsLittleShelter.exe'
+          $compiledHash=if(Test-Path -LiteralPath $exe){(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash}else{''}
+          $method='compiled-exact'
+          if('${{ steps.compile.outcome }}' -cne 'success' -or $compiledHash -cne $env:FROZEN_EXE){
+            $method='reconstructed-tested-exe'
+            $control=Join-Path $env:GITHUB_WORKSPACE 'workflow-control/.github/maintenance/shelter-20261026'
+            $patch=Join-Path $control 'patch.gz';$applier=Join-Path $control 'apply_rin_patch.py'
+            if((Get-FileHash -LiteralPath $patch -Algorithm SHA256).Hash -cne 'B351BADBC642293240B33DE9F69E4E370CB531CC420E4AC1BF0B5CD12E95D65E'){throw 'Reviewed reconstruction patch differs'}
+            if((Get-FileHash -LiteralPath $applier -Algorithm SHA256).Hash -cne '4AC68DECF9F1E40DFA7F6A4E396FF94AF58452DE4EDA89DB52CBC43E8AE2BE9D'){throw 'Reviewed reconstruction applier differs'}
+            $fallback='D:\Shelter桌宠\output\cloud-maintenance\fallback'
+            [void](New-Item -ItemType Directory -Path $fallback)
+            $oldZip=Join-Path $fallback 'previous-tested-portable.zip'
+            $asset=& gh api repos/Fantasy708/Rins-Little-Shelter/releases/assets/675491226|ConvertFrom-Json
+            if($LASTEXITCODE -or $asset.id -ne 675491226 -or $asset.state -cne 'uploaded' -or $asset.digest -ine 'sha256:21e6a7597835846cbb505b7f0688b2f9c7c61c57dec3f838a1bd3151d2e9dee5'){throw 'Fixed previous public package identity differs'}
+            $headers=@{Accept='application/octet-stream';Authorization=('Bearer '+$env:GH_TOKEN);'X-GitHub-Api-Version'='2022-11-28'}
+            Invoke-WebRequest -Uri 'https://api.github.com/repos/Fantasy708/Rins-Little-Shelter/releases/assets/675491226' -Headers $headers -OutFile $oldZip
+            if((Get-FileHash -LiteralPath $oldZip -Algorithm SHA256).Hash -cne '21E6A7597835846CBB505B7F0688B2F9C7C61C57DEC3F838A1BD3151D2E9DEE5'){throw 'Previous public portable bytes differ'}
+            Add-Type -AssemblyName System.IO.Compression
+            $zip=[IO.Compression.ZipFile]::OpenRead($oldZip)
+            $oldExe=Join-Path $fallback 'previous-tested.exe'
+            try{$entry=$zip.GetEntry('RinsLittleShelter/RinsLittleShelter.exe');if(-not $entry){throw 'Previous EXE missing'};$source=$entry.Open();$target=[IO.File]::Open($oldExe,[IO.FileMode]::CreateNew);try{$source.CopyTo($target)}finally{$target.Dispose();$source.Dispose()}}finally{$zip.Dispose()}
+            if((Get-FileHash -LiteralPath $oldExe -Algorithm SHA256).Hash -cne '2B767B17F8D945484D7930DAE1F1822BE56C9EA47FD1AC9480A0B3C02653F797'){throw 'Previous tested EXE differs'}
+            $reconstructed=Join-Path $fallback 'reconstructed-tested.exe'
+            & python $applier $oldExe $patch $reconstructed
+            if($LASTEXITCODE -ne 0){throw 'Reviewed tested-EXE reconstruction failed'}
+            if((Get-FileHash -LiteralPath $reconstructed -Algorithm SHA256).Hash -cne $env:FROZEN_EXE){throw 'Reconstructed EXE is not the tested local EXE'}
+            if(Test-Path -LiteralPath $exe){Move-Item -LiteralPath $exe -Destination (Join-Path $fallback 'rejected-publish.exe')}
+            Copy-Item -LiteralPath $reconstructed -Destination $exe
+          }
+          foreach($item in $script:Frozen.Files|Where-Object Runtime){$target=Join-Path $program $item.Path;[void](New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force);Copy-Item -LiteralPath (Join-Path 'D:\Shelter桌宠' $item.Path) -Destination $target -Force}
+          [IO.File]::WriteAllText('D:\Shelter桌宠\output\cloud-maintenance\reproduction-method.txt',$method,[Text.UTF8Encoding]::new($false))
+          [IO.File]::WriteAllText('D:\Shelter桌宠\output\cloud-maintenance\compiled-hash.txt',$compiledHash,[Text.UTF8Encoding]::new($false))
+          $global:LASTEXITCODE=0
+      - name: Mandatory exact tested EXE and 33-resource gate before packaging
+        id: gate
+        working-directory: 'D:\Shelter桌宠'
+        run: |
+          $ErrorActionPreference='Stop'
+          . ./output/cloud-maintenance/check-frozen.ps1
+          $program='dist/local/v1.1.0-shelter-compat-20261026/RinsLittleShelter'
+          $actual=(Get-FileHash -LiteralPath "$program/RinsLittleShelter.exe" -Algorithm SHA256).Hash
+          Write-Output ('Reproduced EXE SHA256: '+$actual)
+          if($actual -cne $env:FROZEN_EXE){throw 'EXE is not byte-identical to the tested local EXE. Stop before any release attachment generation or artifact upload.'}
+          if(Test-Path -LiteralPath "$program/RinsLittleShelter.pdb"){throw 'Unexpected PDB'}
+          foreach($item in $script:Frozen.Files|Where-Object Runtime){if((Get-FileHash -LiteralPath (Join-Path $program $item.Path) -Algorithm SHA256).Hash -ine $item.SHA256){throw ('Published runtime resource differs: '+$item.Path)}}
+          Assert-FrozenPublicFiles -Restore
+          'exe_verified=true'|Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      - name: Package without rebuilding and verify all 283 source members
+        if: success() && steps.gate.outputs.exe_verified == 'true'
+        working-directory: 'D:\Shelter桌宠'
+        run: |
+          $ErrorActionPreference='Stop'
+          . ./output/cloud-maintenance/check-frozen.ps1
+          Assert-FrozenPublicFiles
+          & ./scripts/package-release.ps1 -Version v1.1.0 -ProgramDirectory dist/local/v1.1.0-shelter-compat-20261026/RinsLittleShelter -ReleaseDirectory dist/cloud/shelter-maintenance/release -ReleaseNotes docs/releases/v1.1.0.md
+          $release='D:\Shelter桌宠\dist\cloud\shelter-maintenance\release'
+          Add-Type -AssemblyName System.IO.Compression
+          $source=[IO.Compression.ZipFile]::OpenRead((Join-Path $release 'RinsLittleShelter-v1.1.0-source.zip'))
+          try{
+            $entries=@($source.Entries|Where-Object{-not $_.FullName.EndsWith('/')})
+            if($entries.Count -ne 283){throw 'Source ZIP must contain exactly the 283 reviewed files'}
+            foreach($entry in $entries){$path=$entry.FullName.Substring('RinsLittleShelter-source/'.Length);$record=@($script:Frozen.Files|Where-Object Path -ceq $path);if($record.Count -ne 1 -or $entry.Length -ne $record[0].Bytes){throw 'Unexpected source ZIP member'};$stream=$entry.Open();try{$hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))}finally{$stream.Dispose()};if($hash -ine $record[0].SHA256){throw ('Packed source bytes differ: '+$path)}}
+          }finally{$source.Dispose()}
+          $portable=[IO.Compression.ZipFile]::OpenRead((Join-Path $release 'RinsLittleShelter-v1.1.0-win-x64.zip'))
+          try{$entry=$portable.GetEntry('RinsLittleShelter/RinsLittleShelter.exe');$stream=$entry.Open();try{$hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))}finally{$stream.Dispose()};if($hash -cne $env:FROZEN_EXE){throw 'Packed EXE differs'}}finally{$portable.Dispose()}
+          $provenance=[ordered]@{SourceCommit=$env:FROZEN_SOURCE;EXESHA256=$env:FROZEN_EXE;SDK='10.0.401';RunId=$env:GITHUB_RUN_ID;WorkflowCommit=$env:GITHUB_SHA;ArtifactName=$env:ARTIFACT_NAME;ReproductionMethod=[IO.File]::ReadAllText('D:\Shelter桌宠\output\cloud-maintenance\reproduction-method.txt');CompiledEXESHA256=[IO.File]::ReadAllText('D:\Shelter桌宠\output\cloud-maintenance\compiled-hash.txt');RawSourceMembers=283;RuntimeAssets=33;ReleaseOrTagChanged=$false}
+          [IO.File]::WriteAllText((Join-Path $release 'BUILD_PROVENANCE.json'),($provenance|ConvertTo-Json -Depth 10)+"`n",[Text.UTF8Encoding]::new($false))
+          $names=@('RinsLittleShelter-v1.1.0-win-x64.zip','RinsLittleShelter-v1.1.0-source.zip','SHA256.txt','RinsLittleShelter-Setup.zip','Install-RinsLittleShelter.ps1','SHA256-Setup.txt','Uninstall-RinsLittleShelter.ps1','Uninstall-RinsLittleShelter.cmd')
+          $manifest=[ordered]@{SourceCommit=$env:FROZEN_SOURCE;EXESHA256=$env:FROZEN_EXE;ArtifactName=$env:ARTIFACT_NAME;ProvenanceSHA256=(Get-FileHash -LiteralPath (Join-Path $release 'BUILD_PROVENANCE.json') -Algorithm SHA256).Hash;Files=@($names|ForEach-Object{$path=Join-Path $release $_;[ordered]@{Name=$_;Bytes=(Get-Item -LiteralPath $path).Length;SHA256=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash}})}
+          [IO.File]::WriteAllText((Join-Path $release 'MANIFEST.json'),($manifest|ConvertTo-Json -Depth 20)+"`n",[Text.UTF8Encoding]::new($false))
+          Write-Output ('Raw MANIFEST SHA256: '+(Get-FileHash -LiteralPath (Join-Path $release 'MANIFEST.json') -Algorithm SHA256).Hash)
+      - name: Upload build artifact only, no release or tag writes
+        if: success() && steps.gate.outputs.exe_verified == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rin-shelter-87135ce-cloud
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+          path: |
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\RinsLittleShelter-v1.1.0-win-x64.zip
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\RinsLittleShelter-v1.1.0-source.zip
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\SHA256.txt
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\RinsLittleShelter-Setup.zip
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\Install-RinsLittleShelter.ps1
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\SHA256-Setup.txt
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\Uninstall-RinsLittleShelter.ps1
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\Uninstall-RinsLittleShelter.cmd
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\RELEASE_NOTES.md
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\BUILD_PROVENANCE.json
+            D:\Shelter桌宠\dist\cloud\shelter-maintenance\release\MANIFEST.json
+  stage:
+    if: github.repository == 'Fantasy708/Rins-Little-Shelter' && github.ref == 'refs/heads/main' && inputs.phase == 'stage'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Fantasy708/Rins-Little-Shelter
+      BUILD_RUN_ID: ${{ inputs.build_run_id }}
+      BUILD_WORKFLOW_COMMIT: ${{ inputs.build_workflow_commit }}
+      EXPECTED_MANIFEST_SHA256: ${{ inputs.expected_manifest_sha256 }}
+    steps:
+      - name: Validate explicit successful same-repository build run
+        run: |
+          $ErrorActionPreference='Stop'
+          if($env:BUILD_RUN_ID -notmatch '^[1-9][0-9]*$' -or $env:BUILD_WORKFLOW_COMMIT -notmatch '^[a-f0-9]{40}$' -or $env:EXPECTED_MANIFEST_SHA256 -notmatch '^[a-fA-F0-9]{64}$'){throw 'Stage requires the locally verified run/CI commit/raw manifest SHA'}
+          $run=& gh api "repos/$env:GH_REPO/actions/runs/$env:BUILD_RUN_ID"|ConvertFrom-Json
+          if($LASTEXITCODE){throw 'Build run unavailable'}
+          $workflow=& gh api "repos/$env:GH_REPO/actions/workflows/shelter-maintenance-build.yml"|ConvertFrom-Json
+          if($LASTEXITCODE){throw 'Expected workflow unavailable'}
+          if($run.status -cne 'completed' -or $run.conclusion -cne 'success' -or $run.event -cne 'workflow_dispatch' -or $run.head_branch -cne 'main' -or $run.head_repository.full_name -cne $env:GH_REPO -or $run.workflow_id -ne $workflow.id -or $run.head_sha -cne $env:BUILD_WORKFLOW_COMMIT -or $run.head_sha -cne $env:GITHUB_SHA){throw 'Build run is not the reviewed successful main run of this exact workflow commit'}
+          $artifacts=& gh api "repos/$env:GH_REPO/actions/runs/$env:BUILD_RUN_ID/artifacts?per_page=100"|ConvertFrom-Json
+          if($LASTEXITCODE -or @($artifacts.artifacts|Where-Object{$_.name -ceq $env:ARTIFACT_NAME -and -not $_.expired}).Count -ne 1){throw 'Expected one unexpired build artifact'}
+      - uses: actions/download-artifact@v4
+        with:
+          name: rin-shelter-87135ce-cloud
+          path: artifact
+          github-token: ${{ github.token }}
+          repository: Fantasy708/Rins-Little-Shelter
+          run-id: ${{ inputs.build_run_id }}
+      - name: Verify root-approved artifact then stage only eight pending names
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=(Resolve-Path -LiteralPath artifact).Path
+          if((Get-FileHash -LiteralPath (Join-Path $root 'MANIFEST.json') -Algorithm SHA256).Hash -ine $env:EXPECTED_MANIFEST_SHA256){throw 'Raw manifest differs from the complete local acceptance'}
+          $manifest=Get-Content -LiteralPath (Join-Path $root 'MANIFEST.json') -Raw|ConvertFrom-Json
+          $provenance=Get-Content -LiteralPath (Join-Path $root 'BUILD_PROVENANCE.json') -Raw|ConvertFrom-Json
+          if($manifest.SourceCommit -cne $env:FROZEN_SOURCE -or $manifest.EXESHA256 -cne $env:FROZEN_EXE -or $manifest.ArtifactName -cne $env:ARTIFACT_NAME -or (Get-FileHash -LiteralPath (Join-Path $root 'BUILD_PROVENANCE.json') -Algorithm SHA256).Hash -ine $manifest.ProvenanceSHA256){throw 'Frozen artifact identity/provenance digest mismatch'}
+          if($provenance.SourceCommit -cne $env:FROZEN_SOURCE -or $provenance.EXESHA256 -cne $env:FROZEN_EXE -or $provenance.SDK -cne '10.0.401' -or [string]$provenance.RunId -cne $env:BUILD_RUN_ID -or $provenance.WorkflowCommit -cne $env:BUILD_WORKFLOW_COMMIT -or $provenance.ArtifactName -cne $env:ARTIFACT_NAME){throw 'Artifact provenance does not belong to the reviewed build run'}
+          $names=@('RinsLittleShelter-v1.1.0-win-x64.zip','RinsLittleShelter-v1.1.0-source.zip','SHA256.txt','RinsLittleShelter-Setup.zip','Install-RinsLittleShelter.ps1','SHA256-Setup.txt','Uninstall-RinsLittleShelter.ps1','Uninstall-RinsLittleShelter.cmd')
+          if(@($manifest.Files).Count -ne 8 -or @($manifest.Files.Name|Sort-Object -Unique).Count -ne 8 -or @(Compare-Object ($names|Sort-Object) ($manifest.Files.Name|Sort-Object)).Count){throw 'Manifest must enumerate exactly the eight fixed public names'}
+          foreach($file in $manifest.Files){$path=Join-Path $root $file.Name;if((Get-Item -LiteralPath $path).Length -ne $file.Bytes -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ine $file.SHA256){throw ('Artifact bytes differ: '+$file.Name)}}
+          Add-Type -AssemblyName System.IO.Compression
+          $zip=[IO.Compression.ZipFile]::OpenRead((Join-Path $root 'RinsLittleShelter-v1.1.0-win-x64.zip'))
+          try{$stream=$zip.GetEntry('RinsLittleShelter/RinsLittleShelter.exe').Open();try{$hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($stream))}finally{$stream.Dispose()};if($hash -cne $env:FROZEN_EXE){throw 'Staged portable EXE differs'}}finally{$zip.Dispose()}
+          function Get-ExpectedRelease {
+            $tag=& gh api "repos/$env:GH_REPO/git/ref/tags/v1.1.0"|ConvertFrom-Json
+            if($LASTEXITCODE -or $tag.object.type -cne 'tag' -or $tag.object.sha -cne 'be846563575c6e214e60e8b5ce2bd5e37872d1b0'){throw 'Original tag object changed'}
+            $peeled=& gh api "repos/$env:GH_REPO/git/tags/be846563575c6e214e60e8b5ce2bd5e37872d1b0"|ConvertFrom-Json
+            if($LASTEXITCODE -or $peeled.object.type -cne 'commit' -or $peeled.object.sha -cne '15ed92d3e595ec5a23e25728b558659e2c0bbcd9'){throw 'Original tag target changed'}
+            $release=& gh api "repos/$env:GH_REPO/releases/422599788"|ConvertFrom-Json
+            if($LASTEXITCODE -or $release.id -ne 422599788 -or $release.tag_name -cne 'v1.1.0' -or $release.draft -or $release.prerelease){throw 'Original final release identity changed'}
+            $rawAssets=& gh api --paginate --slurp "repos/$env:GH_REPO/releases/422599788/assets?per_page=100"
+            if($LASTEXITCODE){throw 'Complete original release asset list unavailable'}
+            $pages=($rawAssets -join "`n")|ConvertFrom-Json -NoEnumerate
+            $release.assets=@(foreach($page in $pages){foreach($asset in $page){$asset}})
+            return $release
+          }
+          $before=Get-ExpectedRelease
+          [IO.File]::WriteAllText('stage-before.json',($before|ConvertTo-Json -Depth 60),[Text.UTF8Encoding]::new($false))
+          [void](New-Item -ItemType Directory -Path pending)
+          $receipts=@()
+          foreach($file in $manifest.Files){
+            $pending=[IO.Path]::GetFileNameWithoutExtension($file.Name)+'-pending-shelter-compat-20261026'+[IO.Path]::GetExtension($file.Name)
+            $current=Get-ExpectedRelease;$existing=@($current.assets|Where-Object name -ceq $pending)
+            if($existing.Count){if($existing.Count -ne 1 -or $existing[0].state -cne 'uploaded' -or $existing[0].size -ne $file.Bytes -or $existing[0].digest -ine ('sha256:'+$file.SHA256)){throw ('Existing pending is incomplete/different; no deletion/replacement allowed: '+$pending)};$asset=$existing[0]}
+            else{
+              $copy=Join-Path pending $pending;Copy-Item -LiteralPath (Join-Path $root $file.Name) -Destination $copy
+              & gh release upload v1.1.0 $copy --repo $env:GH_REPO
+              if($LASTEXITCODE){throw ('Pending upload failed: '+$pending)}
+              $current=Get-ExpectedRelease;$matches=@($current.assets|Where-Object name -ceq $pending)
+              if($matches.Count -ne 1 -or $matches[0].state -cne 'uploaded' -or $matches[0].size -ne $file.Bytes -or $matches[0].digest -ine ('sha256:'+$file.SHA256)){throw 'Uploaded server digest differs'};$asset=$matches[0]
+            }
+            $receipts+=[ordered]@{Name=$file.Name;PendingName=$pending;NewId=$asset.id;Bytes=$file.Bytes;SHA256=$file.SHA256}
+          }
+          $after=Get-ExpectedRelease
+          foreach($old in $before.assets){$now=@($after.assets|Where-Object id -eq $old.id);if($now.Count -ne 1 -or $now[0].name -cne $old.name -or $now[0].size -ne $old.size -or $now[0].digest -cne $old.digest -or $now[0].state -cne $old.state){throw 'An existing asset changed during pending-only staging'}}
+          if($after.name -cne $before.name -or $after.body -cne $before.body -or $after.published_at -cne $before.published_at){throw 'Original release metadata changed'}
+          [IO.File]::WriteAllText('stage-after.json',($after|ConvertTo-Json -Depth 60),[Text.UTF8Encoding]::new($false))
+          $proof=[ordered]@{Passed=$true;SourceCommit=$env:FROZEN_SOURCE;EXESHA256=$env:FROZEN_EXE;BuildRunId=$env:BUILD_RUN_ID;BuildWorkflowCommit=$env:BUILD_WORKFLOW_COMMIT;ManifestSHA256=$env:EXPECTED_MANIFEST_SHA256;StageRunId=$env:GITHUB_RUN_ID;ReleaseId=422599788;OnlyPendingNamesUploaded=$true;CanonicalOrHistoricalAssetsChanged=$false;ReleaseOrTagChanged=$false;Assets=$receipts}
+          [IO.File]::WriteAllText('STAGED_RECEIPTS.json',($proof|ConvertTo-Json -Depth 20)+"`n",[Text.UTF8Encoding]::new($false))
+      - name: Upload small staging proof only
+        uses: actions/upload-artifact@v4
+        with:
+          name: rin-shelter-87135ce-staged
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            STAGED_RECEIPTS.json
+            stage-before.json
+            stage-after.json

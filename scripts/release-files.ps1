@@ -11,7 +11,7 @@ function Get-ShelterPublicFiles([string]$Root) {
         'README.md','design.md','AGENTS.md','global.json','.gitignore','.gitattributes',
         'CREDITS.md','THIRD-PARTY-NOTICES.md','assets/manifest.json','assets/catalog.json',
         'assets/reference/README.md','docs/开发说明.md','docs/开发日志.md','docs/素材制作.md',
-        'docs/验证记录.md','docs/发布状态.md','docs/安装说明.md','docs/多场景素材制作.md','docs/Nurture素材制作.md','docs/开场动画设计.md',
+        'docs/验证记录.md','docs/发布状态.md','docs/内存风险排查.md','docs/安装说明.md','docs/多场景素材制作.md','docs/Nurture素材制作.md','docs/开场动画设计.md',
         'docs/平板创造交互设计.md','docs/平板消息界面设计.md',
         'docs/户外探索素材制作.md',
         'docs/白色粒子创造设计.md',

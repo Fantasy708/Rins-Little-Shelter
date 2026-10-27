@@ -74,6 +74,13 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '窗口置顶设置检查失败。' }
         & $dotnetPath run --project tests/SessionStateTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/session-state-qa
         if ($LASTEXITCODE -ne 0) { throw '启动锁屏状态、计时和恢复检查失败。' }
+        & $dotnetPath run --project tests/MemoryResourceTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/memory-resource-qa --verify
+        if ($LASTEXITCODE -ne 0) { throw '内存分配、场景回收和托盘资源检查失败。' }
+        & $dotnetPath build tests/WalkAllocationTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
+        if ($LASTEXITCODE -ne 0) { throw '步行分配检查宿主编译失败。' }
+        $testBinaries = Join-Path $buildOutput 'Release/net10.0-windows10.0.19041.0'
+        & $dotnetPath (Join-Path $testBinaries 'WalkAllocationTests.dll') (Join-Path $testBinaries 'RinsLittleShelter.dll') output/walk-allocation-qa
+        if ($LASTEXITCODE -ne 0) { throw '步行目标跟随、动作中断和变形缓冲区检查失败。' }
     }
     & $dotnetPath publish src/LittleShelter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true "-p:BaseOutputPath=$buildOutput" -o $OutputDirectory
     if ($LASTEXITCODE -ne 0) { throw '发布失败。请先退出正在运行的发布版本。' }
@@ -107,7 +114,7 @@ try {
     Copy-Item -LiteralPath LICENSES -Destination $OutputDirectory -Recurse -Force
     $docsDirectory = Join-Path $OutputDirectory 'docs'
     New-Item -ItemType Directory -Path $docsDirectory -Force | Out-Null
-    foreach ($document in @('开发说明.md','开发日志.md','素材制作.md','验证记录.md','发布状态.md','安装说明.md','多场景素材制作.md','平板创造交互设计.md','平板消息界面设计.md','Nurture素材制作.md','开场动画设计.md','动作收尾过渡.md','登山动作修复.md','动作起止过渡.md','动作过渡检查表.md','动作过渡素材制作记录.md')) {
+    foreach ($document in @('开发说明.md','开发日志.md','素材制作.md','验证记录.md','发布状态.md','内存风险排查.md','安装说明.md','多场景素材制作.md','平板创造交互设计.md','平板消息界面设计.md','Nurture素材制作.md','开场动画设计.md','动作收尾过渡.md','登山动作修复.md','动作起止过渡.md','动作过渡检查表.md','动作过渡素材制作记录.md')) {
         Copy-Item -LiteralPath (Join-Path 'docs' $document) -Destination $docsDirectory
     }
     if (Test-Path -LiteralPath 'docs/平板参考核对.md') { Copy-Item -LiteralPath 'docs/平板参考核对.md' -Destination $docsDirectory }

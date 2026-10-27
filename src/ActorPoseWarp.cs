@@ -42,11 +42,35 @@ internal sealed class ActorPoseBridgeRegistration
     // Endpoint-only fallback for dedicated/moving artwork that has no hand
     // registration. Read the actual rendered alpha and colours, not the raster
     // rectangle's corners. Hidden joints and overlapping limbs remain estimates;
-    // callers should override known clip/rig joints. This must not run per frame.
+    // callers should override known clip/rig joints. Moving rendered targets
+    // use one Scene-owned workspace while still analysing their current pixels.
     public static Point[] EstimateControls(Atlas.Sprite screenshot, Rect screenshotBounds)
-        => new AnatomyScan(screenshot, screenshotBounds, null).Read();
+        => new AnatomyScan(screenshot, screenshotBounds, null, new AnalysisWorkspace()).Read();
     public static Point[] EstimateControls(Atlas.Sprite screenshot, Rect screenshotBounds, Rect? headRegion)
-        => new AnatomyScan(screenshot, screenshotBounds, headRegion).Read();
+        => new AnatomyScan(screenshot, screenshotBounds, headRegion, new AnalysisWorkspace()).Read();
+    internal static Point[] EstimateControlsBuffered(Atlas.Sprite screenshot, Rect screenshotBounds, AnalysisWorkspace workspace)
+        => new AnatomyScan(screenshot, screenshotBounds, null, workspace).Read();
+
+    // UI-thread scratch storage, bounded by the largest captured body in this
+    // Scene. It holds no sprites, drawings, controls or component objects.
+    internal sealed class AnalysisWorkspace
+    {
+        internal bool[] Skin=Array.Empty<bool>(),Cloth=Array.Empty<bool>(),Pink=Array.Empty<bool>(),Visited=Array.Empty<bool>();
+        internal int[] Owners=Array.Empty<int>(),LegOwners=Array.Empty<int>(),Parent=Array.Empty<int>(),Queue=Array.Empty<int>();
+        internal readonly List<int> Path=new();
+        internal long Bytes => Skin.LongLength*4+Owners.LongLength*16+Path.Capacity*4L;
+        internal void Prepare(int count)
+        {
+            if(Skin.Length<count)
+            {
+                Skin=new bool[count];Cloth=new bool[count];Pink=new bool[count];Visited=new bool[count];
+                Owners=new int[count];LegOwners=new int[count];Parent=new int[count];Queue=new int[count];
+            }
+            // Pixels below the alpha threshold are skipped by the scan, so
+            // all colour masks must be reset, also after a smaller capture.
+            Array.Clear(Skin,0,count);Array.Clear(Cloth,0,count);Array.Clear(Pink,0,count);
+        }
+    }
 
     private sealed class AnatomyScan
     {
@@ -56,10 +80,11 @@ internal sealed class ActorPoseBridgeRegistration
         private readonly int width, height;
         private readonly bool[] skin, cloth, pink;
         private readonly int[] owners;
+        private readonly AnalysisWorkspace workspace;
         private readonly List<Component> components;
         private int left, top, right, bottom;
         private double visibleHeight, visibleWidth;
-        public AnatomyScan(Atlas.Sprite sprite, Rect bounds, Rect? registeredHead)
+        public AnatomyScan(Atlas.Sprite sprite, Rect bounds, Rect? registeredHead, AnalysisWorkspace workspace)
         {
             if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0 ||
                 new[] { bounds.X,bounds.Y,bounds.Width,bounds.Height }.Any(v => !double.IsFinite(v)))
@@ -74,8 +99,9 @@ internal sealed class ActorPoseBridgeRegistration
                     (region.Top-bounds.Top)*height/bounds.Height-.5,
                     region.Width*width/bounds.Width,region.Height*height/bounds.Height);
             }
-            skin = new bool[width * height]; cloth = new bool[skin.Length]; pink = new bool[skin.Length];
-            owners = new int[skin.Length]; left = width; top = height; right = bottom = -1;
+            this.workspace=workspace;workspace.Prepare(checked(width*height));
+            skin=workspace.Skin;cloth=workspace.Cloth;pink=workspace.Pink;owners=workspace.Owners;
+            left = width; top = height; right = bottom = -1;
             bool premultiplied = sprite.Image.Format == PixelFormats.Pbgra32;
             for (int y = 0; y < height; y++) for (int x = 0; x < width; x++)
             {
@@ -153,7 +179,7 @@ internal sealed class ActorPoseBridgeRegistration
             ReadLimb(points,8,armRight,owners,.87,new Point(hipX+shoulderWidth*.65,hipY));
             // Cutting below the actual shorts separates the two legs even
             // when face/arm colour regions happen to connect above the hips.
-            var legOwners = new int[skin.Length];
+            var legOwners = workspace.LegOwners;
             var legs = Components((int)Math.Clamp(hipY+visibleHeight*.025,top,bottom),legOwners)
                 .Where(c => c.Height >= visibleHeight*.13 && c.Bottom >= hipY+visibleHeight*.16).ToList();
             var legLeft = Closest(legs,points[11]); var legRight = Closest(legs,points[14]);
@@ -243,19 +269,23 @@ internal sealed class ActorPoseBridgeRegistration
             if(component==null){points[root+1]=new Point((points[root].X+fallback.X)*.5,(points[root].Y+fallback.Y)*.5);points[root+2]=fallback;return;}
             var seed=Near(component,points[root],split,isLeft);
             if(seed.Pixel<0){points[root+1]=new Point((points[root].X+fallback.X)*.5,(points[root].Y+fallback.Y)*.5);points[root+2]=fallback;return;}
-            var visited=new bool[skin.Length];var parent=new int[skin.Length];var queue=new int[component.Pixels.Count];
+            var visited=workspace.Visited;var parent=workspace.Parent;var queue=workspace.Queue;
+            Array.Clear(visited,0,width*height);
             int read=0,count=1,farthest=seed.Pixel;queue[0]=seed.Pixel;visited[seed.Pixel]=true;parent[seed.Pixel]=-1;
             while(read<count)
             {
                 int p=queue[read++],x=p%width,y=p/width;farthest=p;
-                foreach(int q in new[]{x>0?p-1:-1,x+1<width?p+1:-1,y>0?p-width:-1,y+1<height?p+width:-1})
+                // Keep BFS tie-breaking identical without allocating an array
+                // for every visited body pixel.
+                for(int neighbor=0;neighbor<4;neighbor++)
                 {
+                    int q=neighbor switch {0=>x>0?p-1:-1,1=>x+1<width?p+1:-1,2=>y>0?p-width:-1,_=>y+1<height?p+width:-1};
                     if(q<0 || visited[q] || labels[q]!=component.Id)continue;
                     if(double.IsFinite(split) && (isLeft?q%width>split:q%width<split))continue;
                     visited[q]=true;parent[q]=p;queue[count++]=q;
                 }
             }
-            var path=new List<int>();for(int p=farthest;p>=0;p=parent[p])path.Add(p);path.Reverse();
+            var path=workspace.Path;path.Clear();for(int p=farthest;p>=0;p=parent[p])path.Add(p);path.Reverse();
             int end=Math.Clamp((int)Math.Round((path.Count-1)*terminalFraction),0,path.Count-1);
             int middle=Math.Clamp((int)Math.Round((seed.Distance+end)*.52-seed.Distance),0,end);
             points[root+1]=Average(path,middle);points[root+2]=Average(path,end);
@@ -264,7 +294,7 @@ internal sealed class ActorPoseBridgeRegistration
         {double x=0,y=0;int n=0;for(int i=Math.Max(0,index-2);i<=Math.Min(path.Count-1,index+2);i++){x+=path[i]%width;y+=path[i]/width;n++;}return new Point(x/n,y/n);}
         private List<Component> Components(int minimumY,int[] labels)
         {
-            Array.Fill(labels,-1);var result=new List<Component>();var queue=new int[skin.Length];
+            Array.Fill(labels,-1,0,width*height);var result=new List<Component>();var queue=workspace.Queue;
             for(int y=Math.Max(0,minimumY);y<height;y++)for(int x=0;x<width;x++)
             {
                 int start=y*width+x;if(!skin[start] || labels[start]>=0)continue;
@@ -272,8 +302,11 @@ internal sealed class ActorPoseBridgeRegistration
                 while(read<count)
                 {
                     int p=queue[read++],px=p%width,py=p/width;c.Add(p,px,py);
-                    foreach(int q in new[]{px>0?p-1:-1,px+1<width?p+1:-1,py>minimumY?p-width:-1,py+1<height?p+width:-1})
+                    for(int neighbor=0;neighbor<4;neighbor++)
+                    {
+                        int q=neighbor switch {0=>px>0?p-1:-1,1=>px+1<width?p+1:-1,2=>py>minimumY?p-width:-1,_=>py+1<height?p+width:-1};
                         if(q>=0 && skin[q] && labels[q]<0){labels[q]=c.Id;queue[count++]=q;}
+                    }
                 }
                 result.Add(c);
             }
@@ -309,12 +342,15 @@ internal sealed class ActorPoseWarp
     public Rect VisibleBounds { get; private set; } = Rect.Empty;
     public Point[] CurrentControls => current;
     public long Updates { get; private set; }
-    public long Bytes => (long)pixels.Length + (from?.Bytes ?? 0) + (to?.Bytes ?? 0) + (long)fieldFrom.Length * 32;
+    public long Bytes => (long)pixels.Length + (from?.Bytes ?? 0) + (to?.Bytes ?? 0) + (long)fieldFrom.Length * 32 + distanceScratch.Length * 4L;
     private Endpoint? from, to;
     private Point[] originalFrom = Array.Empty<Point>(), originalTo = Array.Empty<Point>(), current = Array.Empty<Point>();
     private readonly bool[] angularTrajectory = new bool[4];
     private Point[] fieldFrom = Array.Empty<Point>(), fieldTo = Array.Empty<Point>();
     private byte[] pixels = Array.Empty<byte>();
+    // Endpoints are copied on every Begin, including mutable input sprites.
+    // Only storage is reused; no moving target pose or distance field is stale.
+    private float[] distanceScratch = Array.Empty<float>();
     private WriteableBitmap? image;
     private Atlas.Sprite? sprite;
     private int width, height, columns, rows;
@@ -325,9 +361,13 @@ internal sealed class ActorPoseWarp
     {
         Validate(sourceFrom, boundsFrom, controlsFrom); Validate(sourceTo, boundsTo, controlsTo);
         if (controlsFrom.Length != controlsTo.Length) throw new InvalidDataException("动作交接关节必须逐一对应");
-        from = new Endpoint(sourceFrom, boundsFrom); to = new Endpoint(sourceTo, boundsTo);
-        originalFrom = (Point[])controlsFrom.Clone(); originalTo = (Point[])controlsTo.Clone();
-        current = new Point[controlsFrom.Length];
+        (from ??= new Endpoint()).Update(sourceFrom, boundsFrom, ref distanceScratch);
+        (to ??= new Endpoint()).Update(sourceTo, boundsTo, ref distanceScratch);
+        if(originalFrom.Length!=controlsFrom.Length)
+        {
+            originalFrom=new Point[controlsFrom.Length];originalTo=new Point[controlsFrom.Length];current=new Point[controlsFrom.Length];
+        }
+        controlsFrom.CopyTo(originalFrom,0);controlsTo.CopyTo(originalTo,0);
         if(current.Length==17)
         {
             angularTrajectory[0]=RequiresAngularTrajectory(5);angularTrajectory[1]=RequiresAngularTrajectory(8);
@@ -352,7 +392,7 @@ internal sealed class ActorPoseWarp
             image = new WriteableBitmap(width, height, 96, 96, PixelFormats.Pbgra32, null);
             sprite = new Atlas.Sprite(image, 0, 0, width, height, 0, pixels);
         }
-        if (fieldFrom.Length != columns * rows)
+        if (fieldFrom.Length < columns * rows)
         {
             fieldFrom = new Point[columns * rows]; fieldTo = new Point[fieldFrom.Length];
         }
@@ -582,18 +622,24 @@ internal sealed class ActorPoseWarp
     private readonly record struct Texel(double B, double G, double R, double A, double Distance);
     private sealed class Endpoint
     {
-        public readonly Rect Bounds;
-        public readonly int Width, Height;
-        public readonly byte[] Pixels;
-        private readonly float[] distance;
+        public Rect Bounds { get; private set; }
+        public int Width { get; private set; }
+        public int Height { get; private set; }
+        public byte[] Pixels { get; private set; } = Array.Empty<byte>();
+        private float[] distance = Array.Empty<float>();
         public long Bytes => (long)Pixels.Length + distance.Length * 4L;
-        public Endpoint(Atlas.Sprite source, Rect bounds)
+        public void Update(Atlas.Sprite source, Rect bounds, ref float[] outside)
         {
-            Bounds = bounds; Width = source.Width; Height = source.Height; Pixels = (byte[])source.Pixels.Clone();
+            Bounds = bounds; Width = source.Width; Height = source.Height;
+            int count=checked(Width*Height),bytes=checked(count*4);
+            if(Pixels.Length<bytes)Pixels=new byte[bytes];
+            if(distance.Length<count)distance=new float[count];
+            if(outside.Length<count)outside=new float[count];
+            Array.Copy(source.Pixels,Pixels,bytes);
             if (source.Image.Format == PixelFormats.Bgra32)
-                for (int p = 0; p < Pixels.Length; p += 4) for (int c = 0; c < 3; c++)
+                for (int p = 0; p < bytes; p += 4) for (int c = 0; c < 3; c++)
                     Pixels[p + c] = (byte)((Pixels[p + c] * Pixels[p + 3] + 127) / 255);
-            distance = DistanceField(Pixels, Width, Height);
+            DistanceField(Pixels, Width, Height, distance, outside);
         }
         public Texel Sample(Point point)
         {
@@ -616,10 +662,9 @@ internal sealed class ActorPoseWarp
             }
             return new Texel(blue, green, red, alpha, signed);
         }
-        private static float[] DistanceField(byte[] pixels, int width, int height)
+        private static void DistanceField(byte[] pixels, int width, int height, float[] inside, float[] outside)
         {
             int count = width * height;
-            var inside = new float[count]; var outside = new float[count];
             for (int i = 0; i < count; i++)
             {
                 bool solid = pixels[i * 4 + 3] >= 128;
@@ -635,7 +680,6 @@ internal sealed class ActorPoseWarp
                 if (Math.Abs(d) < .75) d = pixels[i * 4 + 3] / 255.0 - .5;
                 inside[i] = (float)(d / Density);
             }
-            return inside;
         }
         private static void Transform(float[] d, int width, int height)
         {

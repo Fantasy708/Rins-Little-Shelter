@@ -59,7 +59,7 @@ if (Test-Path -LiteralPath (Join-Path $projectRoot 'LICENSE')) {
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSES') -Destination $portableRoot -Recurse
 $publicDocs = Join-Path $portableRoot 'docs'
 New-Item -ItemType Directory -Path $publicDocs -Force | Out-Null
-foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验证记录.md','docs/发布状态.md','docs/安装说明.md','docs/多场景素材制作.md',
+foreach ($relative in @('docs/开发说明.md','docs/素材制作.md','docs/验证记录.md','docs/发布状态.md','docs/内存风险排查.md','docs/安装说明.md','docs/多场景素材制作.md',
     'docs/平板创造交互设计.md','docs/平板消息界面设计.md','docs/开发日志.md','docs/Nurture素材制作.md','docs/开场动画设计.md','docs/动作收尾过渡.md','docs/登山动作修复.md',
     'docs/动作起止过渡.md','docs/动作过渡检查表.md','docs/动作过渡素材制作记录.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot $relative) -Destination $publicDocs

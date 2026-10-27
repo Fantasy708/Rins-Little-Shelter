@@ -12,6 +12,8 @@ public sealed partial class Scene
     private Rect doorRect=Rect.Empty, memoryControl=Rect.Empty, seatHit=Rect.Empty;
     private Transform? seatTransform;
     private readonly Dictionary<(int Pose,int Radius),BitmapSource> blurredPoses=new();
+    // Only the current blur needs a CPU alpha copy, not every cached raster.
+    private Atlas.Sprite? blurredPoseSprite;
     public Point SwingPivot { get; private set; }
     public Point SwingContact { get; private set; }
     public Point[] SwingGrips { get; private set; }=Array.Empty<Point>();
@@ -61,7 +63,7 @@ public sealed partial class Scene
         if(!preserveActor)ResetActorTransition();
         births.Clear(); actorHits.Clear(); lifeHits.Clear(); hits.Clear();
         ClearCreationEffects();
-        blurredPoses.Clear();
+        blurredPoses.Clear(); blurredPoseSprite=null;
         recallSprite=null; wasFadingOut=false; swingFrames.ResetTransition(); childFrames.ResetTransition(); fatherFrames.ResetTransition();
         doorRect=memoryControl=seatHit=Rect.Empty; IdealUntil=0; BubbleUntil=0; ClearTabletHits();
         InvalidateVisual();
@@ -223,7 +225,7 @@ public sealed partial class Scene
                     recallSprite=snapshot; recallRect=swingFrames.Bounds;
                     var root=SwingGeometry().Seat;
                     if(!life.RecallSeated) root.Y=behavior.Y-swingFrames.Foot(life.RecallSample);
-                    recallRect.Offset(root.X,root.Y); blurredPoses.Clear(); wasFadingOut=true;
+                    recallRect.Offset(root.X,root.Y); blurredPoses.Clear(); blurredPoseSprite=null; wasFadingOut=true;
                 }
                 // Keep the exact stopped body and ground/seat origin through
                 // the existing memory blur, instead of substituting a pose.
@@ -231,6 +233,7 @@ public sealed partial class Scene
             }
             int radius=(int)Math.Round(life.BlurRadius*2);
             BitmapSource image=s.Image;
+            var shown=s;
             if (radius > 0)
             {
                 var key=(pose,radius);
@@ -245,9 +248,12 @@ public sealed partial class Scene
                 }
                 double sx=rect.Width/s.Width;
                 rect=new Rect(rect.X-16*sx,rect.Y-16*scale,rect.Width+32*sx,rect.Height+32*scale);
+                if (blurredPoseSprite == null || !ReferenceEquals(blurredPoseSprite.Image,image))
+                    blurredPoseSprite=new Atlas.Sprite(image,0,0,image.PixelWidth,image.PixelHeight,0);
+                shown=blurredPoseSprite;
             }
+            else blurredPoseSprite=null;
             var drawing=new DrawingGroup();using(var c=drawing.Open()) {c.PushOpacity(life.PresentOpacity);c.DrawImage(image,rect);c.Pop();}
-            var shown=new Atlas.Sprite(image,0,0,image.PixelWidth,image.PixelHeight,0);
             bool transition=ActorTransitionActive;
             PresentActor(dc,drawing,rect,shown,new Point(behavior.X,behavior.Y));
             // Memory controls own input during the recollection. Only the

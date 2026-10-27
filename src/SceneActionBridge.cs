@@ -7,6 +7,7 @@ public sealed partial class Scene
     private ActorPoseBridgeRegistration bridgeRegistration=null!;
     private ActionBridgeArt bridgeArt=null!;
     private readonly ActorPoseWarp actionWarp=new(),handoffWarp=new(),mountainWarp=new();
+    private readonly ActorPoseBridgeRegistration.AnalysisWorkspace anatomyWorkspace=new();
     private bool captureBridgeDrawing;
     private Point[]? nextActorControls,capturedActorControls;
     private Point[]? displayedControls;
@@ -24,7 +25,7 @@ public sealed partial class Scene
         var bounds=ActorBitmapBlend.PixelBounds(frozen.Bounds);
         var bitmap=ActorBitmapBlend.Render(bounds,c=>c.DrawDrawing(frozen));
         var sprite=new Atlas.Sprite(bitmap,0,0,bitmap.PixelWidth,bitmap.PixelHeight,0);
-        controls ??= HasVisibleBody(sprite) ? ActorPoseBridgeRegistration.EstimateControls(sprite,bounds)
+        controls ??= HasVisibleBody(sprite) ? ActorPoseBridgeRegistration.EstimateControlsBuffered(sprite,bounds,anatomyWorkspace)
             : bridgeRegistration.Map(0,poses.Sprites[0],poseRegistration.Bounds(0,root));
         return new(sprite,bounds,controls.ToArray(),frozen,root);
     }

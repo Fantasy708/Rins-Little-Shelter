@@ -484,7 +484,9 @@ public sealed partial class PetWindow : Window
     {
         if (closed) return; Behavior.Journey.Cancel(Save); CancelTablet(); closed = true; Persist(); heartbeat.Stop();
         CompositionTarget.Rendering -= Render; SystemEvents.SessionSwitch -= SessionSwitch; SystemEvents.PowerModeChanged -= PowerChanged; SystemEvents.DisplaySettingsChanged -= DisplayChanged;
-        Native.UnregisterHotKey(new WindowInteropHelper(this).Handle, 1); tray.Visible = false; tray.Dispose(); trayIcon.Dispose(); Audio.Dispose(); settings?.Close();
+        Native.UnregisterHotKey(new WindowInteropHelper(this).Handle, 1); tray.Visible = false;
+        var trayMenu = tray.ContextMenuStrip; tray.ContextMenuStrip = null;
+        trayMenu?.Dispose(); tray.Dispose(); trayIcon.Dispose(); Audio.Dispose(); settings?.Close();
         Application.Current.Shutdown();
     }
 }

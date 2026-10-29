@@ -11,6 +11,7 @@ namespace LittleShelter;
 
 public sealed partial class PetWindow : Window
 {
+    public const double AnimationSpeed = .7;
     public readonly SaveData Save;
     public readonly Behavior Behavior = new();
     public readonly AudioService Audio = new();
@@ -21,7 +22,7 @@ public sealed partial class PetWindow : Window
     private readonly Stopwatch watch = Stopwatch.StartNew();
     private readonly Forms.NotifyIcon tray;
     private readonly System.Drawing.Icon trayIcon;
-    private double lastFrame, runtime, lastOffer = -120, lastReminder, lastSave;
+    private double lastFrame, runtime, animationRuntime, lastOffer = -120, lastReminder, lastSave;
     private TimeSpan lastPresentation;
     private int seconds;
     private bool sessionLocked, suspended, paused, manualHidden, fullscreen, closed, pointerThrough, dragging;
@@ -148,17 +149,22 @@ public sealed partial class PetWindow : Window
         lastPresentation = presentation;
         lastFrame = now;
         if (paused || fullscreen || manualHidden || locked || !IsVisible) return;
-        runtime += Math.Min(dt, .1); Scene.Time = runtime;
+        // Real visible time still owns UI timeouts, music and invitations.
+        // One bounded animation step drives the body, roots and creation art.
+        double frameSeconds = Math.Clamp(dt, 0, .1);
+        double animationSeconds = frameSeconds * AnimationSpeed;
+        runtime += frameSeconds; Scene.Time = runtime;
+        animationRuntime += animationSeconds; Scene.AnimationTime = animationRuntime;
         frames++;
-        if (Opening.Active) { AdvanceStartup(dt); return; }
+        if (Opening.Active) { AdvanceStartup(animationSeconds); return; }
         Audio.Tick(dt);
         if (Audio.Level > .035) Save.MusicSeconds += Math.Min(dt, .1);
-        if(Recall.Active) { AdvanceRecall(dt); return; }
+        if(Recall.Active) { AdvanceRecall(animationSeconds); return; }
         var theme = World.Theme(Save.Settings, DateTime.Now.Hour);
         // Hold the quiet seated pose throughout the temporary ideal world;
         // explicit interactions still run through the same state machine.
         if (runtime >= Scene.IdealUntil || Behavior.Current.Kind != "idle" || Behavior.Bridge.Active || Behavior.MotionExit.Active || Behavior.PendingRecoveryAction!=null)
-            Behavior.Tick(dt, Save, theme is "夜晚" or "深夜");
+            Behavior.TickAnimation(animationSeconds, Save, theme is "夜晚" or "深夜", frameSeconds);
         if (Native.GetCursorPos(out var cursor))
         {
             var point = Scene.PointFromScreen(new Point(cursor.X, cursor.Y));

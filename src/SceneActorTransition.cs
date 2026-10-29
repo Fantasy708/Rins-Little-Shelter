@@ -23,8 +23,8 @@ public sealed partial class Scene
     private double handoffTargetTime=double.NaN;
     private bool handoffPresentation;
     public long ActorTransitionSnapshots=>actorSnapshots;
-    public bool ActorTransitionActive=>oldDrawSprite!=null && Time-poseChanged<actorTransitionSeconds;
-    public double ActorTransitionProgress=>oldDrawSprite==null?1:MotionClip.Ease((Time-poseChanged)/actorTransitionSeconds);
+    public bool ActorTransitionActive=>oldDrawSprite!=null && AnimationTime-poseChanged<actorTransitionSeconds;
+    public double ActorTransitionProgress=>oldDrawSprite==null?1:MotionClip.Ease((AnimationTime-poseChanged)/actorTransitionSeconds);
 
     private void PrepareActorTransition(string key)
     {
@@ -67,12 +67,12 @@ public sealed partial class Scene
         // crouch/turn. Finish their registered entry before that early motion.
         actorTransitionBaseSeconds=key.StartsWith("climb:",StringComparison.Ordinal) || lastDrawKey?.StartsWith("climb:",StringComparison.Ordinal)==true
             ? .08 : key.StartsWith("hop:",StringComparison.Ordinal) || key.StartsWith("turn:",StringComparison.Ordinal) ? .06 : .24;
-        lastDrawKey=key;poseChanged=Time;actorTransitionSeconds=actorTransitionBaseSeconds;
+        lastDrawKey=key;poseChanged=AnimationTime;actorTransitionSeconds=actorTransitionBaseSeconds;
     }
     private void PresentActor(DrawingContext dc,DrawingGroup target,Rect sourceRect,Atlas.Sprite source,Point root)
     {
         if(captureBridgeDrawing) { capturedActorControls=nextActorControls;nextActorControls=null;dc.DrawDrawing(target);return; }
-        if(oldDrawSprite!=null && Time<=poseChanged)
+        if(oldDrawSprite!=null && AnimationTime<=poseChanged)
             actorTransitionSeconds=actorTransitionBaseSeconds+Math.Min(.12,(root-oldActorRoot).Length/600);
         double progress=ActorTransitionProgress;
         DrawingGroup shown=target;
@@ -90,13 +90,13 @@ public sealed partial class Scene
                 actorHits.Add(new(b,output,false,0,double.PositiveInfinity,0,1));
             }
             else {
-            if(!handoffPrepared || handoffTargetTime!=Time) {
+            if(!handoffPrepared || handoffTargetTime!=AnimationTime) {
                 var from=handoffStart ??=CaptureSurface(oldActorDrawing!,oldActorControls,oldActorRoot);
                 var to=CaptureSurface(target,nextActorControls,root);
                 handoffWarp.Begin(from.Sprite,from.Bounds,from.Controls,to.Sprite,to.Bounds,to.Controls);
                 // Dedicated clocks keep moving. Follow the CURRENT target,
                 // rather than hold frame0 and jump to frame2 at the endpoint.
-                handoffPrepared=true;handoffTargetTime=Time;
+                handoffPrepared=true;handoffTargetTime=AnimationTime;
             }
             var output=handoffWarp.Frame(progress);var bounds=handoffWarp.Bounds;
             if(progress<=0)shown=oldActorDrawing!;

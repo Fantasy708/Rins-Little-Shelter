@@ -45,7 +45,7 @@ public sealed partial class Scene
         var rect=poseRegistration.Bounds(pose,root);bool left=leftOverride ?? behavior.FacingLeft;
         var drawing=new DrawingGroup();using(var dc=drawing.Open()) {
             if(left)dc.PushTransform(new ScaleTransform(-1,1,root.X,root.Y));
-            DrawLayered(dc,sprite,rect,Math.Sin(Time*1.5)*.45,pose==7);
+            DrawLayered(dc,sprite,rect,Math.Sin(AnimationTime*1.5)*.45,pose==7);
             if(left)dc.Pop();
         }
         return CaptureSurface(drawing,bridgeRegistration.Map(pose,sprite,rect,left,root.X),root);

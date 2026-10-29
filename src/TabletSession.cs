@@ -170,7 +170,8 @@ public sealed class TabletSession
         Generation++;Reset();actor.CompleteActionRecovery(s);
     }
     // false during approach: the existing walking/settling path advances then.
-    public bool Tick(double dt,SaveData s)
+    public bool Tick(double dt,SaveData s) => TickAnimation(dt,s,dt);
+    public bool TickAnimation(double dt,SaveData s,double realSeconds)
     {
         if (!Active) return false;
         if (!EnsureValid(s)) return true;
@@ -178,14 +179,17 @@ public sealed class TabletSession
             if (actor.Current.Id != "invite") return false;
             if(Recovering)CompleteRecovery(s);else Enter("present");return true;
         }
-        // The same bounded frame clock drives the sole actor state machine.
-        // Hidden/paused time is deliberately not supplied by the owner.
+        // Authored animation time drives poses; the unanswered invitation uses
+        // real visible time. Hidden/paused time is not supplied by the owner.
         if (!double.IsFinite(dt)) return true;
         Elapsed+=Math.Clamp(dt,0,.15);
         switch(Phase) {
             case "present": if (Elapsed>=.9) Enter(Recovering ? "stowing" : "opening"); break;
             case "opening": if (Elapsed>=.65) Enter("ready"); break;
-            case "ready": if (automatic) { UnansweredSeconds+=Math.Clamp(dt,0,.15); if (UnansweredSeconds>=20) Close(s); } break;
+            case "ready":
+                double unanswered=realSeconds;
+                if (automatic && double.IsFinite(unanswered)) { UnansweredSeconds+=Math.Clamp(unanswered,0,.15); if (UnansweredSeconds>=20) Close(s); }
+                break;
             case "closing": if (Elapsed>=.55) Enter(confirmed == null ? "stowing" : "tap"); break;
             case "tap":
                 if (!emitted && confirmed != null && Elapsed>=1.4*.58) {

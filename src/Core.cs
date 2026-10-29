@@ -297,7 +297,8 @@ public sealed partial class Behavior
             else RecoveryActionReady?.Invoke(request.Id);
         }
     }
-    public void Tick(double dt, SaveData save, bool night)
+    public void Tick(double dt, SaveData save, bool night) => TickAnimation(dt, save, night, dt);
+    public void TickAnimation(double dt, SaveData save, bool night, double realSeconds)
     {
         if (Dragging) { CancelActionRecovery(); if (Tablet.Active) Tablet.Cancel(save); Nurture.Cancel(save); Life.Cancel(); Journey.Cancel(save); return; }
         if(recoveryRequest is { } request && (request.Scene != save.SceneId || request.FreeMode != save.Settings.FreeMode)) CancelActionRecovery();
@@ -319,7 +320,7 @@ public sealed partial class Behavior
         if(Bridge.ContextInvalidated) { CancelActionRecovery();StartImmediate("stand");return; }
         if (Journey.Active && Journey.Tick(dt,save)) return;
         double step = Math.Clamp(dt,0,.15);
-        if (Tablet.Active && Tablet.Tick(step,save)) return;
+        if (Tablet.Active && Tablet.TickAnimation(step,save,realSeconds)) return;
         if (Nurture.Active && Nurture.Tick(dt,save)) return;
         if (save.SceneId is "indoor" or "mountain" or "polar" && !Life.Active && !Scenes.ActionAvailable(save,Current)) { Y=Scenes.Home(save).Y; Start("stand"); return; }
         if (save.SceneId is "indoor" or "mountain" or "polar" && !Life.Active && ((afterSettle != null && !Scenes.ActionAvailable(save,Actions.Get(afterSettle))) || (arrivalAction != null && !Scenes.ActionAvailable(save,Actions.Get(arrivalAction))))) { Y=Scenes.Home(save).Y; Start("stand"); return; }

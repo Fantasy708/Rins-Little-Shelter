@@ -188,6 +188,10 @@ public sealed partial class Scene : FrameworkElement
     private Rect lastDrawRect, oldDrawRect;
     private double poseChanged;
     public double Time { get; set; }
+    private double? animationTime;
+    // Standalone drawings use Time unless their caller supplies a distinct
+    // animation clock. PetWindow keeps this at 70% of real visible time.
+    public double AnimationTime { get => animationTime ?? Time; set => animationTime = value; }
     public bool Editing { get; set; }
     public double IdealUntil { get; set; }
     public double ShelterUntil { get; set; }
@@ -235,7 +239,7 @@ public sealed partial class Scene : FrameworkElement
     }
     private SolidColorBrush White => Brush(245, 253, 252, 247);
     private SolidColorBrush Ink => Brush(255, 73, 91, 109);
-    public void Born(string id) { births[id] = Time; CommitCreationEffect(id); }
+    public void Born(string id) { births[id] = AnimationTime; CommitCreationEffect(id); }
     public string? Hit(Point point)
     {
         if (StartupPresentation) return null;
@@ -361,7 +365,7 @@ public sealed partial class Scene : FrameworkElement
         // The sky-watching pose was drawn looking left in its source frame.
         // Orient this pose toward the actual window instead of the walk facing.
         if (action.Id == "windowWatch" && save.SceneId == "indoor" && save.Layout.FirstOrDefault(p=>p.Id == "window" && !p.Hidden) is { } window) left=window.X>behavior.X;
-        double breath=move || raw ? 0 : Math.Sin(Time*1.5)*.45;
+        double breath=move || raw ? 0 : Math.Sin(AnimationTime*1.5)*.45;
         double seatOffset=action.Id == "swing" ? 45 : 0;
         string tabletBody=behavior.Tablet.Phase=="stowing" ? "stow" : behavior.Tablet.Phase is "tap" or "observe" ? "tap" : "present";
         string key=(polarPose ? "snow:"+behavior.Journey.Generation : climbingPose ? "climb:"+behavior.Journey.Generation+":"+behavior.Journey.Direction : nurturePose ? "nurture:"+behavior.Nurture.Generation+(behavior.Nurture.PoseFrame>=10 ? ":rise" : ":lower") : tabletPose ? "tablet:"+behavior.Tablet.Generation+":"+tabletBody : raw ? action.Id+":"+behavior.ActionRevision : move ? action.Id == "trot" ? "jog" : "walk" : "pose:"+action.Id+":"+behavior.ActionRevision+":"+seatOffset)+(left ? ":left" : ":right");
@@ -474,7 +478,7 @@ public sealed partial class Scene : FrameworkElement
             anchors.Any(a=>a.Length != 2 || a.Any(v=>!double.IsFinite(v))) || heights.Any(h=>!double.IsFinite(h) || h <= 0))
             throw new InvalidDataException("跳跃/转身的帧与落脚锚点不完整");
     }
-    private double LegSwing => Math.Sin(Time * 1.8) * (2.2 + audio.Low * 1.2);
+    private double LegSwing => Math.Sin(AnimationTime * 1.8) * (2.2 + audio.Low * 1.2);
     private void DrawLayered(DrawingContext dc, Atlas.Sprite sprite, Rect rect, double breath, bool seated)
     {
         // The entire dangling leg region hinges at the hips. Shear is zero on
@@ -510,7 +514,7 @@ public sealed partial class Scene : FrameworkElement
             var color = theme switch { "清晨" => (R: (byte)250, G: (byte)223, B: (byte)172), "傍晚" => (R: (byte)242, G: (byte)180, B: (byte)208), "深夜" => (R: (byte)179, G: (byte)185, B: (byte)243), _ => (R: (byte)164, G: (byte)220, B: (byte)237) };
             dc.DrawEllipse(Brush((byte)Math.Clamp((int)(alpha * 125), 0, 200), color.R, color.G, color.B), null, new Point(x, y), 1.2 + audio.High * 1.3, 1.2 + audio.High * 1.3);
         }
-        if (behavior.Current.Id == "catch") dc.DrawEllipse(Brush(160, 243, 185, 203), null, new Point(behavior.X + 15, behavior.Y - 98 - Math.Sin(Time) * 10), 3, 1.5);
+        if (behavior.Current.Id == "catch") dc.DrawEllipse(Brush(160, 243, 185, 203), null, new Point(behavior.X + 15, behavior.Y - 98 - Math.Sin(AnimationTime) * 10), 3, 1.5);
     }
     private void DrawWeather(DrawingContext dc)
     {

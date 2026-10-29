@@ -18,6 +18,8 @@ try {
     if (-not $SkipTests) {
         & $dotnetPath run --project tests/CoreTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '核心检查失败。' }
+        & $dotnetPath run --project tests/AnimationSpeedTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/animation-speed-qa
+        if ($LASTEXITCODE -ne 0) { throw '70%动作速度、真实超时与暂停恢复检查失败。' }
         & $dotnetPath run --project tests/SceneTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '多场景和记忆检查失败。' }
         & $dotnetPath run --project tests/OutdoorTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"

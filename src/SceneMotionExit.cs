@@ -43,7 +43,7 @@ public sealed partial class Scene
             controls=bridgeRegistration.Map(0,sprite,rect,mirror,behavior.X);
             using(var draw=target.Open()) {
                 if(mirror)draw.PushTransform(new ScaleTransform(-1,1,behavior.X,behavior.Y));
-                DrawLayered(draw,sprite,rect,Math.Sin(Time*1.5)*.45,false);
+                DrawLayered(draw,sprite,rect,Math.Sin(AnimationTime*1.5)*.45,false);
                 if(mirror)draw.Pop();
             }
         }

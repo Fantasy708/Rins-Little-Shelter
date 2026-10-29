@@ -31,7 +31,7 @@ public sealed partial class Scene
     public int CreationMaterialPixelWidth=>creationMaterial.PixelWidth;
     public int CreationMaterialPixelHeight=>creationMaterial.PixelHeight;
     private static double CreationReveal(double age)=>MotionClip.Ease((age-CreationShapeHoldSeconds)/CreationRevealSeconds);
-    private double ObjectAppearance(string id)=>births.TryGetValue(id,out var born) ? creationRevealObjects.Contains(id)?CreationReveal(Time-born):Math.Clamp((Time-born)/2.5,0,1):1;
+    private double ObjectAppearance(string id)=>births.TryGetValue(id,out var born) ? creationRevealObjects.Contains(id)?CreationReveal(AnimationTime-born):Math.Clamp((AnimationTime-born)/2.5,0,1):1;
 
     public void ClearCreationEffects()
     {
@@ -115,14 +115,14 @@ public sealed partial class Scene
             creationManual==manual && (manual ? creationGeneration==behavior.Tablet.Generation : creationRevision==behavior.ActionRevision);
         if(!same) SetCreationTarget(id,manual);
         if(creationCommitted) return;
-        creationCommitted=true;creationBorn=Time;creationAge=0;creationRevealObjects.Add(id);
+        creationCommitted=true;creationBorn=AnimationTime;creationAge=0;creationRevealObjects.Add(id);
     }
     private void RefreshCreationEffect()
     {
         CreationParticleCount=0;
         if(creationObject!=null && (creationScene!=save.SceneId || creationFree!=save.Settings.FreeMode || Editing || StartupPresentation || behavior.Dragging || behavior.Life.Active || behavior.Nurture.Active || behavior.Journey.Active)) ResetCreationEffect();
         if(creationCommitted) {
-            creationAge=Time-creationBorn;
+            creationAge=AnimationTime-creationBorn;
             if(creationAge<0 || creationAge>=CreationMaterializeSeconds || !save.Layout.Any(p=>p.Id==creationObject && !p.Hidden)) ResetCreationEffect();
             return;
         }

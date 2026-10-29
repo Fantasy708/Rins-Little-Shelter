@@ -27,6 +27,7 @@ function Get-ShelterPublicFiles([string]$Root) {
         'docs/screenshots/motion-trot-registration.gif','docs/screenshots/motion-hop-registration.gif','docs/screenshots/motion-turn-registration.gif',
         'docs/screenshots/motion-trot-exit.gif','docs/screenshots/motion-hop-exit.gif','docs/screenshots/motion-turn-exit.gif',
         'docs/screenshots/climb-continuity.gif','docs/screenshots/climb-gait-up.gif','docs/screenshots/climb-gait-down.gif',
+        'docs/screenshots/downhill-knee-before-after.png','docs/screenshots/downhill-knee-before-after.gif',
         'docs/screenshots/action-bridges-ground.gif','docs/screenshots/action-bridges-upper.gif','docs/screenshots/mountain-roundtrip.gif','docs/screenshots/action-bridges-runtime.png',
         'docs/screenshots/scenes-indoor.png','docs/screenshots/swing-memory.png','docs/screenshots/indoor-memory.png','docs/screenshots/indoor-memory-unified.png',
         'docs/screenshots/swing-runtime.png','docs/screenshots/bedroom-runtime.png','docs/screenshots/bedroom-night.png',

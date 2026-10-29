@@ -1,4 +1,4 @@
-param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.1.0-maintenance-20261025/RinsLittleShelter')
+param([switch]$SkipTests, [string]$OutputDirectory = 'dist/local/v1.1.0/RinsLittleShelter')
 $ErrorActionPreference = 'Stop'
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 . (Join-Path $PSScriptRoot 'release-files.ps1')
@@ -24,6 +24,11 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '山脉/极地成长和动作逻辑检查失败。' }
         & $dotnetPath run --project tests/ClimbContinuityTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/climb-continuity-qa
         if ($LASTEXITCODE -ne 0) { throw '登山交替步态/体型/连续移动检查失败。' }
+        & $dotnetPath build tests/DownhillKneeTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
+        if ($LASTEXITCODE -ne 0) { throw '下山关节检查宿主编译失败。' }
+        $downhillBinaries = Join-Path $buildOutput 'Release/net10.0-windows10.0.19041.0'
+        & $dotnetPath (Join-Path $downhillBinaries 'DownhillKneeTests.dll') (Join-Path $downhillBinaries 'RinsLittleShelter.dll') output/downhill-knee-qa --matrix
+        if ($LASTEXITCODE -ne 0) { throw '下山关节方向、膝踝连接和完整往返检查失败。' }
         & $dotnetPath run --project tests/TabletTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"
         if ($LASTEXITCODE -ne 0) { throw '平板/来信逻辑检查失败。' }
         & $dotnetPath run --project tests/NurtureTests.csproj -c Release "-p:BaseOutputPath=$buildOutput"

@@ -22,7 +22,7 @@ internal sealed class ClimbLegRig
     private readonly Point[][] soleSamples = new Point[2][];
     private readonly Point[] soleOffsets = new Point[2];
     private readonly double[] soleAngles = { double.NaN, double.NaN };
-    private bool hasFrame;
+    private bool hasFrame,lastDownhill;
     private readonly WriteableBitmap image;
     private readonly Atlas.Sprite sprite;
     private const double Density = 2;
@@ -68,18 +68,18 @@ internal sealed class ClimbLegRig
         sprite = new Atlas.Sprite(image, 0, 0, width, height, 0, pixels);
     }
 
-    public Atlas.Sprite Frame(Point[][] targetJoints)
+    public Atlas.Sprite Frame(Point[][] targetJoints,bool downhill=false)
     {
         Validate(targetJoints);
-        bool same = hasFrame;
+        bool same = hasFrame && downhill==lastDownhill;
         for (int leg = 0; leg < 2; leg++) for (int joint = 0; joint < 4; joint++)
             if (targetJoints[leg][joint] != last[leg * 4 + joint]) same = false;
         if (same) return sprite;
         Array.Clear(pixels);
         for (int leg = 0; leg < 2; leg++) for (int bone = 0; bone < 3; bone++)
             targetBones[leg * 3 + bone] = new Bone(targetJoints[leg][bone], targetJoints[leg][bone + 1]);
-        RenderLeg(1, targetJoints[1]); // the original near leg occludes the far one
-        RenderLeg(0, targetJoints[0]);
+        RenderLeg(1, targetJoints[1],downhill); // the original near leg occludes the far one
+        RenderLeg(0, targetJoints[0],downhill);
         for (int p = 0; p < pixels.Length; p += 4) Over(foreground, p, pixels, p);
         int visibleLeft = width, visibleTop = height, visibleRight = -1, visibleBottom = -1;
         for (int y = 0; y < height; y++) for (int x = 0; x < width; x++)
@@ -92,7 +92,7 @@ internal sealed class ClimbLegRig
             Bounds.Top + visibleTop / Density, (visibleRight - visibleLeft + 1) / Density, (visibleBottom - visibleTop + 1) / Density);
         image.WritePixels(new Int32Rect(0, 0, width, height), pixels, width * 4, 0);
         for (int leg = 0; leg < 2; leg++) for (int joint = 0; joint < 4; joint++) last[leg * 4 + joint] = targetJoints[leg][joint];
-        hasFrame = true; Updates++; return sprite;
+        hasFrame = true;lastDownhill=downhill; Updates++; return sprite;
     }
 
     // Absolute target ankle-to-toe angle in radians (Math.Atan2 convention).
@@ -238,7 +238,7 @@ internal sealed class ClimbLegRig
         }
     }
 
-    private void RenderLeg(int legIndex, Point[] target)
+    private void RenderLeg(int legIndex, Point[] target,bool downhill)
     {
         var leg = legs[legIndex];
         double left = target[0].X, right = left, top = target[0].Y, bottom = top;
@@ -249,8 +249,10 @@ internal sealed class ClimbLegRig
         // Draw bounded bone textures rather than choosing the nearest target
         // bone and sampling an entire leg. Unbounded inverse rays used to pull
         // a thigh or sandal out again as disconnected triangular fragments.
+        if(downhill) RenderDownhillLeg(legIndex,target,x0,x1,y0,y1);
         for (int part = 0; part < 3; part++)
         {
+            if(downhill && part<2) continue;
             var active = targetBones[legIndex * 3 + part];
             for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++)
             {
@@ -260,9 +262,40 @@ internal sealed class ClimbLegRig
                 if (along < -cap || along > active.Length + cap || active.Distance(point) > (part == 2 ? leg.FootRadius : 10)) continue;
                 SampleOver(leg.Parts[part], Map(point, active, leg.Bones[part]), pixels, (y * width + x) * 4);
             }
-            if (part == 1) RenderJoint(legIndex, target, 1, 4.0);
+            if (part == 1 && !downhill) RenderJoint(legIndex, target, 1, 4.0);
         }
         RenderJoint(legIndex, target, 2, 2.0);
+    }
+
+    private void RenderDownhillLeg(int legIndex,Point[] target,int x0,int x1,int y0,int y1)
+    {
+        var leg=legs[legIndex];var thigh=targetBones[legIndex*3];var calf=targetBones[legIndex*3+1];
+        for(int y=y0;y<=y1;y++) for(int x=x0;x<=x1;x++) {
+            var point=new Point(Bounds.Left+(x+.5)/Density,Bounds.Top+(y+.5)/Density);
+            double first=thigh.Distance(point),second=calf.Distance(point);
+            int part=first<=second ? 0 : 1;
+            var active=part==0 ? thigh : calf;var delta=point-active.A;
+            double along=delta.X*active.Ux+delta.Y*active.Uy;
+            if(along < -4.5 || along > active.Length+4.5 || Math.Min(first,second)>10) continue;
+            var mapped=Map(point,active,leg.Bones[part]);
+            double distance=(point-target[1]).Length;
+            if(distance<9) {
+                // Two independently capped strips expose the old straight
+                // knee outline across a deeply bent leg. Sample one continuous
+                // source field around the knee instead of painting one strip
+                // over the other, or rotating a rigid circular skin patch.
+                double weight=first+second<.001 ? .5 : first/(first+second);
+                var a=Map(point,thigh,leg.Bones[0]);var b=Map(point,calf,leg.Bones[1]);
+                var joined=new Point(a.X+(b.X-a.X)*weight,a.Y+(b.Y-a.Y)*weight);
+                double amount=1-MotionClip.Ease((distance-4.5)/4.5);
+                // Blended inverse directions contract toward the source
+                // joint. Bound the target envelope so that contraction cannot
+                // inflate the outside of a bent knee into a square skin lobe.
+                if(Math.Min(first,second)>4.25+(10-4.25)*(1-amount)) continue;
+                mapped=new Point(mapped.X+(joined.X-mapped.X)*amount,mapped.Y+(joined.Y-mapped.Y)*amount);
+                SampleOver(leg.Texture,mapped,pixels,(y*width+x)*4);
+            } else SampleOver(leg.Parts[part],mapped,pixels,(y*width+x)*4);
+        }
     }
 
     private void RenderJoint(int legIndex, Point[] target, int joint, double radius)

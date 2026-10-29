@@ -13,6 +13,10 @@
 
 </div>
 
+> **2026-10-29下山修订（仍为v1.1.0）：** 修正下台阶时支撑腿倒勾与膝部横向接缝，保留原路线、节奏、素材和其他动作。本地最新版统一为`dist/local/v1.1.0/RinsLittleShelter`，附件在同级`release`。用户已授权维护现有GitHub发行，上传及核验结果见[发布状态](docs/发布状态.md)。新程序仅完成61.5秒短测，未作一小时测试，不继承下方旧EXE的长测记录。实际检查及前后动画见[登山动作修复](docs/登山动作修复.md)与[验证记录](docs/验证记录.md)。
+
+以下发布与长测记录对应此前的程序及其各自SHA256。
+
 > **v1.1.0 · 内存分配维护（已发布并核验）**：[下载与发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases/tag/v1.1.0)。固定20轮普通步行交接分配减少约79%，画面与命中保持；同一EXE已完整通过61分钟运行。保留原存档、旧版本和Tag；实际附件更新状态见[发布状态](docs/发布状态.md)。
 
 **本轮已测程序（532A2946…）：** 61分09.1秒、172044个动画循环，正常退出，21+36+31项监测及独立核验通过。平均46.963循环/秒，工作集平均633.342MiB、峰668.191MiB，仍有内存正趋势，不能认定长期无泄漏。维护源码请下载手工source.zip，自动Tag源码仍为原首发。边界见[验证记录](docs/验证记录.md)。
@@ -70,7 +74,7 @@
 
 **想使用安装脚本：** 在[正式发行](https://github.com/Fantasy708/Rins-Little-Shelter/releases/latest)下载 `RinsLittleShelter-Setup.zip`，完整解压后双击 `Install-RinsLittleShelter.cmd`。它会下载并校验最新正式便携包，安装到个人程序目录、创建快捷方式；无需管理员权限，保留现有存档。升级时再次运行，卸载可使用安装目录内的 `Uninstall-RinsLittleShelter.cmd`。自选目录、离线安装与更多说明见[安装说明](docs/安装说明.md)。
 
-**一键卸载：** 便携包和Setup包均带`Uninstall-RinsLittleShelter.cmd`。先从托盘退出Rin，再双击卸载：便携包清理当前文件夹内未修改的程序文件，Setup包中的入口处理默认安装位置；两者均保留存档与自己添加/修改的文件。便携文件夹移动或改名后也可使用。请完整保留入口旁的PS1及支持文件。本次维护包在`dist/local/v1.1.0-maintenance-20261025/release`；此前v1.1.0卸载更新、旧附件归档与服务器核验保留为[发布历史](docs/发布状态.md)。
+**一键卸载：** 便携包和Setup包均带`Uninstall-RinsLittleShelter.cmd`。先从托盘退出Rin，再双击卸载：便携包清理当前文件夹内未修改的程序文件，Setup包中的入口处理默认安装位置；两者均保留存档与自己添加/修改的文件。便携文件夹移动或改名后也可使用。请完整保留入口旁的PS1及支持文件。本次维护包在`dist/local/v1.1.0/release`；此前v1.1.0卸载更新、旧附件归档与服务器核验保留为[发布历史](docs/发布状态.md)。
 
 **继续使用便携包：**
 
@@ -78,7 +82,7 @@
 2. 下载该版本的 Windows x64 便携 ZIP，并使用同一发行中的 `SHA256.txt` 核对文件。`source.zip` 是完整源码素材包，供开发和研究使用。
 3. 完整解压 ZIP，打开 `RinsLittleShelter.exe`。请让 EXE 与旁边的 `assets` 文件夹保持在一起。
 
-本次维护包名为 `RinsLittleShelter-v1.1.0-win-x64.zip`，完整源码素材包为 `RinsLittleShelter-v1.1.0-source.zip`；校验值见同一发行的 `SHA256.txt`。本次原8个同名附件按`before-maintenance-20261025`归档保留。维护源码应下载手工提供的`source.zip`或查看main对应冻结提交；GitHub自动生成的“Source code”ZIP/tar仍指向不移动的原v1.1.0 Tag。须完整解压，让EXE、图集、登记JSON和manifest配套使用。
+本次维护包名为 `RinsLittleShelter-v1.1.0-win-x64.zip`，完整源码素材包为 `RinsLittleShelter-v1.1.0-source.zip`；校验值见同一发行的 `SHA256.txt`。旧同名附件归档保留，本次附件切换与核验结果见[发布状态](docs/发布状态.md)。维护源码应下载手工提供的`source.zip`或查看main对应冻结提交；GitHub自动生成的“Source code”ZIP/tar仍指向不移动的原v1.1.0 Tag。须完整解压，让EXE、图集、登记JSON和manifest配套使用。
 
 升级前先退出旧版，再解压并运行新版。当前版本兼容既有存档，继续读取陪伴进度、来信状态和两种模式的场景布置；升级前也可按下文方法备份。
 
@@ -255,18 +259,18 @@ pwsh -File scripts/bootstrap.ps1
 
 脚本从微软下载指定 SDK，核对 SHA512 后解压到项目的 `.tools`，不更改系统 SDK。也可以安装[微软 .NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)。首次下载 SDK 与恢复 NuGet 依赖需要联网。
 
-本次十秒识别维护构建使用`dist/local/v1.1.0-shelter-compat-20261026/RinsLittleShelter`。检查包含38组动作时序、相邻姿态变形和生产绘图；实际已完成范围以[验证记录](docs/验证记录.md)为准，不把脚本支持视为本轮全套通过。产品版本为1.1.0，程序集、文件及应用清单版本为1.1.0.0。
+当前维护构建使用`dist/local/v1.1.0/RinsLittleShelter`。检查包含38组动作时序、相邻姿态变形、生产绘图与下山关节守卫；实际已完成范围以[验证记录](docs/验证记录.md)为准，不把脚本支持视为本轮全套通过。产品版本为1.1.0，程序集、文件及应用清单版本为1.1.0.0。
 
-显式指定本轮独立路径的等价命令如下，旧本地及公开版本目录保留：
+显式指定最新版路径的等价命令如下，历史版本保留范围见`dist/本地保留版本.md`，公开旧发行继续保留：
 
 ```powershell
-pwsh -File scripts/build.ps1 -OutputDirectory dist/local/v1.1.0-shelter-compat-20261026/RinsLittleShelter
+pwsh -File scripts/build.ps1 -OutputDirectory dist/local/v1.1.0/RinsLittleShelter
 ```
 
 构建前请退出正在运行的发布版本。脚本执行核心与画面等检查，再生成自包含程序和压缩包。若需整理成发行附件，使用：
 
 ```powershell
-pwsh -File scripts/package-release.ps1 -Version v1.1.0 -ProgramDirectory dist/local/v1.1.0-shelter-compat-20261026/RinsLittleShelter -ReleaseDirectory dist/local/v1.1.0-shelter-compat-20261026/release -ReleaseNotes docs/releases/v1.1.0.md
+pwsh -File scripts/package-release.ps1 -Version v1.1.0 -ProgramDirectory dist/local/v1.1.0/RinsLittleShelter -ReleaseDirectory dist/local/v1.1.0/release -ReleaseNotes docs/releases/v1.1.0.md
 ```
 
 打包脚本复用已构建的EXE，生成便携ZIP、完整源码素材ZIP与SHA256清单，不重新编译，也不上传GitHub。本次维护原v1.1.0发行，原Tag不移动，旧同名附件归档保留；维护源码对应main冻结提交，自动Source code仍为原Tag。本次说明见[发行说明](docs/releases/v1.1.0.md)。
@@ -275,7 +279,7 @@ pwsh -File scripts/package-release.ps1 -Version v1.1.0 -ProgramDirectory dist/lo
 
 ## 发布状态与问题反馈
 
-本次v1.1.0十秒识别更新见[发行说明](docs/releases/v1.1.0.md)，新程序的运行、附件及GitHub核验分别登记在[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。此前已发布维护EXE（摘要以2B767B17开头）的一小时及真实音乐检查保留为历史，不替代本次新SHA验收。原生桌宠交互、系统缩放、多屏和设备切换仍据各自实测范围，不以自动或离屏检查代替。
+本次v1.1.0下山修订见[发行说明](docs/releases/v1.1.0.md)，新程序的运行、附件及GitHub核验分别登记在[发布状态](docs/发布状态.md)与[验证记录](docs/验证记录.md)。新程序仅完成61.5秒短测，未作一小时测试；此前各EXE的一小时及真实音乐检查保留为历史，不替代本次新SHA验收。原生桌宠交互、系统缩放、多屏和设备切换仍据各自实测范围，不以自动或离屏检查代替。
 
 遇到问题，请使用 [GitHub Issues](https://github.com/Fantasy708/Rins-Little-Shelter/issues) 中的反馈模板，提供版本、Windows 环境、触发动作与复现步骤；涉及显示问题时，也请说明缩放比例和显示器情况。
 

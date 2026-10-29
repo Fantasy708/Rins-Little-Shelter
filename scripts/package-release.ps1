@@ -1,6 +1,6 @@
 param(
     [string]$Version = 'v1.1.0',
-    [string]$ProgramDirectory = 'dist/local/v1.1.0-maintenance-20261025/RinsLittleShelter',
+    [string]$ProgramDirectory = 'dist/local/v1.1.0/RinsLittleShelter',
     [string]$ReleaseDirectory = '',
     [string]$ReleaseNotes = ''
 )
@@ -13,7 +13,7 @@ $programRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $ProgramDir
 $stage = Join-Path $projectRoot ('output/release-package-' + [Guid]::NewGuid().ToString('N'))
 $portableRoot = Join-Path $stage 'RinsLittleShelter'
 $isActionBridgeLocal = [System.IO.Path]::GetRelativePath($projectRoot,$programRoot).Replace('\','/').TrimEnd('/') -eq 'dist/local/action-bridges/RinsLittleShelter'
-$defaultReleaseDirectory = if ($isActionBridgeLocal) { 'dist/local/action-bridges/release' } elseif ($Version -eq 'v1.1.0') { 'dist/local/v1.1.0-maintenance-20261025/release' } else { 'dist/local/' + $Version + '/release' }
+$defaultReleaseDirectory = if ($isActionBridgeLocal) { 'dist/local/action-bridges/release' } else { 'dist/local/' + $Version + '/release' }
 $releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot $(if ($ReleaseDirectory.Length -gt 0) { $ReleaseDirectory } else { $defaultReleaseDirectory })))
 $notesRelative = if ($ReleaseNotes.Length -gt 0) { $ReleaseNotes } elseif ($isActionBridgeLocal) { 'docs/releases/action-bridges-local.md' } else { "docs/releases/$Version.md" }
 if (-not $releaseRoot.StartsWith($projectRoot+[System.IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw '版本包输出必须在项目内。' }

@@ -137,11 +137,21 @@ public sealed partial class Scene
         for(int leg=0;leg<2;leg++) {
             var chain=climbJoints[leg];var target=climbTargets[leg];
             target[0]=chain[0];target[2]=new Point(climbAnkles[leg].X,climbAnkles[leg].Y-climbDrop);
-            target[1]=ClimbKnee(target[0],target[2],(chain[1]-chain[0]).Length,(chain[2]-chain[1]).Length);
+            double thigh=(chain[1]-chain[0]).Length,calf=(chain[2]-chain[1]).Length;
+            if(left) {
+                // The source's far thigh is foreshortened/occluded, not half a
+                // real femur. Keep its texture landmarks and each leg's total
+                // reach, but use a shared projected split for the downhill
+                // load transfer. The old 25/20 vs 14/29 split let the planted
+                // high-step ankle rise above its knee as the other foot landed.
+                double reach=thigh+calf;
+                thigh=reach*.48;calf=reach-thigh;
+            }
+            target[1]=ClimbKnee(target[0],target[2],thigh,calf);
             double length=(chain[3]-chain[2]).Length,angle=climbFootAngles[leg];
             target[3]=new Point(target[2].X+length*Math.Cos(angle),target[2].Y+length*Math.Sin(angle));
         }
-        return climbRig.Frame(climbTargets);
+        return climbRig.Frame(climbTargets,left);
     }
     private static Point ClimbKnee(Point hip,Point ankle,double thigh,double calf)
     {

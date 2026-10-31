@@ -34,7 +34,7 @@ internal static class CreationVisualTests
         void Png(BitmapSource image,string name) { using var file=File.Create(Path.Combine(output,name+".png")); var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(image));encoder.Save(file); }
         BitmapSource Render(string? name=null,double dpi=1,string layer="scene",bool white=false)
         {
-            scene.Time=time;scene.InvalidateVisual();scene.UpdateLayout();
+            scene.Time=time;scene.AnimationTime=time;scene.InvalidateVisual();scene.UpdateLayout();
             var image=new RenderTargetBitmap((int)(480*dpi),(int)(340*dpi),96*dpi,96*dpi,PixelFormats.Pbgra32);
             if(layer=="scene"&&!white)image.Render(scene);
             else {
@@ -53,7 +53,9 @@ internal static class CreationVisualTests
         }
         void Step(double seconds,bool draw=true)
         {
-            while(seconds>1e-8){double dt=Math.Min(.02,seconds);time+=dt;scene.Time=time;actor.Tick(dt,save,false);seconds-=dt;if(draw)Render();}
+            // This harness supplies animation seconds directly to Behavior,
+            // so its scene clock must advance with that same animation time.
+            while(seconds>1e-8){double dt=Math.Min(.02,seconds);time+=dt;scene.Time=time;scene.AnimationTime=time;actor.Tick(dt,save,false);seconds-=dt;if(draw)Render();}
         }
         void Until(string phase)
         {

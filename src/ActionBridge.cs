@@ -50,7 +50,10 @@ public sealed class ActionBridgeState
         bool replacing=Active;
         SegmentIndex=0;elapsed=0;finalFrame=false;if(!replacing)scene=null;Active=true;Generation++;
     }
-    private static double Duration(int a,int b)=>a==8 || b==8 ? .62 : a is 6 or 7 or 11 || b is 6 or 7 or 11 ? .58 : a==b ? .26 : .42;
+    // Let the ordinary tablet pickup settle through its authored poses. The
+    // return to standing and the interactive TabletSession keep their clocks.
+    private double Duration(int a,int b)=>TargetAction=="tablet" && a==0 && b==4 ? .70
+        : a==8 || b==8 ? .62 : a is 6 or 7 or 11 || b is 6 or 7 or 11 ? .58 : a==b ? .26 : .42;
     internal bool Tick(double dt,SaveData save)
     {
         if(!Active)return false;

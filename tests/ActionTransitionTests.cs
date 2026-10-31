@@ -631,7 +631,7 @@ internal static class ActionTransitionTests
         public bool Left { get; }
         public double Dpi { get; }
         public double Clock { get; private set; }
-        public Fixture(PetWindow pet, bool left, double dpi) { Pet = pet; Left = left; Dpi = dpi; Clock = Scene.Time + 1; }
+        public Fixture(PetWindow pet, bool left, double dpi) { Pet = pet; Left = left; Dpi = dpi; Clock = Scene.AnimationTime + 1; }
         public string Label(string name) => name + "-" + (Left ? "left" : "right") + "-dpi-" + Dpi.ToString("0.0", CultureInfo.InvariantCulture);
         public string State() => Actor.Current.Id + ";life=" + Actor.Life.Phase + ";tablet=" + Actor.Tablet.Phase + ";nurture=" + Actor.Nurture.Phase
             + ";elapsed=" + Actor.Life.Elapsed.ToString("F4", CultureInfo.InvariantCulture) + ";angle=" + Actor.Life.Angle.ToString("F4", CultureInfo.InvariantCulture);
@@ -699,6 +699,9 @@ internal static class ActionTransitionTests
         public Frame Render()
         {
             Scene.Time = Clock;
+            // This fixture ticks Behavior in animation seconds directly. Keep
+            // its presentation clock moving after the real/animation split.
+            Scene.AnimationTime = Clock;
             var visual = new DrawingVisual(); RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
             using (var dc = visual.RenderOpen()) DrawActor.Invoke(Scene, new object[] { dc });
             var image = new RenderTargetBitmap((int)Math.Round(480 * Dpi), (int)Math.Round(340 * Dpi), 96 * Dpi, 96 * Dpi, PixelFormats.Pbgra32);

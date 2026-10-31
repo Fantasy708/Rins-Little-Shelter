@@ -6,10 +6,9 @@ namespace LittleShelter;
 // objects, advances behavior, owns a timer, writes saves, or registers hits.
 public sealed partial class Scene
 {
-    public const int CreationParticleLimit=384;
-    public const double CreationGatherSeconds=.65,CreationMaterializeSeconds=1.15,CreationShapeHoldSeconds=.18,CreationRevealSeconds=.70;
-    private readonly record struct CreationGrain(Point Target,Vector Start,double Curve,double Width,double Height,bool Blue,bool Round,double Delay);
-    private readonly CreationGrain[] creationGrains=new CreationGrain[CreationParticleLimit];
+    public const int CreationParticleLimit=CreationEffectVisual.ParticleLimit;
+    public const double CreationGatherSeconds=CreationEffectVisual.GatherSeconds,CreationMaterializeSeconds=CreationEffectVisual.MaterializeSeconds,CreationShapeHoldSeconds=CreationEffectVisual.ShapeHoldSeconds,CreationRevealSeconds=CreationEffectVisual.RevealSeconds;
+    private readonly CreationEffectVisual.Grain[] creationGrains=new CreationEffectVisual.Grain[CreationParticleLimit];
     private readonly CreationMaterialRaster creationMaterial=new();
     private string? creationObject,creationScene;
     private bool creationFree,creationManual,creationCommitted;
@@ -30,7 +29,7 @@ public sealed partial class Scene
     public long CreationMaterialUpdates=>creationMaterial.Updates;
     public int CreationMaterialPixelWidth=>creationMaterial.PixelWidth;
     public int CreationMaterialPixelHeight=>creationMaterial.PixelHeight;
-    private static double CreationReveal(double age)=>MotionClip.Ease((age-CreationShapeHoldSeconds)/CreationRevealSeconds);
+    private static double CreationReveal(double age)=>CreationEffectVisual.Reveal(age);
     private double ObjectAppearance(string id)=>births.TryGetValue(id,out var born) ? creationRevealObjects.Contains(id)?CreationReveal(AnimationTime-born):Math.Clamp((AnimationTime-born)/2.5,0,1):1;
 
     public void ClearCreationEffects()
@@ -78,24 +77,7 @@ public sealed partial class Scene
         var clip=creationRect;clip.Inflate(24,24);clip.Intersect(new Rect(0,0,480,340));
         creationClip=new RectangleGeometry(clip);creationClip.Freeze();
         creationMaterial.Prepare(sprite,width,height);
-        // Stratified alpha sampling covers the whole authored shape, including
-        // thin trunks and stems; sparse random points cannot describe it.
-        static double Noise(int seed) {uint n=(uint)seed*747796405u+2891336453u;n=((n>>((int)(n>>28)+4))^n)*277803737u;return ((n>>22)^n)/(double)uint.MaxValue;}
-        int columns=Math.Clamp((int)Math.Round(Math.Sqrt(CreationParticleLimit*width/height)),8,48);
-        int rows=CreationParticleLimit/columns;creationGrainSlots=0;
-        for(int row=0;row<rows;row++)for(int column=0;column<columns;column++) {
-            double u=0,v=0;bool found=false;
-            for(int trial=0;trial<9;trial++) {
-                double x=(column+(trial==1?.5:(trial==0?.28:.02)+(trial==0?.44:.96)*Noise((row*columns+column)*29+trial*2)))/columns;
-                double y=(row+(trial==1?.5:(trial==0?.28:.02)+(trial==0?.44:.96)*Noise((row*columns+column)*29+trial*2+1)))/rows;
-                if(sprite.Solid(x,y)) {u=x;v=y;found=true;break;}
-            }
-            if(!found)continue;
-            int i=creationGrainSlots++;double angle=Noise(i*19+7)*Math.PI*2,reach=8+Noise(i*23+9)*13;
-            creationGrains[i]=new(new Point(creationRect.X+u*width,creationRect.Y+v*height),
-                new Vector(Math.Cos(angle)*reach,Math.Sin(angle)*reach),
-                (Noise(i*17+2)-.5)*6,.65+Noise(i*11+3)*1.45,.65+Noise(i*13+2)*1.65,i%16==0,i%3==0,Noise(i*31+8)*.23);
-        }
+        creationGrainSlots=CreationEffectVisual.Prepare(sprite,creationRect,creationGrains);
     }
     private bool HasCreationMaterial(string id)=>creationObject==id && (!creationCommitted || creationAge<CreationShapeHoldSeconds+CreationRevealSeconds);
     private bool DrawCreationMaterial(DrawingContext dc,string id,Atlas.Sprite sprite,Rect rect)
@@ -142,7 +124,6 @@ public sealed partial class Scene
         CreationParticleCount=0;
         if(creationObject==null || creationClip==null)return;
         double gather=Math.Clamp(1+creationAge/CreationGatherSeconds,0,1);
-        double envelope=creationCommitted ? .28*(1-CreationReveal(creationAge)) : MotionClip.Ease(gather)*(1-.72*MotionClip.Ease((gather-.55)/.42));
         var drift=new Vector();
         if(creationObject=="cloud")drift.X=(Math.Sin(Time*.13)-Math.Sin(creationRegisteredTime*.13))*8;
         if(creationObject=="bird") {drift.X=(Math.Sin(Time*.65)-Math.Sin(creationRegisteredTime*.65))*14;drift.Y=(Math.Sin(Time*1.2)-Math.Sin(creationRegisteredTime*1.2))*3;}
@@ -160,24 +141,7 @@ public sealed partial class Scene
             dc.DrawImage(creationMaterial.Sample(gather,0),materialRect);
             dc.Pop();
         }
-        for(int i=0;i<creationGrainSlots;i++) {
-            ref readonly var grain=ref creationGrains[i];
-            double entry=MotionClip.Ease((gather-grain.Delay)/.24);
-            if(!creationCommitted && entry<=0)continue;
-            double progress=creationCommitted ? 1 : MotionClip.Ease((gather-grain.Delay)/(.72-grain.Delay*.2));
-            var point=grain.Target+grain.Start*(1-progress)+drift;
-            point.X+=Math.Sin(progress*Math.PI)*grain.Curve;
-            point.Y+=Math.Sin(progress*Math.PI*2)*grain.Curve*.32;
-            double amount=envelope*(creationCommitted?1:entry)*(.82+.18*(i%4)/3.0);
-            byte alpha=(byte)(Math.Clamp((int)(amount*224)/8*8,0,224));
-            if(alpha==0)continue;
-            byte red=grain.Blue?(byte)218:(byte)255,green=grain.Blue?(byte)239:(byte)253,blue=grain.Blue?(byte)255:(byte)243;
-            if(i%8==0)dc.DrawEllipse(Brush((byte)(alpha/12),red,green,blue),null,point,grain.Width,grain.Height);
-            var ink=Brush(alpha,red,green,blue);
-            if(grain.Round)dc.DrawEllipse(ink,null,point,grain.Width*.45,grain.Height*.45);
-            else dc.DrawRoundedRectangle(ink,null,new Rect(point.X-grain.Width/2,point.Y-grain.Height/2,grain.Width,grain.Height),.7,.7);
-            CreationParticleCount++;
-        }
+        CreationParticleCount=CreationEffectVisual.DrawGrains(dc,creationGrains,creationGrainSlots,gather,creationCommitted,CreationReveal(creationAge),drift,brushes);
         dc.Pop();
     }
 }

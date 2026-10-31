@@ -77,6 +77,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw '声音启停检查失败。' }
         & $dotnetPath run --project tests/RecallTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/recall-qa
         if ($LASTEXITCODE -ne 0) { throw 'Shelter创造回顾检查失败。' }
+        & $dotnetPath run --project tests/RecallMaterialTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/recall-material-qa
+        if ($LASTEXITCODE -ne 0) { throw 'Shelter回顾白形、局部显色、缓存和日常视觉一致性检查失败。' }
         & $dotnetPath run --project tests/WindowSettingsTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/window-settings-qa
         if ($LASTEXITCODE -ne 0) { throw '窗口置顶设置检查失败。' }
         & $dotnetPath run --project tests/SessionStateTests.csproj -c Release "-p:BaseOutputPath=$buildOutput" -- output/session-state-qa
